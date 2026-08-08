@@ -8,7 +8,8 @@
 - harness 初始化（git / verify / PROGRESS / CLAUDE.md）
 - 读取《AI Agent 开发需求调研.pdf》并并行调研 Pi 真源、网关、OS MVP
 - 阶段 0 脚手架：`adapter/` + `host/` + SQLite + safety + `SPEC.md`
-- `.harness/verify.sh` 全绿；独立 verifier：**PASS**
+- 核心架构设计 `ARCHITECTURE.md`（分层 + 逐层 Pi Hook 对照，暂不含飞书）
+- **后台运行模式**：`scripts/aiia-host.sh`（nohup+PID 脱退重连）+ systemd user unit + 宿主优雅退出；verify 含「start→脱退存活→stop」验收；verifier PASS
 
 ## 进行中
 - （无）
