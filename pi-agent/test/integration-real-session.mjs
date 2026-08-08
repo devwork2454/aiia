@@ -33,9 +33,10 @@ const loader = new DefaultResourceLoader({
   // Independent probe hook to detect that tool_call reaches extensions at all.
   extensionFactories: [
     (pi) => {
+      // Real Pi event shape is event.input.command (not event.args).
       pi.on("tool_call", async (event) => {
         toolCallFired = true;
-        const cmd = String(event?.args?.command || "");
+        const cmd = String(event?.input?.command ?? event?.args?.command ?? "");
         if (/rm\s+-rf\s+\//.test(cmd)) blocked = true; // safety.js already returns block; we just observe
       });
     },
@@ -44,13 +45,20 @@ const loader = new DefaultResourceLoader({
 
 await loader.reload();
 
-// ASSERTION 1 (model-independent): our extensions loaded without error.
-const loadErrors = loader.extensionsResult?.errors ?? [];
-if (loadErrors.length > 0) {
-  console.error("[integration] extension load errors:", JSON.stringify(loadErrors).slice(0, 500));
+// ASSERTION 1 (model-independent): our extensions actually loaded, without error.
+// Must be >= 3 (probe factory + safety.js + memory.js). An empty/broken load fails here,
+// so a skip branch below can no longer hide broken wiring.
+const res = loader.getExtensions();
+if (res.errors.length > 0) {
+  console.error("[integration] extension load errors:", JSON.stringify(res.errors).slice(0, 500));
   process.exit(1);
 }
-console.error(`[integration] extensions loaded: ${loader.extensionsResult?.extensions?.length ?? "?"}`);
+const loadedCount = res.extensions.length;
+console.error(`[integration] extensions loaded: ${loadedCount} [${res.extensions.map((e) => e.name || e.id || "?").join(", ")}]`);
+if (loadedCount < 3) {
+  console.error(`[integration] EXPECTED >=3 extensions (probe+safety+memory), got ${loadedCount} — wiring broken`);
+  process.exit(1);
+}
 
 const rt = await ModelRuntime.create();
 const available = await rt.getAvailable();

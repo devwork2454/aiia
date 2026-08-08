@@ -3,18 +3,31 @@
 export const DANGEROUS =
   /(\brm\s+-rf\s+[\/~]|\bsudo\b|\bgit\s+push\s+--force\b|\bmkfs\b|\bdd\s+if=|:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;|\bchmod\s+-R\s+777\s+\/|>\s*\/dev\/sd[a-z])/i;
 
+const SHELL_TOOLS = new Set(["bash", "shell", "run_shell_command"]);
+
 /**
- * @param {string} toolName
- * @param {Record<string, unknown>} args
+ * Extract the shell command from a Pi tool_call event.
+ * Pi's real event shape is `event.input.command` (BashToolInput); we also accept
+ * `event.args`/`cmd` for robustness against SDK shape drift and unit tests.
+ * @param {any} event
+ * @returns {string}
+ */
+export function extractCommand(event) {
+  const src = event?.input ?? event?.args ?? {};
+  return String(src.command ?? src.cmd ?? "");
+}
+
+/**
+ * Evaluate a Pi tool_call event. Pass the WHOLE event (real shape), not just args.
+ * @param {{toolName?: string, input?: any, args?: any}} event
  * @returns {{ block: boolean, reason?: string }}
  */
-export function evaluateToolCall(toolName, args = {}) {
-  const name = String(toolName || "").toLowerCase();
-  if (name === "bash" || name === "shell" || name === "run_shell_command") {
-    const command = String(args.command ?? args.cmd ?? "");
-    if (DANGEROUS.test(command)) {
-      return { block: true, reason: `AIIA policy blocked dangerous shell: ${command.slice(0, 80)}` };
-    }
+export function evaluateToolCallEvent(event) {
+  const name = String(event?.toolName || "").toLowerCase();
+  if (!SHELL_TOOLS.has(name)) return { block: false };
+  const command = extractCommand(event);
+  if (DANGEROUS.test(command)) {
+    return { block: true, reason: `AIIA policy blocked dangerous shell: ${command.slice(0, 80)}` };
   }
   return { block: false };
 }

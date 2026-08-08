@@ -1,27 +1,36 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { evaluateToolCall } from "../src/policy.js";
+import { evaluateToolCallEvent, extractCommand } from "../src/policy.js";
 
-describe("evaluateToolCall", () => {
+// Uses the REAL Pi event shape: { toolName, input: { command } }
+const ev = (toolName, command) => ({ type: "tool_call", toolName, input: { command } });
+
+describe("evaluateToolCallEvent (real event shape)", () => {
+  it("extractCommand reads event.input.command", () => {
+    assert.equal(extractCommand(ev("bash", "echo hi")), "echo hi");
+  });
   it("allows read-ish shell", () => {
-    assert.equal(evaluateToolCall("bash", { command: "ls -la" }).block, false);
+    assert.equal(evaluateToolCallEvent(ev("bash", "ls -la")).block, false);
   });
   it("blocks rm -rf /", () => {
-    assert.equal(evaluateToolCall("bash", { command: "rm -rf /" }).block, true);
+    assert.equal(evaluateToolCallEvent(ev("bash", "rm -rf /")).block, true);
   });
   it("blocks rm -rf ~", () => {
-    assert.equal(evaluateToolCall("bash", { command: "rm -rf ~/" }).block, true);
+    assert.equal(evaluateToolCallEvent(ev("bash", "rm -rf ~/")).block, true);
   });
   it("blocks sudo", () => {
-    assert.equal(evaluateToolCall("bash", { command: "sudo apt install x" }).block, true);
+    assert.equal(evaluateToolCallEvent(ev("bash", "sudo apt install x")).block, true);
   });
   it("blocks force push", () => {
-    assert.equal(evaluateToolCall("shell", { command: "git push --force origin main" }).block, true);
+    assert.equal(evaluateToolCallEvent(ev("shell", "git push --force origin main")).block, true);
   });
   it("blocks chmod -R 777 /", () => {
-    assert.equal(evaluateToolCall("bash", { command: "chmod -R 777 /" }).block, true);
+    assert.equal(evaluateToolCallEvent(ev("bash", "chmod -R 777 /")).block, true);
   });
   it("ignores non-shell tools", () => {
-    assert.equal(evaluateToolCall("read", { path: "/etc/passwd" }).block, false);
+    assert.equal(evaluateToolCallEvent({ toolName: "read", input: { path: "/etc/passwd" } }).block, false);
+  });
+  it("still handles legacy args shape (robustness)", () => {
+    assert.equal(evaluateToolCallEvent({ toolName: "bash", args: { command: "rm -rf /" } }).block, true);
   });
 });

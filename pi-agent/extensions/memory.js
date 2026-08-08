@@ -17,18 +17,16 @@ export default function memoryExtension(pi) {
   const store = new MemoryStore(dbPath());
 
   // Inject top-N active memories every turn (Ebbinghaus-ranked, lazy).
-  pi.on("context", async (event, ctx) => {
+  // Pi contract: `context` handler receives { messages } and returns
+  // { messages } to REPLACE the context. We append a system memory message.
+  pi.on("context", async (event) => {
     const memories = store.active({ threshold: 0.15, limit: 10 });
     if (memories.length === 0) return;
-    const block = `\n\n[AIIA active memories]\n- ${memories.join("\n- ")}`;
-    // Append to system prompt for this turn if the API allows; otherwise add a context message.
-    if (typeof event.appendSystemPrompt === "function") {
-      event.appendSystemPrompt(block);
-    } else if (Array.isArray(event.messages)) {
-      event.messages.push({ role: "system", content: block });
-    } else if (ctx && typeof ctx.addContextMessage === "function") {
-      ctx.addContextMessage({ role: "system", content: block });
-    }
+    const memoryMessage = {
+      role: "system",
+      content: `[AIIA active memories]\n- ${memories.join("\n- ")}`,
+    };
+    return { messages: [...(event.messages ?? []), memoryMessage] };
   });
 
   // Slash command: /memory add|list|rm
