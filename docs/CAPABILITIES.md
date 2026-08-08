@@ -113,3 +113,21 @@
 ## 与主架构的关系
 - L5.5 属**核心**（跨目录共享是刚需），可在阶段 1–2 落地：先 direnv + SOPS env 注入 + `kb_search`/`secret_exec` 两个 tool。
 - L7.6 属**二期**（高风险、依赖桌面/浏览器环境），接口先定、实现延后；两者都复用 §3.1 后台常驻宿主与 §4 安全网关。
+
+---
+
+## 附录：浏览器选型定档（2026-08 效果对比后确认）
+
+依据独立第三方基准（ianlpaterson 2026-05, 651 verdicts，含 CloakBrowser）+ 轮换代理基准（techinz）横测。关键分水岭是**控制面架构**而非指纹强度。
+
+| 档位 | 方案 | 何时用 | 依据 |
+|---|---|---|---|
+| **默认** | **patchright (Node)** | 日常自有账号运维/注册 | drop-in Playwright + 持久化 CDP 复用；JS/CDP 泄漏消除干净 |
+| **高强度** | **nodriver (直连 CDP)** | Cloudflare Turnstile/DataDome 硬门，patchright/camoufox 顶不住 | 唯一在真实硬门零阻断（换控制面架构，无 Playwright shim / Runtime.enable） |
+| **备胎** | **camoufox-js (Firefox)** | 目标对 Chromium 收紧 / 需 OS 指纹伪装 / 轮换代理 | 指纹层最强（CreepJS 0% headless），轮换代理通过率最高 |
+| **排除** | ~~CloakBrowser~~ | — | 纯效果与 patchright 同档（独立数据与 21 行 curl_cffi 打平），触不到协议层；且闭源二进制+license 门控 |
+
+要点：
+- 浏览器只是一层；**代理策略（每账号粘性出口）+ 人类化行为层**往往比换浏览器更决定成败——四者都缺内建行为模拟，需自补。
+- daemon 默认起 patchright；tool 层暴露 `engine: patchright|nodriver|camoufox` 参数按档切换，接口统一（open/attach/goto/...）。
+- WAF 对抗按月失效，选型结论需定期回归。
