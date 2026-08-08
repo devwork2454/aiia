@@ -163,3 +163,7 @@ aiia/
 **Pi 当内核、Node 宿主常驻、控制面全用官方 Hook（安全/质量/记忆/路由）、记忆用 SQLite+艾宾浩斯+Lazy Skill；subagent、向量 RAG、自进化、飞书全部延后并预留接口。**
 
 > 能力扩展（机密/共享配置 · OS 键鼠 · 指纹浏览器）见 [docs/CAPABILITIES.md](docs/CAPABILITIES.md)（L5.5 核心 / L7.6 二期）。
+
+---
+
+> 实现路线已切换为 **A（Pi 原生 extension）**：见 `pi-agent/`（safety+memory extension，真被 Pi 加载）与 `legacy/`（已归档的旧 mock 宿主/adapter/飞书）。当前架构以 PROGRESS.md 为准。

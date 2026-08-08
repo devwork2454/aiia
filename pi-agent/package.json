@@ -1,0 +1,17 @@
+{
+  "name": "aiia-pi-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AIIA as Pi extensions (memory + safety), no self-hosted HTTP",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "^0.84.1",
+    "better-sqlite3": "^13.0.3"
+  }
+}
