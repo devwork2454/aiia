@@ -11,15 +11,17 @@ const DANGEROUS =
   /\b(rm\s+-rf\s+[\/~]|sudo\b|git\s+push\s+--force|mkfs\b|dd\s+if=)/i;
 
 export default function (pi: ExtensionAPI) {
-  pi.on("tool_call", async (event, ctx) => {
+  // Pi 官方约定：tool_call handler 返回 { block: true, reason?, terminate? } 来拦截，
+  // 而非抛异常（抛异常语义不同，且不会给模型可读的 reason）。
+  pi.on("tool_call", async (event) => {
     const name = String(event.toolName || "").toLowerCase();
     if (name !== "bash" && name !== "shell") return;
     const command = String((event.args as { command?: string })?.command || "");
     if (DANGEROUS.test(command)) {
-      ctx.ui?.notify?.(`AIIA blocked: ${command.slice(0, 80)}`);
-      // Prefer deny via throwing / returning block if API supports it;
-      // fallback: rewrite to echo deny for older hooks.
-      throw new Error("Blocked dangerous shell command by AIIA policy.");
+      return {
+        block: true,
+        reason: `Blocked dangerous shell command by AIIA policy: ${command.slice(0, 80)}`,
+      };
     }
   });
 }
