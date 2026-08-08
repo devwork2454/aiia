@@ -1,0 +1,15 @@
+[Unit]
+Description=AIIA Pi agent host
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/project/aiia/host
+Environment=AIIA_MOCK=0
+Environment=AIIA_HOST_PORT=8787
+ExecStart=/usr/bin/env node src/server.js
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

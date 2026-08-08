@@ -19,9 +19,12 @@ build/
 .agent/worktrees/
 *.db
 *.sqlite
+data/*.db
+data/*.db-*
 .lancedb/
 logs/
 *.log
+/tmp/
 
 # IDE / OS
 .DS_Store

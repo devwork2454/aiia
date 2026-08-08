@@ -1,0 +1,15 @@
+{
+  "name": "aiia-host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AIIA Pi agent host — HTTP front for createAgentSession",
+  "scripts": {
+    "start": "node src/server.js",
+    "start:mock": "AIIA_MOCK=1 node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
