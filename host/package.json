@@ -11,5 +11,8 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "optionalDependencies": {
+    "@earendil-works/pi-coding-agent": "0.84.1"
   }
 }
