@@ -1,15 +1,32 @@
+# AIIA host as a systemd user service (background / detach-reattach).
+#
+# Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp deploy/aiia-host.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now aiia-host
+#   # keep running after logout:
+#   loginctl enable-linger "$USER"
+#
+# Ops:
+#   systemctl --user status aiia-host
+#   journalctl --user -u aiia-host -f     # attach to logs
+#   systemctl --user restart aiia-host
+
 [Unit]
 Description=AIIA Pi agent host
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=%h/project/aiia/host
+WorkingDirectory=%h/project/aiia
 Environment=AIIA_MOCK=0
 Environment=AIIA_HOST_PORT=8787
-ExecStart=/usr/bin/env node src/server.js
+ExecStart=/usr/bin/env node host/src/server.js
 Restart=on-failure
 RestartSec=3
+KillSignal=SIGTERM
+TimeoutStopSec=10
 
 [Install]
 WantedBy=default.target

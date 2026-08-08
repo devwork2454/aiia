@@ -59,6 +59,30 @@
 
 > 对应现有代码：`host/src/{server,agent,safety}.js`。
 
+### 3.1 后台运行与脱退重连（Background / detach-reattach）
+
+**为什么天然支持**：会话状态持久化在磁盘（`~/.pi/agent/sessions/`），不绑终端；宿主是独立常驻进程，客户端断开不影响任务。
+
+三种形态（按推荐度）：
+
+| 形态 | 机制 | 适用 | 状态 |
+|---|---|---|---|
+| **A. 常驻宿主（推荐）** | systemd user service 常驻 + `Restart=on-failure`；或 `scripts/aiia-host.sh` 用 `nohup`+PID 文件脱离终端 | 个人 OS 级主路径 | ✅ 已实现 |
+| **B. `pi --mode rpc` 子进程** | 宿主起 headless Pi，stdin/stdout JSONL，无 TUI | subagent / 后台派发 | 预留（L6） |
+| **C. tmux/screen 兜底** | `tmux new -d 'pi'` + `tmux attach` | 临时最省事 | Pi 官方支持 |
+
+**脱退重连语义**：
+- 关终端 → 宿主继续（A 已保证）。
+- 重新连上 → 客户端按 `session_key` 请求，宿主用 `createAgentSessionRuntime` 续接同一会话历史，不丢上下文。
+- 日志视图 → `scripts/aiia-host.sh logs -f` 或 `journalctl --user -u aiia-host -f`。
+
+**运维入口**：
+- 无 systemd：`scripts/aiia-host.sh {start|stop|restart|status|logs|attach}`
+- 有 systemd：`systemctl --user enable --now aiia-host` + `loginctl enable-linger` 保证登出后仍活
+
+**延后**：跨设备 attach、后台任务完成主动推送——等实验性 `pi-server`/`pi-client`（Unix socket + CBOR，多 client 租约 attach）稳定后再上（见 §8）。
+
+
 ## 4. L4 控制面（核心，全部是 Pi Hook）
 
 按官方事件精确落位（return/ctx 语义已核对）：
@@ -103,7 +127,7 @@
 3. L5 LSP + LanceDB Hybrid RAG
 4. L7 Metaprompt 自进化优化器
 5. L3 LiteLLM 网关 sidecar
-6. Daemon 脱退重连（实验性 `pi-server` 稳定后）
+6. 跨设备 attach + 后台完成推送（实验性 `pi-server` 稳定后；基础后台常驻已在 §3.1 落地）
 
 ## 9. 目标仓库结构
 

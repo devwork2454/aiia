@@ -67,7 +67,16 @@ if (isMain) {
   const server = createServer();
   server.listen(PORT, "127.0.0.1", () => {
     console.log(
-      `[aiia-host] listening on http://127.0.0.1:${PORT} mock=${process.env.AIIA_MOCK || "0"}`,
+      `[aiia-host] listening on http://127.0.0.1:${PORT} mock=${process.env.AIIA_MOCK || "0"} pid=${process.pid}`,
     );
   });
+
+  const shutdown = (signal) => {
+    console.log(`[aiia-host] ${signal} received, shutting down`);
+    server.close(() => process.exit(0));
+    // Force-exit if connections linger
+    setTimeout(() => process.exit(0), 3000).unref();
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }

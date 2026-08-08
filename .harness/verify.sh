@@ -43,4 +43,28 @@ curl -sf -X POST "http://127.0.0.1:${PORT}/v1/chat" \
 echo "[verify] schema present"
 test -f data/schema.sql
 
+echo "[verify] background mode (detach → still alive → stop)"
+export AIIA_MOCK=1
+BG_PORT="$(python3 -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1]);s.close()')"
+export AIIA_HOST_PORT="$BG_PORT"
+export AIIA_RUN_DIR="$(mktemp -d)"
+bg_cleanup() {
+  [[ -n "${AIIA_RUN_DIR:-}" ]] || return 0
+  AIIA_HOST_PORT="$BG_PORT" AIIA_RUN_DIR="$AIIA_RUN_DIR" bash scripts/aiia-host.sh stop >/dev/null 2>&1 || true
+  rm -rf "$AIIA_RUN_DIR"
+}
+trap 'cleanup; bg_cleanup' EXIT
+
+bash scripts/aiia-host.sh start >/dev/null
+BG_PID="$(cat "$AIIA_RUN_DIR/aiia-host.pid")"
+# 校验脱离启动 shell 后仍存活且可达（等价于关闭终端后继续运行）
+kill -0 "$BG_PID"
+curl -sf "http://127.0.0.1:${BG_PORT}/health" | grep -q '"status":"ok"'
+bash scripts/aiia-host.sh status | grep -q '^running'
+bash scripts/aiia-host.sh stop >/dev/null
+if kill -0 "$BG_PID" 2>/dev/null; then
+  echo "[verify] background host did not stop" >&2
+  exit 1
+fi
+
 echo "[verify] OK"

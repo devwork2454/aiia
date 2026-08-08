@@ -17,6 +17,7 @@ build/
 
 # agent runtime
 .agent/worktrees/
+.run/
 *.db
 *.sqlite
 data/*.db
