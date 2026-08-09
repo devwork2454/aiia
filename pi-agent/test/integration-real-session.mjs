@@ -46,6 +46,8 @@ const loader = new DefaultResourceLoader({
     join(extDir, "goal.js"),
     join(extDir, "add-dir.js"),
     join(extDir, "reply-prefs.js"),
+    join(extDir, "capability-catalog.js"),
+    join(extDir, "slash-ux.js"),
   ],
   // Independent probe hook to detect that tool_call reaches extensions at all.
   extensionFactories: [
@@ -63,7 +65,7 @@ const loader = new DefaultResourceLoader({
 await loader.reload();
 
 // ASSERTION 1 (model-independent): our extensions actually loaded, without error.
-// Must be >= 16 (probe factory + 11 extensions including os-browser+channel-adapter). An empty/broken load fails here,
+// Must be >= 18 (probe factory + 11 extensions including os-browser+channel-adapter). An empty/broken load fails here,
 // so a skip branch below can no longer hide broken wiring.
 const res = loader.getExtensions();
 if (res.errors.length > 0) {
@@ -72,8 +74,8 @@ if (res.errors.length > 0) {
 }
 const loadedCount = res.extensions.length;
 console.error(`[integration] extensions loaded: ${loadedCount} [${res.extensions.map((e) => e.name || e.id || "?").join(", ")}]`);
-if (loadedCount < 16) {
-  console.error(`[integration] EXPECTED >=16 extensions, got ${loadedCount} — wiring broken`);
+if (loadedCount < 18) {
+  console.error(`[integration] EXPECTED >=18 extensions, got ${loadedCount} — wiring broken`);
   process.exit(1);
 }
 

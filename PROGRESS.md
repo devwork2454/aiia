@@ -1,19 +1,19 @@
 # 项目进度
 
 ## GOAL
-连续收口第二期余项：实现 S4 L7.6（接口+默认关+可测 verify）与 S5 接入层（归一化/归档状态+可测 verify），使切片表无未完成项且无下一刀建议。
+Slash UX / Tool-First：减少 `/` 菜单噪音，能力目录 + `/aiia` 聚合，memory/dirs 走 tool。
 ### 验收标准
-- S4：`os-browser` 扩展注册 OS/浏览器工具；默认关闭；未启用时 `tool_call` 拦截高危；dry-run 可测；不硬依赖 ydotool/patchright
-- S5：`channel-adapter` 提供入站归一化；`cli` 可用；飞书/Web 显式 archived/deferred（不重开自研飞书）
-- `.harness/verify.sh` 含对应单测且退出 0；EVAL 无 Critical/Major
-- PROGRESS 切片 S0–S5 均为已完成/诚实收口，汇报无「下一步建议」操作命令
+- S-UX-1：`capability-catalog` 注入短目录（含 kb_search/remember/memory_search）；`enableSkillCommands=false` 推荐落地；长度 ≤2048
+- S-UX-2：补全白名单默认 goal/reply/add-dir/vault/aiia；`/aiia` 可路由到 registry handlers；冷门命令可手打
+- S-UX-3：`memory_search`/`memory_list`/`list_additional_dirs` 工具可用；catalog 覆盖
+- `.harness/verify.sh` 含 capability-catalog + slash-ux 单测且退出 0
 ### 状态
-通过（2026-08-09）：S4+S5 收口完成；切片表 S0–S5 均已完成；无下一刀。
+通过（2026-08-09）：S-UX-1/2/3 完成；verify 绿
 ### 本轮计划
-1. S4 os-browser-gate + extension + 单测
-2. S5 channel-adapter + extension + 单测
-3. 增强 verify/integration + 文档
-4. 评估 → 终审 → commit
+1. S-UX-1 capability-catalog + settings 推荐
+2. S-UX-2 slash-ux 白名单 + /aiia
+3. S-UX-3 memory/dirs tool-first
+4. verify → 终审 → commit
 
 
 ## 第二期 Harness 交付切片（机器可判定）
@@ -84,6 +84,7 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 （无）
 
 ## 已完成
+- **Slash UX / Tool-First**：`capability-catalog` 短目录注入；`slash-ux` 白名单+`/aiia`；`memory_search`/`memory_list`/`list_additional_dirs`；推荐 `enableSkillCommands=false`（`docs/pi-settings-recommended.json` + install 补缺）。
 - **Pi /reply**：全局回复语言/风格（`~/.config/aiia/reply-prefs.json`）；`/reply lang|style|on|off|reset`；before_agent_start 注入。
 - **Pi /add-dir**：会话附加工作目录；持久化 `.agent/additional-dirs.json`；system prompt 注入 + skills 发现。
 - **Pi /goal**：`extensions/goal.js` 注册 `/goal`；skill `.agents/skills/goal` 链到 `~/.pi/agent/skills/goal`。

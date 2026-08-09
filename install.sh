@@ -140,6 +140,29 @@ AIIA_DIR="$AIIA_DIR" bash "$AIIA_DIR/scripts/link-pi-skills.sh" \
   || error "Pi skills 链接失败；请检查 $AIIA_DIR/.agents/skills/{auto-harness,goal}"
 success "Pi 默认 skills 已链接（含 auto-harness、goal；支持 /goal）"
 
+
+# 推荐关闭 skill slash 补全（skill 仍可被 agent 发现）
+SETTINGS_JSON="$HOME/.pi/agent/settings.json"
+REC="$AIIA_DIR/docs/pi-settings-recommended.json"
+if [[ -f "$REC" ]]; then
+  mkdir -p "$(dirname "$SETTINGS_JSON")"
+  if [[ ! -f "$SETTINGS_JSON" ]]; then
+    echo '{}' > "$SETTINGS_JSON"
+  fi
+  if command -v node >/dev/null 2>&1; then
+    node -e '
+const fs=require("fs");
+const settingsPath=process.argv[1];
+const recPath=process.argv[2];
+const s=JSON.parse(fs.readFileSync(settingsPath,"utf8")||"{}");
+const r=JSON.parse(fs.readFileSync(recPath,"utf8"));
+if (s.enableSkillCommands === undefined) s.enableSkillCommands = r.enableSkillCommands;
+fs.writeFileSync(settingsPath, JSON.stringify(s,null,2)+"\n");
+' "$SETTINGS_JSON" "$REC" && success "已写入推荐 Pi settings（enableSkillCommands=false，仅补缺）" \
+      || info "跳过 settings 合并（可手动参考 docs/pi-settings-recommended.json）"
+  fi
+fi
+
 # ─── Step 7: 配置环境变量 ─────────────────────────────────────────────────────
 step "Step 7/7  配置环境变量"
 

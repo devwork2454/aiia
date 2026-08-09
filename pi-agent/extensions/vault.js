@@ -16,6 +16,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import os from 'os';
+import { registerAiiaHandler } from '../src/command-registry.js';
 
 // ─── 常量 ────────────────────────────────────────────────────────────────────
 
@@ -134,9 +135,7 @@ async function getMasterPassword(ctx, action = '操作') {
 // ─── Pi 命令注册 ──────────────────────────────────────────────────────────────
 
 export default function (pi) {
-  pi.registerCommand('vault', {
-    description: '本地加密个人保险箱 | 管理账号密码/身份/地址/银行卡/SSH等敏感信息',
-    handler: async (args, ctx) => {
+  const vaultHandler = async (args, ctx) => {
       const parts = (args || '').trim().split(/\s+/);
       const action = parts[0] || 'help';
 
@@ -349,6 +348,11 @@ export default function (pi) {
         '',
         '  🔒 数据本地 AES-256 加密存储，同步时随 /sync push 一并上传（仍为密文）',
       ].join('\n'), 'info');
-    }
+  };
+
+  pi.registerCommand('vault', {
+    description: '本地加密个人保险箱 | 管理账号密码/身份/地址/银行卡/SSH等敏感信息',
+    handler: vaultHandler,
   });
+  registerAiiaHandler('vault', vaultHandler);
 }

@@ -1,0 +1,4 @@
+{
+  "enableSkillCommands": false,
+  "_comment": "AIIA recommendation: keep skills discoverable for the agent, but hide /skill:* from the slash autocomplete menu. Merge into ~/.pi/agent/settings.json (do not delete other keys)."
+}

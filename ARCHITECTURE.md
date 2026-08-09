@@ -13,6 +13,17 @@
 4. **合规红线**：**不做**模型破甲/越狱/绕过 Provider 安全策略（PDF 有，本方案剔除）。安全中间件只做「高危命令拦截 + 人审」。
 5. **机器验收**：每层能力都要有 `.harness/verify.sh` 可判定的通过标准。
 
+
+### 0.1 控制面通道：Slash / Tool / Skill
+
+| 通道 | 给谁 | 约定 |
+|---|---|---|
+| **Slash** | 人 | 会话控制与高敏入口；默认补全白名单：`/goal` `/reply` `/add-dir` `/vault` `/aiia` |
+| **Tool** | 模型 | 业务能力（`remember`/`memory_search`/`kb_search`/…）；由 capability-catalog 短目录注入 |
+| **Skill** | 模型（懒） | 长说明书可发现；推荐 `enableSkillCommands=false`，不进 `/` 菜单 |
+
+冷门 slash（如 `/memory` `/sync`）过渡期仍可手打，或经 `/aiia <sub>`；勿把 skill 正文整页灌进 system prompt。
+
 ---
 
 ## 1. 分层架构

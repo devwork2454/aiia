@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import os from 'os';
+import { registerAiiaHandler } from '../src/command-registry.js';
 
 // ─── 常量 ────────────────────────────────────────────────────────────────────
 
@@ -283,9 +284,7 @@ async function pullFromGist(token, gistId) {
 // ─── Pi 命令注册 ──────────────────────────────────────────────────────────────
 
 export default function (pi) {
-  pi.registerCommand('sync', {
-    description: '端到端加密云端账号同步 | 用法: /sync <login|push|pull|status>',
-    handler: async (args, ctx) => {
+  const syncHandler = async (args, ctx) => {
       const action = (args || '').trim().split(/\s+/)[0] || 'help';
 
       // ── login ────────────────────────────────────────────────────────────
@@ -544,6 +543,11 @@ export default function (pi) {
           '  ℹ️  主密码只在您的大脑里，云端只存密文，任何人无法解读。'
         ].join('\n'), 'info');
       }
-    }
+  };
+
+  pi.registerCommand('sync', {
+    description: '端到端加密云端账号同步 | 用法: /sync <login|push|pull|status>',
+    handler: syncHandler,
   });
+  registerAiiaHandler('sync', syncHandler);
 }

@@ -21,6 +21,7 @@ import {
   formatAdditionalDirsPrompt,
   parseAddDirArgs,
 } from "../src/add-dir-store.js";
+import { registerAiiaHandler } from "../src/command-registry.js";
 
 function loadSkillsEnabled(env = process.env) {
   return env.AIIA_ADD_DIR_LOAD_SKILLS !== "0" && env.AIIA_ADD_DIR_LOAD_SKILLS !== "false";
@@ -121,6 +122,9 @@ export default function addDirExtension(pi) {
     }
   }
 
+  const handleRmDir = async (args, ctx) => handleAddDir(`rm ${args || ""}`, ctx);
+  const handleListDirs = async (_args, ctx) => handleAddDir("list", ctx);
+
   pi.registerCommand("add-dir", {
     description:
       "Add extra workspace directory (Claude-style) | /add-dir <path> | list | rm <path>",
@@ -129,12 +133,32 @@ export default function addDirExtension(pi) {
 
   pi.registerCommand("rm-dir", {
     description: "Remove an additional workspace directory | /rm-dir <path>",
-    handler: async (args, ctx) => handleAddDir(`rm ${args || ""}`, ctx),
+    handler: handleRmDir,
   });
 
   pi.registerCommand("list-dirs", {
     description: "List additional workspace directories | /list-dirs",
-    handler: async (_args, ctx) => handleAddDir("list", ctx),
+    handler: handleListDirs,
+  });
+
+  registerAiiaHandler("add-dir", handleAddDir);
+  registerAiiaHandler("rm-dir", handleRmDir);
+  registerAiiaHandler("list-dirs", handleListDirs);
+
+  pi.registerTool({
+    name: "list_additional_dirs",
+    label: "List Additional Dirs",
+    description:
+      "List extra workspace directories registered with /add-dir for this session/cwd.",
+    parameters: { type: "object", properties: {} },
+    async execute() {
+      const cwd = process.cwd();
+      const dirs = listDirectories(cwd);
+      const text = dirs.length
+        ? `Additional dirs (${dirs.length}):\n` + dirs.map((d, i) => `${i + 1}. ${d}`).join("\n")
+        : "No additional directories.";
+      return { content: [{ type: "text", text }], details: { dirs, cwd } };
+    },
   });
 
   pi.on("resources_discover", async (event) => {

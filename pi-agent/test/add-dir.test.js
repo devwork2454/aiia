@@ -78,10 +78,14 @@ describe("Pi /add-dir", () => {
     const extra = tmp();
     const commands = {};
     const hooks = {};
+    const tools = {};
     const notes = [];
     const mockPi = {
       registerCommand: (name, opts) => {
         commands[name] = opts;
+      },
+      registerTool: (tool) => {
+        tools[tool.name] = tool;
       },
       on: (ev, fn) => {
         hooks[ev] = fn;
@@ -95,6 +99,7 @@ describe("Pi /add-dir", () => {
     assert.equal(typeof commands["list-dirs"]?.handler, "function");
     assert.equal(typeof hooks.resources_discover, "function");
     assert.equal(typeof hooks.before_agent_start, "function");
+    assert.equal(typeof tools.list_additional_dirs?.execute, "function");
 
     const ctx = {
       cwd,
