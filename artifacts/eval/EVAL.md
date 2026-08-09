@@ -1,25 +1,25 @@
-# EVAL — S1 Quality Gate
+# EVAL — S2 Trajectory Logger
 
 日期: 2026-08-09
-GOAL: 实现 S1 quality-gate（edit/write 后 lint/typecheck 失败回灌）并增强 verify。
+GOAL: 实现 S2 trajectory（agent_end/session_shutdown → trajectories.jsonl）并增强 verify。
 
 ## 维度评估
 
 | 维度 | 评级 | 说明 |
 |------|------|------|
-| D1 功能正确性 | OK | verify 0；坏 JS 回灌 `[AIIA Quality Gate]`+`isError:true`；干净文件 null |
-| D2 架构一致性 | OK | 官方 `tool_result` 可修改契约；ARCHITECTURE/PROGRESS S1 对齐 |
-| D3 成本/安全闸门 | OK | 超时 15s、输出截断 4KB；`QUALITY_GATE_DISABLED` 可关 |
-| D4 可维护性 | OK | 核心/extension 分离；下一刀 S2 trajectory |
-| D5 已知条件项 | OK | 默认语法级 `node --check`，未伪装全量 eslint |
+| D1 功能正确性 | OK | verify 0；trajectory 7/7；JSONL 双事件可测 |
+| D2 架构一致性 | OK | 对齐 L7「先采集」；优化器显式未做；总览图已改 |
+| D3 成本/安全闸门 | OK | 字段截断、轻量脱敏、DISABLED 开关；写失败不抛穿 agent |
+| D4 可维护性 | OK | 核心/extension 分离；路径可配；gitignore 忽略日志 |
+| D5 已知条件项 | OK | 未把 Metaprompt 优化器伪装为完成 |
 
 ## 本轮发现与处置
 
 | 问题 | 严重度 | 处置 |
 |------|--------|------|
-| `node --check` 放行残缺 `export default (` | Minor | 测试用明确语法错误 |
-| PROGRESS 曾被 GOAL 替换误截断 | Major（过程） | 已从 git 恢复并合并 S1 状态 |
-| ARCHITECTURE 4+ 仍列 quality-gate | Minor | 已改为 S2–S5 |
+| 全量消息入库体积风险 | Minor | 默认 8KB/字段截断 |
+| 脱敏非完整 secret-gate | Minor | 文档据实；关键形态覆盖 |
+| 真会话未断言落盘 | Minor | 单测覆盖；integration 仅断言加载 |
 
 ## 独立终审
 verifier: PASS（verify 0；五条硬验收过）。

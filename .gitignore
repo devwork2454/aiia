@@ -33,3 +33,6 @@ logs/
 .vscode/
 .pi/
 
+# AIIA L7 trajectory logs (local)
+.agent/trajectories.jsonl
+**/trajectories.jsonl

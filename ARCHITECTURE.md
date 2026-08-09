@@ -19,7 +19,7 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ L7 自进化层  Trajectory Logger → 离线 Metaprompt（人审 gate）    │  ← 延后
+│ L7 自进化层  Trajectory Logger（已采集）→ Metaprompt（人审 gate） │  ← 优化器延后
 ├──────────────────────────────────────────────────────────────┤
 │ L6 调度层    L0意图路由 / L1 Lead / L2 Worker(spawn_subagent)   │  ← 二期
 │              + Git Worktree 隔离                                │
@@ -119,12 +119,12 @@
 ## 7. L6 调度层 + L7 自进化层
 
 - **L6 分级调度（Phase 2 已落地）**：`subagent-worktree.js` 注册 `spawn_worktree_subagent` / `list` / `merge` / `cleanup`；为子任务 `git worktree add` 建隔离工作区，完成后 merge 回收。配套：`task-runner.js`（DAG）、`cron-scheduler.js`（定时）、`router.js`（模型分级）。
-- **L7 自进化（部分延后）**：`agent_end`/`session_shutdown` hook 落 `trajectories.jsonl`；离线 LLM-as-Judge 识别高频失败 → 生成 skill/规则候选 → **回归测试胜率达标 + 人审**后才写入 `.agents/skills`。**轨迹采集与优化器均仍待做**（见 PROGRESS S2）。
+- **L7 自进化**：轨迹采集已落地 `extensions/trajectory.js` → `<cwd>/.agent/trajectories.jsonl`（`agent_end`/`session_shutdown`）。离线 LLM-as-Judge / Metaprompt 优化器仍延后（人审 gate）。
 
 ## 8. 明确延后（非核心，按序解锁）
 
 1. ~~L4 `quality-gate`~~：已落地 `pi-agent/extensions/quality-gate.js`（edit/write → lint/typecheck 回灌）
-2. L7 轨迹采集 → Metaprompt 优化器（S2；优化器更后）
+2. ~~L7 轨迹采集~~ 已落地（S2）；Metaprompt 优化器仍延后
 3. L5 LSP + LanceDB Hybrid RAG（条件项：语料/规模门槛）
 4. L7.6 OS 键鼠 / 指纹浏览器（条件项：桌面环境 + HITL；见 CAPABILITIES）
 5. 接入层：飞书 adapter / Web channel（曾归档，按需重开）
@@ -156,12 +156,12 @@ aiia/
 | **2 模型分级** | `router.js` 四级路由 + 直连 provider 门禁 | router 单测 + Charon 不误改写 |
 | **3 真实会话** | `@earendil-works/pi-coding-agent` 真加载 extension | integration `INTEGRATION_OK` |
 | **4 Phase 2（已交付）** | P1–P7：搜索反代 / worktree / router / 记忆增强 / DAG / cron / sandbox | `.harness/verify.sh` 全绿 |
-| **4+ 余项** | 轨迹、LSP+RAG、L7.6、接入层 | 见 PROGRESS 切片 S2–S5，各自独立验收 |
+| **4+ 余项** | LSP+RAG、L7.6、接入层、L7 优化器 | 见 PROGRESS 切片 S3–S5，各自独立验收 |
 
 ---
 
 ### 一句话总结
-**Pi 当内核、控制面全用官方 Hook（安全/记忆/路由/沙箱等已落地）、记忆用 SQLite+艾宾浩斯+Lazy Skill；Phase 2（P1–P7）与 S1 quality-gate 已交付；轨迹自进化、向量 RAG、L7.6、飞书接入按 PROGRESS S2–S5 切片推进。**
+**Pi 当内核、控制面全用官方 Hook（安全/记忆/路由/沙箱等已落地）、记忆用 SQLite+艾宾浩斯+Lazy Skill；Phase 2（P1–P7）、S1 quality-gate、S2 轨迹采集已交付；向量 RAG、L7.6、飞书接入、L7 优化器按 PROGRESS S3–S5 切片推进。**
 
 > 能力扩展（机密/共享配置 · OS 键鼠 · 指纹浏览器）见 [docs/CAPABILITIES.md](docs/CAPABILITIES.md)（L5.5 核心 / L7.6 二期）。
 
