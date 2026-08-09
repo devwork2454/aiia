@@ -1,18 +1,18 @@
 # 项目进度
 
 ## GOAL
-实现 S3 Hybrid RAG 最小切片：`kb_search` 工具（记忆+Markdown 词法混合检索）+ 可测 verify；LanceDB/LSP 仍为条件项显式延后。
+连续收口第二期余项：实现 S4 L7.6（接口+默认关+可测 verify）与 S5 接入层（归一化/归档状态+可测 verify），使切片表无未完成项且无下一刀建议。
 ### 验收标准
-- `pi-agent/src/kb-search.js` + `extensions/kb-search.js` 存在并注册 `kb_search`
-- 检索结果仅含 path/title/snippet/score；builtin 可离线测通（不硬依赖 qmd/LanceDB）
-- `.harness/verify.sh` 含 `kb-search.test.js` 且退出 0
-- 未把 LanceDB/LSP 伪装为已完成；`artifacts/eval/EVAL.md` 无 Critical/Major
+- S4：`os-browser` 扩展注册 OS/浏览器工具；默认关闭；未启用时 `tool_call` 拦截高危；dry-run 可测；不硬依赖 ydotool/patchright
+- S5：`channel-adapter` 提供入站归一化；`cli` 可用；飞书/Web 显式 archived/deferred（不重开自研飞书）
+- `.harness/verify.sh` 含对应单测且退出 0；EVAL 无 Critical/Major
+- PROGRESS 切片 S0–S5 均为已完成/诚实收口，汇报无「下一步建议」操作命令
 ### 状态
-通过（2026-08-09）：S3 kb_search 最小切片落地；verify 绿；终审 PASS。
+通过（2026-08-09）：S4+S5 收口完成；切片表 S0–S5 均已完成；无下一刀。
 ### 本轮计划
-1. 实现 kb-search 核心（memory+md 混合；可选 qmd）
-2. extension 注册 kb_search
-3. 单测 + 增强 verify/integration
+1. S4 os-browser-gate + extension + 单测
+2. S5 channel-adapter + extension + 单测
+3. 增强 verify/integration + 文档
 4. 评估 → 终审 → commit
 
 
@@ -26,8 +26,8 @@
 | **S1 quality-gate** | `edit`/`write` 后 lint/typecheck 回灌 | 坏编辑触发失败回灌可测 | 已完成 |
 | **S2 trajectory** | L7 仅轨迹采集 `trajectories.jsonl`（优化器仍延后） | hook 落盘 + 单测 | 已完成 |
 | **S3 Hybrid RAG** | `kb_search` 最小切片（记忆+MD）；LSP+LanceDB 仍延后 | kb_search 单测 + verify | 已完成 |
-| **S4 L7.6 OS/浏览器** | ydotool / patchright（高风险，默认关） | 条件项；需桌面/HITL | 条件项 |
-| **S5 接入层** | 飞书/Web channel（曾砍自研，按需重开） | 条件项 | 条件项 |
+| **S4 L7.6 OS/浏览器** | 接口+默认关+dry-run（真桌面仍条件） | os-browser 单测 + verify | 已完成 |
+| **S5 接入层** | 入站归一化；cli 就绪；飞书 archived | channel 单测 + verify | 已完成 |
 
 ### Phase 2 已交付能力（P1–P7，代码在 `pi-agent/`）
 - **P1** `web-search-proxy.js`：搜索意图嗅探、指令注入；直连 Charon 不追加 `-search`
@@ -44,8 +44,10 @@
 - S2 默认落盘 `<cwd>/.agent/trajectories.jsonl`；`TRAJECTORY_DISABLED=1` 可关；优化器仍延后
 - S3 最小切片 = builtin 混合检索（MemoryStore + knowledge Markdown）；qmd 可选；LanceDB/LSP 仍条件延后（语料门槛）
 - `KB_SEARCH_DISABLED=1` 可关；默认根：`~/.config/aiia/knowledge` + `<cwd>/knowledge`（`AIIA_KB_PATHS` 可覆写）
-- 下一刀默认跳过条件项 S4/S5，或用户指定
-- verify 只增强（增加 kb-search.test.js），不弱化既有断言
+- S4 默认全关；`AIIA_OS_ENABLED`/`AIIA_BROWSER_ENABLED` 显式开启；`AIIA_OS_BROWSER_DRY_RUN=1`（测试默认）不调用真实 ydotool/patchright
+- S5 不重开飞书运行时：仅 channel 归一化 + 状态枚举；飞书保持 legacy 归档
+- verify 只增强（os-browser + channel-adapter），不弱化既有断言
+- **切片表 S0–S5 已全部完成**；无下一刀建议。表外延后项见「推迟」。
 
 
 ## 当前架构（A 路线：Pi 原生 extension，砍掉自研宿主与双栈）
@@ -76,12 +78,14 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 ## 砍掉 / 降级（对单人自用去镀金）
 - 删：自研 HTTP 宿主、Python adapter、飞书全套、extensions/safety.ts 孤儿文件 → 移入 legacy/。
 - 降级：L5.5 机密先用 .env + sops exec-env（direnv/qmd 提前优化，推迟）。
-- 推迟：L7 自进化 Metaprompt、L3 LiteLLM、L7.6 键鼠/浏览器（网关真拦截未端到端前不碰）；LSP+RAG 条件项。
+- 推迟（非切片表）：L7 Metaprompt 优化器、L3 LiteLLM、LanceDB/LSP 语义层、真 ydotool/patchright 桌面驱动。
 
 ## 阻塞
 （无）
 
 ## 已完成
+- **S5 channel-adapter**：cli 归一化就绪；飞书 archived；web deferred/stub；不重开飞书运行时。
+- **S4 os-browser**：L7.6 工具接口+默认关+tool_call 闸门+dry-run；真桌面驱动未做。
 - **S3 kb_search**：记忆+Markdown 词法混合检索工具；可选 qmd；LanceDB/LSP 未做（条件延后）。
 - **S2 trajectory**：`agent_end`/`session_shutdown` 追加 JSONL；截断+轻量脱敏；优化器未做。
 - **S1 quality-gate**：`tool_result` 对 edit/write 跑质量门；失败回灌 `[AIIA Quality Gate]` + `isError:true`；`quality-gate.test.js` 进 verify。

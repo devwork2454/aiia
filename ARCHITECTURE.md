@@ -127,8 +127,8 @@
 1. ~~L4 `quality-gate`~~：已落地 `pi-agent/extensions/quality-gate.js`（edit/write → lint/typecheck 回灌）
 2. ~~L7 轨迹采集~~ 已落地（S2）；Metaprompt 优化器仍延后
 3. ~~L5 `kb_search` 最小切片~~：已落地；LSP + LanceDB 语义层仍条件延后（语料/规模门槛）
-4. L7.6 OS 键鼠 / 指纹浏览器（条件项：桌面环境 + HITL；见 CAPABILITIES）
-5. 接入层：飞书 adapter / Web channel（曾归档，按需重开）
+4. ~~L7.6 接口闸门~~：已落地 `os-browser`（默认关+dry-run）；真 ydotool/patchright 桌面仍条件
+5. ~~接入层最小切片~~：`channel-adapter`（cli ready；飞书 archived；web deferred/stub）
 6. L3 LiteLLM 网关 sidecar
 7. 跨设备 attach + 后台完成推送（实验性 `pi-server` 稳定后；基础后台常驻已在 §3.1 落地）
 
@@ -146,7 +146,7 @@ aiia/
 ├── docs/                 # CAPABILITIES 等补充设计
 └── .harness/verify.sh    # 分层验收
 ```
-控制面 `quality-gate` / 轨迹 / `kb_search` 已落地（S1–S3）；余项见 S4–S5。
+控制面与二期切片 S0–S5 已收口；LanceDB/LSP 与 L7 优化器仍非本表项。
 
 ## 10. 分阶段路线（每阶段一个 verify 门）
 
@@ -157,12 +157,12 @@ aiia/
 | **2 模型分级** | `router.js` 四级路由 + 直连 provider 门禁 | router 单测 + Charon 不误改写 |
 | **3 真实会话** | `@earendil-works/pi-coding-agent` 真加载 extension | integration `INTEGRATION_OK` |
 | **4 Phase 2（已交付）** | P1–P7：搜索反代 / worktree / router / 记忆增强 / DAG / cron / sandbox | `.harness/verify.sh` 全绿 |
-| **4+ 余项** | LanceDB/LSP、L7.6、接入层、L7 优化器 | S3 最小 `kb_search` 已交；见 PROGRESS S4–S5 |
+| **4+ 余项** | LanceDB/LSP、L7 优化器（非切片表） | S0–S5 切片已收口；优化器/向量层仍延后 |
 
 ---
 
 ### 一句话总结
-**Pi 当内核、控制面全用官方 Hook（安全/记忆/路由/沙箱等已落地）、记忆用 SQLite+艾宾浩斯+Lazy Skill；Phase 2（P1–P7）、S1 quality-gate、S2 轨迹、S3 `kb_search` 最小切片已交付；LanceDB/LSP、L7.6、飞书接入、L7 优化器按 PROGRESS S4–S5 推进。**
+**Pi 当内核、控制面全用官方 Hook、记忆用 SQLite+艾宾浩斯；Phase 2（P1–P7）与 Harness 切片 S0–S5（含 L7.6 闸门与 channel 归一化）已交付；LanceDB/LSP 与 L7 Metaprompt 优化器仍显式延后。**
 
 > 能力扩展（机密/共享配置 · OS 键鼠 · 指纹浏览器）见 [docs/CAPABILITIES.md](docs/CAPABILITIES.md)（L5.5 核心 / L7.6 二期）。
 
