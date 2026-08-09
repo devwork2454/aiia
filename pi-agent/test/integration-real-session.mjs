@@ -40,6 +40,7 @@ const loader = new DefaultResourceLoader({
     join(extDir, "web-search-proxy.js"),
     join(extDir, "quality-gate.js"),
     join(extDir, "trajectory.js"),
+    join(extDir, "kb-search.js"),
   ],
   // Independent probe hook to detect that tool_call reaches extensions at all.
   extensionFactories: [
@@ -57,7 +58,7 @@ const loader = new DefaultResourceLoader({
 await loader.reload();
 
 // ASSERTION 1 (model-independent): our extensions actually loaded, without error.
-// Must be >= 10 (probe factory + 10 extensions including trajectory). An empty/broken load fails here,
+// Must be >= 11 (probe factory + 11 extensions including kb-search). An empty/broken load fails here,
 // so a skip branch below can no longer hide broken wiring.
 const res = loader.getExtensions();
 if (res.errors.length > 0) {
@@ -66,8 +67,8 @@ if (res.errors.length > 0) {
 }
 const loadedCount = res.extensions.length;
 console.error(`[integration] extensions loaded: ${loadedCount} [${res.extensions.map((e) => e.name || e.id || "?").join(", ")}]`);
-if (loadedCount < 10) {
-  console.error(`[integration] EXPECTED >=10 extensions, got ${loadedCount} — wiring broken`);
+if (loadedCount < 11) {
+  console.error(`[integration] EXPECTED >=11 extensions, got ${loadedCount} — wiring broken`);
   process.exit(1);
 }
 

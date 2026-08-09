@@ -1,17 +1,17 @@
 # 项目进度
 
 ## GOAL
-实现 S2 trajectory：`agent_end` / `session_shutdown` 落盘 `trajectories.jsonl`（仅采集，无优化器），并增强 `.harness/verify.sh`。
+实现 S3 Hybrid RAG 最小切片：`kb_search` 工具（记忆+Markdown 词法混合检索）+ 可测 verify；LanceDB/LSP 仍为条件项显式延后。
 ### 验收标准
-- `pi-agent/src/trajectory-store.js` + `extensions/trajectory.js` 存在
-- `agent_end` 与 `session_shutdown` 各追加一行合法 JSONL；含截断与轻量脱敏
-- `.harness/verify.sh` 含 `trajectory.test.js` 且退出 0
-- 未实现 Metaprompt 优化器（条件项显式延后）；`artifacts/eval/EVAL.md` 无 Critical/Major
+- `pi-agent/src/kb-search.js` + `extensions/kb-search.js` 存在并注册 `kb_search`
+- 检索结果仅含 path/title/snippet/score；builtin 可离线测通（不硬依赖 qmd/LanceDB）
+- `.harness/verify.sh` 含 `kb-search.test.js` 且退出 0
+- 未把 LanceDB/LSP 伪装为已完成；`artifacts/eval/EVAL.md` 无 Critical/Major
 ### 状态
-通过（2026-08-09）：S2 trajectory 落地；verify 绿；终审 PASS。
+通过（2026-08-09）：S3 kb_search 最小切片落地；verify 绿；终审 PASS。
 ### 本轮计划
-1. 实现 trajectory-store（路径/截断/脱敏/JSONL append）
-2. extension 挂 agent_end + session_shutdown
+1. 实现 kb-search 核心（memory+md 混合；可选 qmd）
+2. extension 注册 kb_search
 3. 单测 + 增强 verify/integration
 4. 评估 → 终审 → commit
 
@@ -25,7 +25,7 @@
 | **S0 交付收口** | P1–P7 已实现代码 + `scripts/link-pi-skills.sh` + `install.sh` Step 6 + 文档对齐 | verify 全绿；新机 skills 可链 | 已完成 |
 | **S1 quality-gate** | `edit`/`write` 后 lint/typecheck 回灌 | 坏编辑触发失败回灌可测 | 已完成 |
 | **S2 trajectory** | L7 仅轨迹采集 `trajectories.jsonl`（优化器仍延后） | hook 落盘 + 单测 | 已完成 |
-| **S3 Hybrid RAG** | LSP + LanceDB（记忆/文档上千才上） | 条件项；有语料门槛 | 条件项 |
+| **S3 Hybrid RAG** | `kb_search` 最小切片（记忆+MD）；LSP+LanceDB 仍延后 | kb_search 单测 + verify | 已完成 |
 | **S4 L7.6 OS/浏览器** | ydotool / patchright（高风险，默认关） | 条件项；需桌面/HITL | 条件项 |
 | **S5 接入层** | 飞书/Web channel（曾砍自研，按需重开） | 条件项 | 条件项 |
 
@@ -42,8 +42,10 @@
 - 第二期「开发交付」= **P1–P7 + S0 打包收口**；ARCHITECTURE「4+ 二期」余项拆成 S1–S5，不在本 GOAL 内实现
 - S1 默认 `node --check`（JS）；可选 tsc/py_compile；`QUALITY_GATE_DISABLED=1` 可关
 - S2 默认落盘 `<cwd>/.agent/trajectories.jsonl`；`TRAJECTORY_DISABLED=1` 可关；优化器仍延后
-- 下一刀默认跳过条件项，或用户指定 S3/S4/S5
-- verify 只增强（增加 link-pi-skills 检查），不弱化既有断言
+- S3 最小切片 = builtin 混合检索（MemoryStore + knowledge Markdown）；qmd 可选；LanceDB/LSP 仍条件延后（语料门槛）
+- `KB_SEARCH_DISABLED=1` 可关；默认根：`~/.config/aiia/knowledge` + `<cwd>/knowledge`（`AIIA_KB_PATHS` 可覆写）
+- 下一刀默认跳过条件项 S4/S5，或用户指定
+- verify 只增强（增加 kb-search.test.js），不弱化既有断言
 
 
 ## 当前架构（A 路线：Pi 原生 extension，砍掉自研宿主与双栈）
@@ -80,6 +82,7 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 （无）
 
 ## 已完成
+- **S3 kb_search**：记忆+Markdown 词法混合检索工具；可选 qmd；LanceDB/LSP 未做（条件延后）。
 - **S2 trajectory**：`agent_end`/`session_shutdown` 追加 JSONL；截断+轻量脱敏；优化器未做。
 - **S1 quality-gate**：`tool_result` 对 edit/write 跑质量门；失败回灌 `[AIIA Quality Gate]` + `isError:true`；`quality-gate.test.js` 进 verify。
 - **Pi 默认集成 auto-harness（新机可用）**：新增 `scripts/link-pi-skills.sh`，`install.sh` Step 6 幂等链接到 `~/.pi/agent/skills`；本机已链接。验证：`link-pi-skills.test.sh` + `.harness/verify.sh` 绿。
