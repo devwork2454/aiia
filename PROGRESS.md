@@ -1,5 +1,20 @@
 # 项目进度
 
+## GOAL
+扫描并清除 Pi/AIIA 扩展中仍会破坏 Charon→xAI（及同类直连 provider）正常请求的 bug；verify 绿且无 Critical/Major。
+### 验收标准
+- `.harness/verify.sh` 退出 0
+- 直连 Charon 路径：model 不会被改成层级别名或 `*-search`
+- 多维评估无 Critical/Major，写入 `artifacts/eval/EVAL.md`
+- 发现的可修 Major 在本轮预算内修掉或记为阻塞
+### 状态
+通过（2026-08-09）：verify 绿，EVAL 无 Critical/Major。
+### 本轮计划
+1. 静态扫描 extensions 对 model/baseUrl 的改写与过宽关键词
+2. 模拟 Charon 请求链路（router + web-search）
+3. 修 Critical/Major → verify → 评估停机
+
+
 ## 当前架构（A 路线：Pi 原生 extension，砍掉自研宿主与双栈）
 
 AIIA = **Pi harness + 一组真正被 Pi 加载的 Node extension**。不再自研 HTTP 宿主 / Python 双栈 / 飞书。
@@ -40,6 +55,7 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
    - 实现 `spawn_subagent` 工具，利用 `git worktree` 为子任务创建物理隔离的临时代码空间，并发执行大重构或多模块开发。
 
 ## 已完成
+- **修复 toolResult 误触发 web-search**：意图嗅探改为只看最近 user 消息，避免 bash 输出中的 `find` 把 Charon 打成 `grok-*-search`（`/usa` 回归）。verify 绿；`artifacts/eval/EVAL.md` 无 Critical/Major。
 - **修复 Charon 搜索意图被改成 grok-*-search**：`web-search-proxy.js` 对直连 provider 只注入提示词、不追加 `-search` 模型后缀；本地反代行为不变。`agy-bridge` 对 EADDRINUSE 容错。
 - **subagent-worktree 测试隔离**：单测改用临时 git 仓，避免 merge 污染主仓；`merge --abort` 容错。验证：`.harness/verify.sh` 绿，独立终审 PASS。
 - **修复 Charon→xAI Grok 被 router 劫持**：`router.js` 默认仅对 `local-proxy` / `127.0.0.1:4000` / 层级别名（`low|medium|high|reasoning`）改写 model；直连 Charon/DeepSeek 等保留原 model（如 `grok-4.5`）。可用 `ROUTER_ENABLED` / `ROUTER_FORCE_MODEL` 覆盖。验证：router 单测 11/11 + `.harness/verify.sh` 绿。

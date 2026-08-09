@@ -5,6 +5,7 @@ import webSearchProxyExtension, {
   isSearchIntent,
   injectSearchDirective,
   shouldRewriteSearchModel,
+  extractSearchIntentText,
 } from '../extensions/web-search-proxy.js';
 
 describe('Phase 2 P1: Web Search Proxy & AGY Bridge Tests', () => {
@@ -118,5 +119,41 @@ describe('Phase 2 P1: Web Search Proxy & AGY Bridge Tests', () => {
 
     await handler({ payload }, ctx);
     assert.equal(payload.model, 'high-search');
+  });
+
+  test('toolResult containing find does not trigger search rewrite (regression /usa)', () => {
+    const messages = [
+      { role: 'user', content: '/usa' },
+      { role: 'assistant', content: 'checking' },
+      {
+        role: 'toolResult',
+        content: 'drwx skills\n-rw- find-something.txt\nfind /tmp -name x',
+      },
+    ];
+    assert.equal(extractSearchIntentText(messages), '/usa');
+    assert.equal(isSearchIntent(extractSearchIntentText(messages)), false);
+  });
+
+  test('bare find in tool output must not rewrite Charon model after tool turn', async () => {
+    let handler;
+    const mockPi = {
+      on: (event, fn) => { if (event === 'before_provider_request') handler = fn; }
+    };
+    process.env.AIIA_SKIP_AGY_BRIDGE = '1';
+    webSearchProxyExtension(mockPi);
+
+    const payload = {
+      model: 'grok-4.5',
+      baseUrl: 'https://api.x.ai/v1',
+      messages: [
+        { role: 'user', content: '/usa' },
+        { role: 'assistant', content: [{ type: 'toolCall', name: 'bash' }] },
+        { role: 'toolResult', content: 'ls output mentioning find and skills' },
+      ],
+    };
+    const ctx = { model: { id: 'grok-4.5', provider: 'charon', baseUrl: 'https://api.x.ai/v1' } };
+    await handler({ payload }, ctx);
+    assert.equal(payload.model, 'grok-4.5');
+    assert.equal(String(payload.messages[2].content).includes('[Web Search Active'), false);
   });
 });

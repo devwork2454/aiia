@@ -1,13 +1,15 @@
 /**
  * AIIA Web Search Proxy Extension (Phase 2 P1)
- * 1. 意图嗅探：自动识别 Prompt 中的搜索/联网关键词 (@web, "最新", "搜索", "实时", "全网", "排查", "查一下", "find").
+ * 1. 意图嗅探：只检查最近一条 **user** 消息中的搜索/联网关键词
+ *    (@web, "最新", "搜索", "实时", "全网", "排查", "查一下", "find")。
+ *    绝不扫描 toolResult（否则 bash 输出里的 find 会误触发，见 /usa 回归）。
  * 2. 动态路由适配：
  *    - 适配本地反代 (LiteLLM / CPA / cursor-openai-api / AGY Bridge)。
  *    - 当匹配到搜索意图时：
  *      a. 若指定了 SEARCH_MODEL_OVERRIDE 环境变量，重定向至该搜索模型 (如 high-search / gemini-search)。
  *      b. 若指定了 SEARCH_PROXY_URL 环境变量，重定向 req.baseUrl。
- *      c. 在 prompt 中自动结构化注入 [Web Search Active] 增强指令（支持 string 与 content 数组格式）。
- *    - 直连 provider（Charon→xAI 等）只注入提示词，不把 model 改成 `*-search`（上游无此模型）。
+ *      c. 在最近 user prompt 中注入 [Web Search Active] 增强指令。
+ *    - 直连 provider（Charon→xAI 等）只注入提示词，不把 model 改成 `*-search`。
  * 3. 自动维持后台 AGY API Bridge 服务 (127.0.0.1:8788) 作为无缝兜底。
  */
 
@@ -22,18 +24,48 @@ export function isSearchIntent(text = '') {
   return SEARCH_KEYWORDS.some(kw => text.includes(kw));
 }
 
-export function injectSearchDirective(messages) {
-  if (!Array.isArray(messages) || messages.length === 0) return false;
-  const lastMsg = messages[messages.length - 1];
-  if (!lastMsg) return false;
+function messageText(msg) {
+  if (!msg) return '';
+  if (typeof msg.content === 'string') return msg.content;
+  if (Array.isArray(msg.content)) {
+    return msg.content.map(c => c.text || c.content || '').join(' ');
+  }
+  return '';
+}
 
-  if (typeof lastMsg.content === 'string') {
-    if (!lastMsg.content.includes('[Web Search Active')) {
-      lastMsg.content = `[Web Search Active: 请结合全网最新知识与实时检索信息回答]\n${lastMsg.content}`;
+/**
+ * 仅取最近一条 user 消息文本，忽略 assistant / toolResult。
+ */
+export function extractSearchIntentText(messages = []) {
+  if (!Array.isArray(messages) || messages.length === 0) return '';
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (msg?.role === 'user') {
+      return messageText(msg);
+    }
+  }
+  return '';
+}
+
+function findLastUserMessage(messages = []) {
+  if (!Array.isArray(messages)) return null;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i]?.role === 'user') return messages[i];
+  }
+  return null;
+}
+
+export function injectSearchDirective(messages) {
+  const lastUser = findLastUserMessage(messages);
+  if (!lastUser) return false;
+
+  if (typeof lastUser.content === 'string') {
+    if (!lastUser.content.includes('[Web Search Active')) {
+      lastUser.content = `[Web Search Active: 请结合全网最新知识与实时检索信息回答]\n${lastUser.content}`;
       return true;
     }
-  } else if (Array.isArray(lastMsg.content)) {
-    const textObj = lastMsg.content.find(c => c.type === 'text' || typeof c.text === 'string');
+  } else if (Array.isArray(lastUser.content)) {
+    const textObj = lastUser.content.find(c => c.type === 'text' || typeof c.text === 'string');
     if (textObj && !textObj.text.includes('[Web Search Active')) {
       textObj.text = `[Web Search Active: 请结合全网最新知识与实时检索信息回答]\n${textObj.text}`;
       return true;
@@ -73,24 +105,14 @@ export default function webSearchProxyExtension(pi) {
     }
   }
 
-  // 监听 before_provider_request 钩子
   pi.on('before_provider_request', async (event, ctx) => {
     const req = event?.req || event?.payload;
     if (!req || !req.messages || !Array.isArray(req.messages)) return;
 
-    const lastMsg = req.messages[req.messages.length - 1];
-    let text = '';
-    if (typeof lastMsg?.content === 'string') {
-      text = lastMsg.content;
-    } else if (Array.isArray(lastMsg?.content)) {
-      text = lastMsg.content.map(c => c.text || c.content || '').join(' ');
-    }
-
+    const text = extractSearchIntentText(req.messages);
     if (isSearchIntent(text)) {
-      // 1. 结构化注入提示词（直连/反代都可）
       injectSearchDirective(req.messages);
 
-      // 2. 仅本地反代或显式 env 时改写 model / baseUrl
       if (shouldRewriteSearchModel(req, ctx, process.env)) {
         const targetModel = process.env.SEARCH_MODEL_OVERRIDE || (req.model ? `${req.model}-search` : 'high-search');
         req.model = targetModel;
@@ -98,7 +120,6 @@ export default function webSearchProxyExtension(pi) {
         if (process.env.SEARCH_PROXY_URL) {
           req.baseUrl = process.env.SEARCH_PROXY_URL;
         } else if (req.baseUrl && (req.baseUrl.includes('4000') || req.baseUrl.includes('litellm'))) {
-          // LiteLLM / CPA 反代通道适配
           req.baseUrl = req.baseUrl;
         }
       }
