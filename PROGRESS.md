@@ -55,7 +55,10 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 - **自动化安装与 Private 仓库上线**：
   - 编写并测试通过 `install.sh` 新系统一键全自动安装脚本。
   - 创建 GitHub 私有仓库 `devwork2454/aiia` 并成功提交推送全部最新代码。
-- **深度安全与核心逻辑重构 (Security & Logic Deep Fixes)**：
-  - **安全防线补漏**：修复 `sync.js` 目录恢复的 `Zip Slip` 穿越漏洞；将本地校验哈希从无盐 `SHA-256` 升级至加盐 `PBKDF2`；修复 `secret-gate.js` 中因 JSON 转义导致脱敏失效的盲区；强化 `policy.js` 拦截正则防注入绕过。
-  - **逻辑架构夯实**：为 `subagent-worktree.js` 补齐了真实的子进程拉起逻辑及并发冲突处理；彻底解决 `memory-store.js` 频繁交互导致艾宾浩斯衰减死锁与全表扫描 OOM 隐患；修正 `memory.js` 的大模型 System 注入规范与 `router.js` 的全局多模态路由检测。
+- **Phase 2 P1 联网搜索反代深度适配 (`web-search-proxy.js`)**：
+  - 支持 Prompt 意图嗅探，覆盖 `@web`、`搜索`、`最新`、`实时`、`排查`、`find` 等多语言搜索关键字。
+  - 增强 `before_provider_request` 钩子，支持结构化注入 `[Web Search Active]` 增强指令（兼容 string 与 content 数组多模态格式）。
+  - 支持通过环境变量 `SEARCH_MODEL_OVERRIDE` 与 `SEARCH_PROXY_URL` 动态路由重定向反代（如 `litellm-cpa` / `cursor-openai-api`），无缝复用反代自带的联网搜索额度。
+  - 自动化单元与 Hook 集成测试 100% 通过（20/20 passed）。
+
 
