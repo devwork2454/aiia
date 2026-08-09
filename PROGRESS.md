@@ -55,10 +55,12 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 - **自动化安装与 Private 仓库上线**：
   - 编写并测试通过 `install.sh` 新系统一键全自动安装脚本。
   - 创建 GitHub 私有仓库 `devwork2454/aiia` 并成功提交推送全部最新代码。
-- **Phase 2 P2 L6 级多智能体 Worktree 并发编排 (`subagent-worktree.js`)**：
-  - 注册 4 大 Worktree 编排工具：`spawn_worktree_subagent` (拉起隔离工作区与后台进程), `list_worktree_subagents` (扫描监控活动/历史工作区 PID、任务与日志), `merge_worktree_subagent` (自动 WIP 提交、预检与安全合并至主分支), `cleanup_worktree_subagent` (强行回收/清理工作区与分支)。
-  - 完美解决 `.gitignore` 穿越与多工作区路径检测问题。
-  - 单元与并发编排测试 100% 通过（25/25 passed）。
+- **Phase 2 P3 模型成本与能力动态路由评估器 (`router.js`)**：
+  - 核心评估逻辑：依据 Prompt 复杂度、多模态 (Vision)、上下文 Token 长度及关键词意图，分级分流请求至 `low` / `medium` / `high` / `reasoning`。
+  - 支持 `ROUTER_FORCE_MODEL` 强行锁定与 `ROUTER_LOW_THRESHOLD` / `ROUTER_MEDIUM_THRESHOLD` 环境变量调整。
+  - 导出独立的 `evaluateModelRoute(payload, env)` 无依赖评估函数与 Pi Hook 结合。
+  - 自动化单元测试与闭环验证 100% 通过（31/31 passed）。
+
 
 
 
