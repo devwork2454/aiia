@@ -40,6 +40,12 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
    - 实现 `spawn_subagent` 工具，利用 `git worktree` 为子任务创建物理隔离的临时代码空间，并发执行大重构或多模块开发。
 
 ## 已完成
+- **优化 auto-harness skill 输出展现 (Output Style Guidelines)**：增加 4 阶段进度面板、专家视角对比矩阵、决策卡片与测试驱动闭环规范。
+- **开发 B 项：机密零知识注入与敏感词脱敏网关 (`secret-gate.js`)**：
+  - 在 `before_agent_start` 钩子中仅向 Agent 注入可用的 Secret Key 变量名清单。
+  - 在 `tool_result` 阶段执行动态脱敏拦截，自动打码替换为 `***REDACTED:KEY_NAME***`。
+- **开发 C 项：L6 级多智能体 Git Worktree 并发协作 (`subagent-worktree.js`)**：
+  - 注册 `spawn_worktree_subagent` 工具，支持基于 `git worktree` 自动创建物理隔离子工作区。
 - **开发 router.js 静态规则路由**：将简单请求分发给便宜模型以降低 API 成本。
 - **开发 L5.5 机密与多端配置同步层 (`sync.js` & `vault.js`)**：
   - 实现 GitHub Device Flow 点链接授权登录 (`/sync login`)。
@@ -49,4 +55,5 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 - **自动化安装与 Private 仓库上线**：
   - 编写并测试通过 `install.sh` 新系统一键全自动安装脚本。
   - 创建 GitHub 私有仓库 `devwork2454/aiia` 并成功提交推送全部最新代码。
+
 
