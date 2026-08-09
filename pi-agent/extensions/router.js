@@ -3,10 +3,14 @@
  *
  * 依据 Prompt 复杂度、多模态 (Vision)、上下文 Token 长度及关键词意图，
  * 智能分流请求至 low / medium / high / reasoning 模型层级。
+ *
+ * 默认仅对本地分层反代（local-proxy / 127.0.0.1:4000）或已是层级别名的模型改写；
+ * 直连 provider（如 Charon→xAI 的 grok-4.5、DeepSeek）保持原 model，避免把别名打到上游 API。
  */
 
 const COMPLEX_KEYWORDS = ['refactor', 'architecture', 'debug', 'redesign', '重构', '架构', '报错', '死锁', '并发', '漏洞', '性能优化'];
 const REASONING_KEYWORDS = ['证明', '深度推导', '数学建模', 'prover', 'formal verification', 'benchmark'];
+const TIER_MODELS = new Set(['low', 'medium', 'high', 'reasoning']);
 
 /**
  * 根据 payload 消息特征计算目标模型路由
@@ -75,18 +79,64 @@ export function evaluateModelRoute(payload = {}, env = process.env) {
   return 'low';
 }
 
+function envFlag(value) {
+  if (value == null) return null;
+  const v = String(value).trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(v)) return true;
+  if (['0', 'false', 'no', 'off'].includes(v)) return false;
+  return null;
+}
+
+/**
+ * 是否应对当前会话改写 payload.model。
+ * @param {{ model?: { id?: string, provider?: string, baseUrl?: string } }} ctx
+ * @param {NodeJS.ProcessEnv | Record<string, string | undefined>} env
+ */
+export function shouldRewriteModel(ctx = {}, env = process.env) {
+  if (env.ROUTER_FORCE_MODEL) {
+    return true;
+  }
+
+  const enabled = envFlag(env.ROUTER_ENABLED);
+  if (enabled === false) {
+    return false;
+  }
+  if (enabled === true) {
+    return true;
+  }
+
+  const model = ctx.model || {};
+  const provider = String(model.provider || '');
+  const baseUrl = String(model.baseUrl || '');
+  const modelId = String(model.id || '');
+
+  if (provider === 'local-proxy') {
+    return true;
+  }
+  if (/127\.0\.0\.1:4000|localhost:4000/.test(baseUrl)) {
+    return true;
+  }
+  if (TIER_MODELS.has(modelId)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * 若应改写则返回新 payload；否则返回 undefined（让 Pi 保持原请求）。
+ */
+export function resolveRoutedPayload(payload = {}, ctx = {}, env = process.env) {
+  if (!shouldRewriteModel(ctx, env)) {
+    return undefined;
+  }
+  const targetModel = evaluateModelRoute(payload, env);
+  return { ...payload, model: targetModel };
+}
+
 export default function routerExtension(pi) {
   pi.on('before_provider_request', (event, ctx) => {
-    const req = event?.req || event?.payload || {};
-    const targetModel = evaluateModelRoute(req);
-
-    if (event?.req) {
-      event.req.model = targetModel;
-    }
-    if (event?.payload) {
-      event.payload.model = targetModel;
-    }
-
-    return { ...req, model: targetModel };
+    const payload = event?.payload ?? event?.req ?? {};
+    return resolveRoutedPayload(payload, ctx, process.env);
   });
 }

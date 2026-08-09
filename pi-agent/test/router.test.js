@@ -1,6 +1,10 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluateModelRoute } from '../extensions/router.js';
+import {
+  evaluateModelRoute,
+  shouldRewriteModel,
+  resolveRoutedPayload,
+} from '../extensions/router.js';
 
 describe('Phase 2 P3: Dynamic Model Router Evaluator Tests', () => {
   test('Routes short simple query to low cost model', () => {
@@ -56,5 +60,75 @@ describe('Phase 2 P3: Dynamic Model Router Evaluator Tests', () => {
     };
     const env = { ROUTER_FORCE_MODEL: 'custom-locked-model' };
     assert.equal(evaluateModelRoute(payload, env), 'custom-locked-model');
+  });
+});
+
+describe('Router rewrite gate (direct providers vs local proxy)', () => {
+  test('Does not rewrite Charon/xAI direct provider models like grok-4.5', () => {
+    const ctx = {
+      model: {
+        id: 'grok-4.5',
+        provider: 'charon',
+        baseUrl: 'https://api.x.ai/v1',
+      },
+    };
+    assert.equal(shouldRewriteModel(ctx, {}), false);
+
+    const payload = { model: 'grok-4.5', messages: [{ role: 'user', content: 'hi' }] };
+    assert.equal(resolveRoutedPayload(payload, ctx, {}), undefined);
+  });
+
+  test('Does not rewrite DeepSeek direct models', () => {
+    const ctx = {
+      model: {
+        id: 'deepseek-v4-pro',
+        provider: 'deepseek',
+        baseUrl: 'https://api.deepseek.com',
+      },
+    };
+    assert.equal(shouldRewriteModel(ctx, {}), false);
+  });
+
+  test('Rewrites local-proxy tier models', () => {
+    const ctx = {
+      model: {
+        id: 'high',
+        provider: 'local-proxy',
+        baseUrl: 'http://127.0.0.1:4000/v1',
+      },
+    };
+    assert.equal(shouldRewriteModel(ctx, {}), true);
+
+    const payload = {
+      model: 'high',
+      messages: [{ role: 'user', content: '你好' }],
+    };
+    const routed = resolveRoutedPayload(payload, ctx, {});
+    assert.equal(routed.model, 'low');
+  });
+
+  test('ROUTER_FORCE_MODEL still rewrites even on direct providers', () => {
+    const ctx = {
+      model: {
+        id: 'grok-4.5',
+        provider: 'charon',
+        baseUrl: 'https://api.x.ai/v1',
+      },
+    };
+    const env = { ROUTER_FORCE_MODEL: 'grok-4.5' };
+    assert.equal(shouldRewriteModel(ctx, env), true);
+    const payload = { model: 'something-else', messages: [{ role: 'user', content: 'x' }] };
+    assert.equal(resolveRoutedPayload(payload, ctx, env).model, 'grok-4.5');
+  });
+
+  test('ROUTER_ENABLED=true forces rewrite; false disables even for local-proxy', () => {
+    const localCtx = {
+      model: { id: 'high', provider: 'local-proxy', baseUrl: 'http://127.0.0.1:4000/v1' },
+    };
+    const charonCtx = {
+      model: { id: 'grok-4.5', provider: 'charon', baseUrl: 'https://api.x.ai/v1' },
+    };
+    assert.equal(shouldRewriteModel(charonCtx, { ROUTER_ENABLED: 'true' }), true);
+    assert.equal(shouldRewriteModel(localCtx, { ROUTER_ENABLED: 'false' }), false);
   });
 });
