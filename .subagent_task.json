@@ -1,8 +1,8 @@
 {
   "task": "开发单元测试示例组件",
   "branch": "test_feat_subagent_orch",
-  "pid": 713810,
-  "spawnedAt": "2026-08-09T10:05:03.773Z",
+  "pid": 861904,
+  "spawnedAt": "2026-08-09T12:01:13.152Z",
   "status": "running",
   "worktreePath": "/home/zakza/project/aiia/.agent/worktrees/test_feat_subagent_orch"
 }
