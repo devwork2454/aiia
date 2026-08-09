@@ -1,8 +1,8 @@
 {
-  "task": "debug",
-  "branch": "debug_branch",
-  "pid": 613130,
-  "spawnedAt": "2026-08-09T08:35:08.090Z",
+  "task": "开发单元测试示例组件",
+  "branch": "test_feat_subagent_orch",
+  "pid": 613371,
+  "spawnedAt": "2026-08-09T08:35:15.764Z",
   "status": "running",
-  "worktreePath": "/home/zakza/project/aiia/.agent/worktrees/debug_branch"
+  "worktreePath": "/home/zakza/project/aiia/pi-agent/.agent/worktrees/test_feat_subagent_orch"
 }
