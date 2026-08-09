@@ -1,18 +1,47 @@
 # 项目进度
 
 ## GOAL
-扫描并清除 Pi/AIIA 扩展中仍会破坏 Charon→xAI（及同类直连 provider）正常请求的 bug；verify 绿且无 Critical/Major。
+用 harness 闭环完成第二期（Phase 2 P1–P7）开发交付收口：可复现安装、文档与阶段表一致、verify 绿、评估无 Critical/Major，并给出后续二期余项的可复制切片命令。
 ### 验收标准
-- `.harness/verify.sh` 退出 0
-- 直连 Charon 路径：model 不会被改成层级别名或 `*-search`
-- 多维评估无 Critical/Major，写入 `artifacts/eval/EVAL.md`
-- 发现的可修 Major 在本轮预算内修掉或记为阻塞
+- `.harness/verify.sh` 退出 0（含 Phase 2 单测 + link-pi-skills + 真会话 wiring）
+- `install.sh` 新机路径能幂等链接默认 Pi skills（auto-harness）
+- `PROGRESS.md` / `ARCHITECTURE.md` 阶段表与真实代码一致，不把延后项伪装为已交付
+- 写入第二期 harness 切片清单（已交付 / 下一刀）与 `artifacts/eval/EVAL.md`，无 Critical/Major
 ### 状态
-通过（2026-08-09）：verify 绿，EVAL 无 Critical/Major。
+通过（2026-08-09）：S0 交付收口完成；verify 绿；EVAL 无 Critical/Major。
 ### 本轮计划
-1. 静态扫描 extensions 对 model/baseUrl 的改写与过宽关键词
-2. 模拟 Charon 请求链路（router + web-search）
-3. 修 Critical/Major → verify → 评估停机
+1. 锚定第二期定义（P1–P7 已实现）与交付缺口（安装打包 + 文档对齐）
+2. 写入 harness 切片清单（S0 收口 → S1+ 余项）
+3. 同步 ARCHITECTURE 阶段表；保留未提交的 install/scripts/verify 增强
+4. 跑 verify → 多维评估 → 停机并给出下一刀命令
+
+
+## 第二期 Harness 交付切片（机器可判定）
+
+> 约定：每一刀 = 规格写入 PROGRESS → 增强/不弱化 `verify.sh` → 实现 → `bash .harness/verify.sh` → 独立终审 → commit。
+
+| 切片 | 内容 | verify 门 | 状态 |
+|---|---|---|---|
+| **S0 交付收口** | P1–P7 已实现代码 + `scripts/link-pi-skills.sh` + `install.sh` Step 6 + 文档对齐 | verify 全绿；新机 skills 可链 | **本 GOAL** |
+| **S1 quality-gate** | `edit` 后 lint/typecheck 回灌（ARCHITECTURE 待建项） | 坏编辑触发失败回灌可测 | 下一刀（推荐） |
+| **S2 trajectory** | L7 仅轨迹采集 `trajectories.jsonl`（优化器仍延后） | hook 落盘 + 单测 | 待定 |
+| **S3 Hybrid RAG** | LSP + LanceDB（记忆/文档上千才上） | 条件项；有语料门槛 | 条件项 |
+| **S4 L7.6 OS/浏览器** | ydotool / patchright（高风险，默认关） | 条件项；需桌面/HITL | 条件项 |
+| **S5 接入层** | 飞书/Web channel（曾砍自研，按需重开） | 条件项 | 条件项 |
+
+### Phase 2 已交付能力（P1–P7，代码在 `pi-agent/`）
+- **P1** `web-search-proxy.js`：搜索意图嗅探、指令注入；直连 Charon 不追加 `-search`
+- **P2** `subagent-worktree.js`：spawn/list/merge/cleanup worktree 子代理
+- **P3** `router.js`：low/medium/high/reasoning；直连 provider 默认不改写 model
+- **P4** `memory-store.js` / `memory.js`：艾宾浩斯 + 关联度 + `/memory search`
+- **P5** `task-runner.js`：DAG 拓扑、重试、断点续传
+- **P6** `cron-scheduler.js`：5 段 cron + 持久化工具
+- **P7** `sandbox-policy.js`：路径/高危 shell/白名单
+
+### 代定决策
+- 第二期「开发交付」= **P1–P7 + S0 打包收口**；ARCHITECTURE「4+ 二期」余项拆成 S1–S5，不在本 GOAL 内实现
+- 下一刀默认 **S1 quality-gate**（可逆、无桌面依赖、补齐控制面缺口）
+- verify 只增强（增加 link-pi-skills 检查），不弱化既有断言
 
 
 ## 当前架构（A 路线：Pi 原生 extension，砍掉自研宿主与双栈）
@@ -43,18 +72,13 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 ## 砍掉 / 降级（对单人自用去镀金）
 - 删：自研 HTTP 宿主、Python adapter、飞书全套、extensions/safety.ts 孤儿文件 → 移入 legacy/。
 - 降级：L5.5 机密先用 .env + sops exec-env（direnv/qmd 提前优化，推迟）。
-- 推迟：L6 subagent/worktree、L7 自进化 Metaprompt、L3 LiteLLM、L7.6 键鼠/浏览器（网关真拦截未端到端前不碰）。
+- 推迟：L7 自进化 Metaprompt、L3 LiteLLM、L7.6 键鼠/浏览器（网关真拦截未端到端前不碰）；LSP+RAG 条件项。
 
-## 下一步迭代计划候选
-1. **反代 Bridge 原生联网搜索触发 (Web Search Proxy)**：
-   - 调研并适配本地反代 Bridge (如 `cursor-openai-api` / `litellm-cpa`) 的原生搜索触发机制（例如自动注入 `@web` 标识或切换 `-search` 模型），直接复用反代自带的搜索额度。
-2. **机密零知识注入与敏感词全局脱敏网关 (Redaction Gate)**：
-   - 在 `before_agent_start` 钩子中，仅向 Agent 注入可用的 Secret 键名清单（不给明文值）。
-   - 在 `tool_result` 及 SQLite 消息存盘前，执行内存级敏感词正则打码（`***REDACTED***`），防止 API Key 泄露进日志。
-3. **L6 级多智能体 Worktree 并发协作 (Subagent Worktree)**：
-   - 实现 `spawn_subagent` 工具，利用 `git worktree` 为子任务创建物理隔离的临时代码空间，并发执行大重构或多模块开发。
+## 阻塞
+（无）
 
 ## 已完成
+- **Pi 默认集成 auto-harness（新机可用）**：新增 `scripts/link-pi-skills.sh`，`install.sh` Step 6 幂等链接到 `~/.pi/agent/skills`；本机已链接。验证：`link-pi-skills.test.sh` + `.harness/verify.sh` 绿。
 - **修复 toolResult 误触发 web-search**：意图嗅探改为只看最近 user 消息，避免 bash 输出中的 `find` 把 Charon 打成 `grok-*-search`（`/usa` 回归）。verify 绿；`artifacts/eval/EVAL.md` 无 Critical/Major。
 - **修复 Charon 搜索意图被改成 grok-*-search**：`web-search-proxy.js` 对直连 provider 只注入提示词、不追加 `-search` 模型后缀；本地反代行为不变。`agy-bridge` 对 EADDRINUSE 容错。
 - **subagent-worktree 测试隔离**：单测改用临时 git 仓，避免 merge 污染主仓；`merge --abort` 容错。验证：`.harness/verify.sh` 绿，独立终审 PASS。
@@ -82,11 +106,4 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
   - **P5 任务依赖 DAG 调度器 (`task-runner.js`)**：`TaskDAGRunner` 拓扑依赖计算、入度队列调度、失败重试与 `.agent/dag_runner` 断点续传存盘。
   - **P6 后台 Cron 定时任务系统 (`cron-scheduler.js`)**：5 段式 Cron 表达式匹配引擎、到期判定轮询与状态持久化 (`register_cron_task` / `list_cron_tasks` / `remove_cron_task`)。
   - **P7 MCP & Skill 沙箱安全策略 (`sandbox-policy.js`)**：资源访问控制、敏感路径屏蔽、二重危险 Shell 拦截与白名单模式 (`set_sandbox_policy` / `get_sandbox_policy_status`)。
-  - **闭环质量**：全量 43 个单元与端到端测试 100% 绿色通过（43/43 passed），全套代码已同步至私有仓库。
-
-
-
-
-
-
-
+  - **闭环质量**：全量单元与端到端测试经 `.harness/verify.sh` 绿色通过。

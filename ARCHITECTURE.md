@@ -48,6 +48,7 @@
 - **内置工具**：`read / bash / edit / write`（默认），可选 `grep / find / ls`。自定义工具与之合并。
 - **会话能力**：消息树、`compact()` 压缩、`steer()/followUp()` 流中插话、`navigateTree()` 分支导航——**直接复用**，不重造。
 - **资源发现**：`DefaultResourceLoader` 从 `~/.pi/agent/extensions|skills` 与项目 `.pi/extensions|skills`、`.agents/skills` 自动加载。AIIA 的扩展就落在这些目录。
+- **默认全局 Skills**：仓库源在 `.agents/skills/`；新机由 `install.sh` Step 6 调用 `scripts/link-pi-skills.sh`，将 `auto-harness` 等幂等 symlink 到 `~/.pi/agent/skills`，任意 cwd 下的 Pi 均可加载。
 
 ## 3. L2 宿主层（AIIA 自研，stage-0 已有雏形）
 
@@ -115,52 +116,52 @@
 **Lazy Skill**：知识条目以 skill 形式存在，平时一行摘要，触发意图才展开完整内容与工具 schema。
 **预留（延后）**：LSP client（精确符号跳转，0 向量 token）+ LanceDB（语义 RAG），组成 Hybrid Context Engine——**记忆/文档上千或需代码库语义检索时才上**。
 
-## 7. L6 调度层 + L7 自进化层（二期，接口先预留）
+## 7. L6 调度层 + L7 自进化层
 
-- **L6 分级调度**：`pi.registerTool("spawn_subagent")` → 为子任务 `git worktree add` 建隔离工作区 → 用 SDK 起 headless 子会话（或 `pi --mode rpc`）→ 完成后 `git merge --squash` 回收。Lead/Worker 分级避免主上下文污染。
-- **L7 自进化**：`agent_end`/`session_shutdown` hook 落 `trajectories.jsonl`；离线 LLM-as-Judge 识别高频失败 → 生成 skill/规则候选 → **回归测试胜率达标 + 人审**后才写入 `.agents/skills`。**先只做轨迹采集**，优化器延后。
+- **L6 分级调度（Phase 2 已落地）**：`subagent-worktree.js` 注册 `spawn_worktree_subagent` / `list` / `merge` / `cleanup`；为子任务 `git worktree add` 建隔离工作区，完成后 merge 回收。配套：`task-runner.js`（DAG）、`cron-scheduler.js`（定时）、`router.js`（模型分级）。
+- **L7 自进化（部分延后）**：`agent_end`/`session_shutdown` hook 落 `trajectories.jsonl`；离线 LLM-as-Judge 识别高频失败 → 生成 skill/规则候选 → **回归测试胜率达标 + 人审**后才写入 `.agents/skills`。**轨迹采集与优化器均仍待做**（见 PROGRESS S2）。
 
 ## 8. 明确延后（非核心，按序解锁）
 
-1. 接入层：飞书 adapter / Web / Cron（channel 归一化后投 L2）
-2. L6 subagent + worktree 并发
-3. L5 LSP + LanceDB Hybrid RAG
-4. L7 Metaprompt 自进化优化器
-5. L3 LiteLLM 网关 sidecar
-6. 跨设备 attach + 后台完成推送（实验性 `pi-server` 稳定后；基础后台常驻已在 §3.1 落地）
+1. L4 `quality-gate`：edit 后 lint/typecheck 回灌（PROGRESS S1，推荐下一刀）
+2. L7 轨迹采集 → Metaprompt 优化器（S2；优化器更后）
+3. L5 LSP + LanceDB Hybrid RAG（条件项：语料/规模门槛）
+4. L7.6 OS 键鼠 / 指纹浏览器（条件项：桌面环境 + HITL；见 CAPABILITIES）
+5. 接入层：飞书 adapter / Web channel（曾归档，按需重开）
+6. L3 LiteLLM 网关 sidecar
+7. 跨设备 attach + 后台完成推送（实验性 `pi-server` 稳定后；基础后台常驻已在 §3.1 落地）
 
-## 9. 目标仓库结构
+## 9. 目标仓库结构（A 路线：以 `pi-agent/` 为准）
 
 ```
 aiia/
-├── host/                 # L2 宿主：SDK 嵌入 + 本地 API + 会话管理
-│   └── src/{server,agent,safety}.js
-├── extensions/           # L4 控制面（挂 Pi hooks）
-│   ├── safety.ts         #   tool_call → {block}
-│   ├── quality-gate.ts   #   edit 后 lint/typecheck（待建）
-│   ├── memory.ts         #   context 注入 + /memory 命令（待建）
-│   └── router.ts         #   model_select 分级路由（待建）
-├── memory/               # L5 记忆（Python 现有；后续可并入 host）
-│   └── (adapter/memory.py, data/schema.sql)
-├── skills/               # Lazy Skills（知识库条目）
-├── .pi/                  # 项目级 Pi 资源发现目录
+├── pi-agent/             # 真被 Pi 加载的 extension + 单测
+│   ├── extensions/       # safety/memory/router/web-search/…（已落地）
+│   ├── src/              # policy/memory-store/… 共用逻辑
+│   └── test/             # 单元 + 真会话 wiring
+├── scripts/              # install 辅助（如 link-pi-skills.sh）
+├── .agents/skills/       # 仓库 skills 真源（install 链到 ~/.pi）
+├── legacy/               # 已归档旧 host/adapter/飞书
+├── docs/                 # CAPABILITIES 等补充设计
 └── .harness/verify.sh    # 分层验收
 ```
+待建控制面：`quality-gate`（PROGRESS S1）。
 
 ## 10. 分阶段路线（每阶段一个 verify 门）
 
 | 阶段 | 交付 | verify 门 |
 |---|---|---|
 | **0（已完成）** | 宿主雏形 + SQLite + safety 样例 + mock 闭环 | ✅ 现有 verify 全绿 |
-| **1 控制面核心** | `tool_call` 真拦截（block API）、`context` 记忆注入、edit 后质量门 | 危险命令 block、记忆被注入上下文、坏编辑触发 lint 失败回灌 |
-| **2 模型分级** | `scopedModels` + `model_select` 分级路由 + fallback | 指定任务命中预期模型；主模型不可用时 fallback 生效 |
-| **3 真实会话** | 装 `@earendil-works/pi-coding-agent`，`AIIA_MOCK=0` 打通一轮真 Agent | 真实 prompt 有响应；工具受控 |
-| **4+ 二期** | subagent/worktree、LSP+RAG、自进化、接入层 | 各自独立验收 |
+| **1 控制面核心** | `tool_call` 真拦截、`context` 记忆注入；（质量门 → S1） | 危险命令 block、记忆注入；quality-gate 待 S1 |
+| **2 模型分级** | `router.js` 四级路由 + 直连 provider 门禁 | router 单测 + Charon 不误改写 |
+| **3 真实会话** | `@earendil-works/pi-coding-agent` 真加载 extension | integration `INTEGRATION_OK` |
+| **4 Phase 2（已交付）** | P1–P7：搜索反代 / worktree / router / 记忆增强 / DAG / cron / sandbox | `.harness/verify.sh` 全绿 |
+| **4+ 余项** | quality-gate、轨迹、LSP+RAG、L7.6、接入层 | 见 PROGRESS 切片 S1–S5，各自独立验收 |
 
 ---
 
 ### 一句话总结
-**Pi 当内核、Node 宿主常驻、控制面全用官方 Hook（安全/质量/记忆/路由）、记忆用 SQLite+艾宾浩斯+Lazy Skill；subagent、向量 RAG、自进化、飞书全部延后并预留接口。**
+**Pi 当内核、控制面全用官方 Hook（安全/记忆/路由/沙箱等已落地）、记忆用 SQLite+艾宾浩斯+Lazy Skill；Phase 2（P1–P7）已交付；quality-gate、轨迹自进化、向量 RAG、L7.6、飞书接入按 PROGRESS S1–S5 切片推进。**
 
 > 能力扩展（机密/共享配置 · OS 键鼠 · 指纹浏览器）见 [docs/CAPABILITIES.md](docs/CAPABILITIES.md)（L5.5 核心 / L7.6 二期）。
 

@@ -30,7 +30,7 @@ echo "  ╚═══════════════════════
 echo -e "${RESET}"
 
 # ─── Step 1: 检查 Node.js ────────────────────────────────────────────────────
-step "Step 1/6  检查 Node.js 环境"
+step "Step 1/7  检查 Node.js 环境"
 
 if command -v node &>/dev/null; then
   NODE_VER=$(node --version)
@@ -67,7 +67,7 @@ if [ "$install_node" = true ]; then
 fi
 
 # ─── Step 2: 安装 pi CLI ──────────────────────────────────────────────────────
-step "Step 2/6  安装 Pi CLI"
+step "Step 2/7  安装 Pi CLI"
 
 if command -v pi &>/dev/null; then
   PI_VER=$(pi --version 2>/dev/null || echo "未知")
@@ -79,7 +79,7 @@ else
 fi
 
 # ─── Step 3: 获取 AIIA 项目 ──────────────────────────────────────────────────
-step "Step 3/6  获取 AIIA 项目"
+step "Step 3/7  获取 AIIA 项目"
 
 if [ -d "$AIIA_DIR/pi-agent" ]; then
   success "AIIA 项目已存在于 $AIIA_DIR"
@@ -110,7 +110,7 @@ else
 fi
 
 # ─── Step 4: 安装 Pi-agent 依赖 ───────────────────────────────────────────────
-step "Step 4/6  安装 AIIA 依赖"
+step "Step 4/7  安装 AIIA 依赖"
 
 cd "$AIIA_DIR/pi-agent"
 info "正在安装 npm 依赖..."
@@ -118,7 +118,7 @@ npm install --prefer-offline 2>/dev/null || npm install
 success "依赖安装完成"
 
 # ─── Step 5: 注册为 Pi Package ───────────────────────────────────────────────
-step "Step 5/6  注册 AIIA 为 Pi 全局插件"
+step "Step 5/7  注册 AIIA 为 Pi 全局插件"
 
 # 检查是否已注册
 if pi list 2>/dev/null | grep -q "aiia"; then
@@ -129,8 +129,19 @@ else
   success "AIIA 注册完成"
 fi
 
-# ─── Step 6: 配置环境变量 ─────────────────────────────────────────────────────
-step "Step 6/6  配置环境变量"
+# ─── Step 6: 链接默认 Pi Skills（新机即用）───────────────────────────────────
+step "Step 6/7  链接默认 Pi Skills（auto-harness 等）"
+
+if [[ ! -f "$AIIA_DIR/scripts/link-pi-skills.sh" ]]; then
+  error "缺少 $AIIA_DIR/scripts/link-pi-skills.sh（新机无法默认启用 auto-harness）"
+fi
+info "正在将仓库 skills 链接到 ~/.pi/agent/skills ..."
+AIIA_DIR="$AIIA_DIR" bash "$AIIA_DIR/scripts/link-pi-skills.sh" \
+  || error "Pi skills 链接失败；请检查 $AIIA_DIR/.agents/skills/auto-harness"
+success "Pi 默认 skills 已链接（含 auto-harness）"
+
+# ─── Step 7: 配置环境变量 ─────────────────────────────────────────────────────
+step "Step 7/7  配置环境变量"
 
 SHELL_RC=""
 if [ -f "$HOME/.zshrc" ]; then
