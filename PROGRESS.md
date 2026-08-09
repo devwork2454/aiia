@@ -55,10 +55,11 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 - **自动化安装与 Private 仓库上线**：
   - 编写并测试通过 `install.sh` 新系统一键全自动安装脚本。
   - 创建 GitHub 私有仓库 `devwork2454/aiia` 并成功提交推送全部最新代码。
-- **Phase 2 P4 同进程记忆艾宾浩斯算法索引增强 (`memory-store.js` & `memory.js`)**：
-  - 记忆自动查重与物理加强：新增 `add` 自动去重逻辑，若存在重复记忆则触发强度提升（`initial_strength + 0.5`）与时间戳刷更新。
-  - 上下文 Query 词块关联度加权：实现 `calculateRelevance` 函数，动态把 Prompt 上下文关联分融入艾宾浩斯时间衰减算法（$W_{\text{total}} = W_{\text{ebbinghaus}} + W_{\text{relevance}}$），让相关领域记忆优先曝光。
-  - 新增 `/memory search <query>` 命令与关联检索函数，单元测试与闭环验证 100% 通过（33/33 passed）。
+- **Phase 2 P5 任务依赖 DAG 调度器与断点续传引擎 (`task-runner.js`)**：
+  - 核心拓扑引擎 (`TaskDAGRunner`)：支持任务节点的依赖图计算、入度与就绪队列拓扑调度，以及失败自动重试机制。
+  - 持久化检查点存盘与断点续传：调度状态自动存盘至 `.agent/dag_runner/<dag_id>.json`，中断后重启可自动跳过已完成节点，从未完成节点恢复执行。
+  - 注册工具：`create_dag_task`, `run_dag_task`, `get_dag_task_status`，单元测试与闭环验证 100% 通过（37/37 passed）。
+
 
 
 
