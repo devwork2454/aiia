@@ -55,10 +55,16 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 - **自动化安装与 Private 仓库上线**：
   - 编写并测试通过 `install.sh` 新系统一键全自动安装脚本。
   - 创建 GitHub 私有仓库 `devwork2454/aiia` 并成功提交推送全部最新代码。
-- **Phase 2 P5 任务依赖 DAG 调度器与断点续传引擎 (`task-runner.js`)**：
-  - 核心拓扑引擎 (`TaskDAGRunner`)：支持任务节点的依赖图计算、入度与就绪队列拓扑调度，以及失败自动重试机制。
-  - 持久化检查点存盘与断点续传：调度状态自动存盘至 `.agent/dag_runner/<dag_id>.json`，中断后重启可自动跳过已完成节点，从未完成节点恢复执行。
-  - 注册工具：`create_dag_task`, `run_dag_task`, `get_dag_task_status`，单元测试与闭环验证 100% 通过（37/37 passed）。
+- **Phase 2 全量核心扩展与高级能力打通 (Phase 2 Full Completion P1 ~ P7)**：
+  - **P1 联网搜索反代适配 (`web-search-proxy.js`)**：意图嗅探、多模态 Prompt 指令注入、`SEARCH_MODEL_OVERRIDE` 与反代 URL 自动重定向。
+  - **P2 Subagent Worktree 隔离编排 (`subagent-worktree.js`)**：注册 `spawn_worktree_subagent` / `list_worktree_subagents` / `merge_worktree_subagent` / `cleanup_worktree_subagent` 4 大编排工具。
+  - **P3 动态模型路由评估器 (`router.js`)**：`evaluateModelRoute` 实现 `low`/`medium`/`high`/`reasoning` 4 阶分级与 Vision/推理意图自动分流。
+  - **P4 艾宾浩斯记忆与关联度增强 (`memory-store.js` & `memory.js`)**：自动物理查重加强、词块重合度加权 ($W_{\text{total}} = W_{\text{ebbinghaus}} + W_{\text{relevance}}$)、`/memory search` 命令。
+  - **P5 任务依赖 DAG 调度器 (`task-runner.js`)**：`TaskDAGRunner` 拓扑依赖计算、入度队列调度、失败重试与 `.agent/dag_runner` 断点续传存盘。
+  - **P6 后台 Cron 定时任务系统 (`cron-scheduler.js`)**：5 段式 Cron 表达式匹配引擎、到期判定轮询与状态持久化 (`register_cron_task` / `list_cron_tasks` / `remove_cron_task`)。
+  - **P7 MCP & Skill 沙箱安全策略 (`sandbox-policy.js`)**：资源访问控制、敏感路径屏蔽、二重危险 Shell 拦截与白名单模式 (`set_sandbox_policy` / `get_sandbox_policy_status`)。
+  - **闭环质量**：全量 43 个单元与端到端测试 100% 绿色通过（43/43 passed），全套代码已同步至私有仓库。
+
 
 
 
