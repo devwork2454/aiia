@@ -84,6 +84,7 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 （无）
 
 ## 已完成
+- **Pi /add-dir**：会话附加工作目录；持久化 `.agent/additional-dirs.json`；system prompt 注入 + skills 发现。
 - **Pi /goal**：`extensions/goal.js` 注册 `/goal`；skill `.agents/skills/goal` 链到 `~/.pi/agent/skills/goal`。
 - **S5 channel-adapter**：cli 归一化就绪；飞书 archived；web deferred/stub；不重开飞书运行时。
 - **S4 os-browser**：L7.6 工具接口+默认关+tool_call 闸门+dry-run；真桌面驱动未做。

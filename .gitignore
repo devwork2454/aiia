@@ -36,3 +36,6 @@ logs/
 # AIIA L7 trajectory logs (local)
 .agent/trajectories.jsonl
 **/trajectories.jsonl
+
+# session additional dirs (local)
+**/.agent/additional-dirs.json

@@ -44,6 +44,7 @@ const loader = new DefaultResourceLoader({
     join(extDir, "os-browser.js"),
     join(extDir, "channel-adapter.js"),
     join(extDir, "goal.js"),
+    join(extDir, "add-dir.js"),
   ],
   // Independent probe hook to detect that tool_call reaches extensions at all.
   extensionFactories: [
@@ -61,7 +62,7 @@ const loader = new DefaultResourceLoader({
 await loader.reload();
 
 // ASSERTION 1 (model-independent): our extensions actually loaded, without error.
-// Must be >= 14 (probe factory + 11 extensions including os-browser+channel-adapter). An empty/broken load fails here,
+// Must be >= 15 (probe factory + 11 extensions including os-browser+channel-adapter). An empty/broken load fails here,
 // so a skip branch below can no longer hide broken wiring.
 const res = loader.getExtensions();
 if (res.errors.length > 0) {
@@ -70,8 +71,8 @@ if (res.errors.length > 0) {
 }
 const loadedCount = res.extensions.length;
 console.error(`[integration] extensions loaded: ${loadedCount} [${res.extensions.map((e) => e.name || e.id || "?").join(", ")}]`);
-if (loadedCount < 14) {
-  console.error(`[integration] EXPECTED >=14 extensions, got ${loadedCount} — wiring broken`);
+if (loadedCount < 15) {
+  console.error(`[integration] EXPECTED >=15 extensions, got ${loadedCount} — wiring broken`);
   process.exit(1);
 }
 
