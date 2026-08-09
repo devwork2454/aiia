@@ -30,10 +30,23 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 - 降级：L5.5 机密先用 .env + sops exec-env（direnv/qmd 提前优化，推迟）。
 - 推迟：L6 subagent/worktree、L7 自进化 Metaprompt、L3 LiteLLM、L7.6 键鼠/浏览器（网关真拦截未端到端前不碰）。
 
-## 下一步
-1. /memory 与 remember 工具的真会话联调。
-2. **启动 L5.5 机密层与多端配置同步层开发**：基于本地强加密 (AES-256) 与 GitHub Gist 云端同步 (E2EE 账号同步)，取代原本复杂的 SOPS+age 方案。
-3. 调研并适配本地反代 Bridge 的原生大模型搜索触发机制（例如探测并注入 `@web` 标识）。
+## 下一步迭代计划候选
+1. **反代 Bridge 原生联网搜索触发 (Web Search Proxy)**：
+   - 调研并适配本地反代 Bridge (如 `cursor-openai-api` / `litellm-cpa`) 的原生搜索触发机制（例如自动注入 `@web` 标识或切换 `-search` 模型），直接复用反代自带的搜索额度。
+2. **机密零知识注入与敏感词全局脱敏网关 (Redaction Gate)**：
+   - 在 `before_agent_start` 钩子中，仅向 Agent 注入可用的 Secret 键名清单（不给明文值）。
+   - 在 `tool_result` 及 SQLite 消息存盘前，执行内存级敏感词正则打码（`***REDACTED***`），防止 API Key 泄露进日志。
+3. **L6 级多智能体 Worktree 并发协作 (Subagent Worktree)**：
+   - 实现 `spawn_subagent` 工具，利用 `git worktree` 为子任务创建物理隔离的临时代码空间，并发执行大重构或多模块开发。
 
 ## 已完成
-- **开发 router.js 静态规则路由，将简单请求分发给便宜模型以降低API成本。**
+- **开发 router.js 静态规则路由**：将简单请求分发给便宜模型以降低 API 成本。
+- **开发 L5.5 机密与多端配置同步层 (`sync.js` & `vault.js`)**：
+  - 实现 GitHub Device Flow 点链接授权登录 (`/sync login`)。
+  - 实现本地 AES-256-GCM 强加密与 GitHub Private Gist 零知识云端账号同步 (`/sync push`/`/sync pull`)。
+  - 实现本地加密保险箱 (`/vault`)，支持账号密码、身份、地址、银行卡、SSH 等结构化敏感数据管理。
+  - 覆盖同步范围：`~/.secrets/env`、Pi Settings、AIIA Config、`aiia.db` 跨项目记忆库、Pi Skills 目录以及各类 MCP 配置文件。
+- **自动化安装与 Private 仓库上线**：
+  - 编写并测试通过 `install.sh` 新系统一键全自动安装脚本。
+  - 创建 GitHub 私有仓库 `devwork2454/aiia` 并成功提交推送全部最新代码。
+
