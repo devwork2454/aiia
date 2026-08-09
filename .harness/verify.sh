@@ -20,6 +20,9 @@ node --test test/safety-hook.test.mjs
 echo "[verify] real injection: memory.js loaded by Pi actually INJECTS memories into context (no model)"
 node --test test/memory-inject.test.mjs
 
+echo "[verify] e2e real usage: web search proxy & agy bridge end-to-end HTTP/hook dispatch"
+node test/e2e-real-usage.mjs
+
 echo "[verify] real-session wiring: load safety+memory into genuine Pi AgentSession"
 # ASSERTS: extensions load without error + hooks register in a real session.
 # Live tool_call block is exercised when a working model exists, else gracefully skipped.
