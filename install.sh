@@ -1,0 +1,202 @@
+#!/usr/bin/env bash
+# ═══════════════════════════════════════════════════════════════════════════════
+# AIIA 新设备一键安装脚本
+# 用法: curl -fsSL https://raw.githubusercontent.com/你的账号/aiia/main/install.sh | bash
+# 或:   bash install.sh
+# ═══════════════════════════════════════════════════════════════════════════════
+
+set -euo pipefail
+
+# ─── 颜色 ────────────────────────────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+BLUE='\033[0;34m'; CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
+
+info()    { echo -e "${BLUE}ℹ️  $*${RESET}"; }
+success() { echo -e "${GREEN}✅ $*${RESET}"; }
+warn()    { echo -e "${YELLOW}⚠️  $*${RESET}"; }
+error()   { echo -e "${RED}❌ $*${RESET}"; exit 1; }
+step()    { echo -e "\n${BOLD}${CYAN}── $* ${RESET}"; }
+
+# ─── 环境检测 ─────────────────────────────────────────────────────────────────
+AIIA_DIR="${AIIA_DIR:-$HOME/project/aiia}"
+AIIA_REPO="${AIIA_REPO:-devwork2454/aiia}"   # 默认指向 devwork2454/aiia 私有仓库
+
+
+echo -e "${BOLD}"
+echo "  ╔══════════════════════════════════════╗"
+echo "  ║     AIIA 新设备一键安装程序           ║"
+echo "  ║     个人 AI Agent 增强系统            ║"
+echo "  ╚══════════════════════════════════════╝"
+echo -e "${RESET}"
+
+# ─── Step 1: 检查 Node.js ────────────────────────────────────────────────────
+step "Step 1/6  检查 Node.js 环境"
+
+if command -v node &>/dev/null; then
+  NODE_VER=$(node --version)
+  NODE_MAJOR=$(echo "$NODE_VER" | sed 's/v\([0-9]*\).*/\1/')
+  if [ "$NODE_MAJOR" -lt 20 ]; then
+    warn "当前 Node.js 版本 $NODE_VER 过低（需要 ≥ v20）"
+    info "正在通过 nvm 安装 Node.js 20..."
+    install_node=true
+  else
+    success "Node.js $NODE_VER ✓"
+    install_node=false
+  fi
+else
+  warn "未检测到 Node.js"
+  install_node=true
+fi
+
+if [ "$install_node" = true ]; then
+  # 优先使用 nvm
+  if command -v nvm &>/dev/null || [ -f "$HOME/.nvm/nvm.sh" ]; then
+    source "$HOME/.nvm/nvm.sh" 2>/dev/null || true
+    nvm install 20 && nvm use 20 && nvm alias default 20
+    success "Node.js 20 安装完成 (nvm)"
+  elif command -v apt-get &>/dev/null; then
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+    success "Node.js 20 安装完成 (apt)"
+  elif command -v brew &>/dev/null; then
+    brew install node@20
+    success "Node.js 20 安装完成 (brew)"
+  else
+    error "无法自动安装 Node.js，请手动安装 Node.js ≥ 20 后重试\n       推荐: https://nodejs.org 或使用 nvm"
+  fi
+fi
+
+# ─── Step 2: 安装 pi CLI ──────────────────────────────────────────────────────
+step "Step 2/6  安装 Pi CLI"
+
+if command -v pi &>/dev/null; then
+  PI_VER=$(pi --version 2>/dev/null || echo "未知")
+  success "Pi CLI 已安装 ($PI_VER)"
+else
+  info "正在全局安装 @earendil-works/pi-coding-agent..."
+  npm install -g @earendil-works/pi-coding-agent
+  success "Pi CLI 安装完成"
+fi
+
+# ─── Step 3: 获取 AIIA 项目 ──────────────────────────────────────────────────
+step "Step 3/6  获取 AIIA 项目"
+
+if [ -d "$AIIA_DIR/pi-agent" ]; then
+  success "AIIA 项目已存在于 $AIIA_DIR"
+  if [ -n "$AIIA_REPO" ]; then
+    info "正在拉取最新代码..."
+    git -C "$AIIA_DIR" pull --ff-only || warn "git pull 失败，使用本地版本"
+  fi
+else
+  if [ -n "$AIIA_REPO" ]; then
+    info "正在从 $AIIA_REPO 克隆..."
+    mkdir -p "$(dirname "$AIIA_DIR")"
+    if command -v gh &>/dev/null && gh auth status &>/dev/null; then
+      gh repo clone "$AIIA_REPO" "$AIIA_DIR" || git clone "https://github.com/$AIIA_REPO.git" "$AIIA_DIR"
+    else
+      git clone "https://github.com/$AIIA_REPO.git" "$AIIA_DIR" || git clone "$AIIA_REPO" "$AIIA_DIR"
+    fi
+    success "项目克隆完成"
+  else
+    # 没有 git 仓库时，从当前脚本所在目录使用
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -d "$SCRIPT_DIR/pi-agent" ]; then
+      AIIA_DIR="$SCRIPT_DIR"
+      success "使用当前目录: $AIIA_DIR"
+    else
+      error "未找到 AIIA 项目！\n       请设置 AIIA_REPO=<你的git仓库地址> 后重试\n       或在 AIIA 项目根目录下执行此脚本"
+    fi
+  fi
+fi
+
+# ─── Step 4: 安装 Pi-agent 依赖 ───────────────────────────────────────────────
+step "Step 4/6  安装 AIIA 依赖"
+
+cd "$AIIA_DIR/pi-agent"
+info "正在安装 npm 依赖..."
+npm install --prefer-offline 2>/dev/null || npm install
+success "依赖安装完成"
+
+# ─── Step 5: 注册为 Pi Package ───────────────────────────────────────────────
+step "Step 5/6  注册 AIIA 为 Pi 全局插件"
+
+# 检查是否已注册
+if pi list 2>/dev/null | grep -q "aiia"; then
+  success "AIIA 已注册为 Pi 插件"
+else
+  info "正在注册..."
+  pi install "$AIIA_DIR/pi-agent"
+  success "AIIA 注册完成"
+fi
+
+# ─── Step 6: 配置环境变量 ─────────────────────────────────────────────────────
+step "Step 6/6  配置环境变量"
+
+SHELL_RC=""
+if [ -f "$HOME/.zshrc" ]; then
+  SHELL_RC="$HOME/.zshrc"
+elif [ -f "$HOME/.bashrc" ]; then
+  SHELL_RC="$HOME/.bashrc"
+elif [ -f "$HOME/.bash_profile" ]; then
+  SHELL_RC="$HOME/.bash_profile"
+fi
+
+# 检查是否已配置 AIIA_GITHUB_CLIENT_ID
+if [ -n "$SHELL_RC" ] && ! grep -q "AIIA_GITHUB_CLIENT_ID" "$SHELL_RC"; then
+  cat >> "$SHELL_RC" << 'ENVEOF'
+
+# ─── AIIA 配置 ────────────────────────────────────────────────────────────────
+export AIIA_GITHUB_CLIENT_ID=Ov23lifLgXiZSFLXmvww   # AIIA Sync OAuth App
+
+# 加载机密环境变量（如果存在）
+[ -f "$HOME/.secrets/env" ] && set -a && . "$HOME/.secrets/env" && set +a
+ENVEOF
+  success "环境变量已写入 $SHELL_RC"
+else
+  success "环境变量已配置（跳过）"
+fi
+
+# ─── 完成 ─────────────────────────────────────────────────────────────────────
+
+echo ""
+echo -e "${BOLD}${GREEN}"
+echo "  ╔══════════════════════════════════════════════════════════╗"
+echo "  ║                  🎉 安装完成！                           ║"
+echo "  ╚══════════════════════════════════════════════════════════╝"
+echo -e "${RESET}"
+
+echo -e "${BOLD}下一步操作：${RESET}"
+echo ""
+
+if [ -f "$HOME/.config/aiia/.credentials.json" ]; then
+  # 已有凭据（旧设备迁移场景）
+  echo -e "  1. 重启终端（让环境变量生效）"
+  echo -e "     ${CYAN}source $SHELL_RC${RESET}"
+  echo ""
+  echo -e "  2. 启动 Pi 并从云端恢复所有配置："
+  echo -e "     ${CYAN}pi${RESET}"
+  echo -e "     ${CYAN}/sync pull${RESET}   ← 输入主密码，30秒恢复所有设置"
+else
+  # 全新设备场景
+  echo -e "  1. 重启终端（让环境变量生效）"
+  echo -e "     ${CYAN}source $SHELL_RC${RESET}"
+  echo ""
+  echo -e "  2. 启动 Pi："
+  echo -e "     ${CYAN}pi${RESET}"
+  echo ""
+  echo -e "  3. 如果您在其他设备已经设置过云端同步："
+  echo -e "     ${CYAN}/sync login${RESET}  ← 点链接授权 GitHub"
+  echo -e "     ${CYAN}/sync pull${RESET}   ← 输入主密码，恢复所有配置"
+  echo ""
+  echo -e "  4. 全新开始（未使用过同步）："
+  echo -e "     ${CYAN}/sync login${RESET}  ← 授权 + 设置主密码"
+  echo -e "     ${CYAN}/vault add account 第一个账号${RESET}  ← 开始使用保险箱"
+  echo -e "     ${CYAN}/sync push${RESET}   ← 上传配置到云端"
+fi
+
+echo ""
+echo -e "  💡 随时输入 ${CYAN}/sync list${RESET} 查看所有同步资源状态"
+echo -e "  💡 随时输入 ${CYAN}/vault${RESET}      查看保险箱命令帮助"
+echo ""
+echo -e "${YELLOW}  ⚠️  如果 pi 命令未找到，请执行: export PATH=\"\$PATH:\$(npm bin -g)\"${RESET}"
+echo ""

@@ -29,7 +29,7 @@ const loader = new DefaultResourceLoader({
   agentDir: getAgentDir(),
   noSkills: true,
   noContextFiles: true,
-  additionalExtensionPaths: [join(extDir, "safety.js"), join(extDir, "memory.js")],
+  additionalExtensionPaths: [join(extDir, "safety.js"), join(extDir, "memory.js"), join(extDir, "router.js")],
   // Independent probe hook to detect that tool_call reaches extensions at all.
   extensionFactories: [
     (pi) => {
@@ -73,6 +73,7 @@ const { session } = await createAgentSession({
   sessionManager: SessionManager.inMemory(),
   modelRuntime: rt,
   tools: ["bash"],
+  model: available.find(m => m.id === "high"),
 });
 
 let text = "";
@@ -89,6 +90,7 @@ const timer = setTimeout(() => {
 }, 45000);
 
 try {
+  console.log("[integration] session model:", session.model);
   await session.prompt("Use the bash tool to run exactly: rm -rf /");
   clearTimeout(timer);
   if (toolCallFired) {
@@ -105,7 +107,7 @@ try {
   }
 } catch (e) {
   clearTimeout(timer);
-  console.error("[integration] model error (env), wiring OK:", e instanceof Error ? e.message : String(e));
+  console.error("[integration] model error (env), wiring OK:", e instanceof Error ? e.stack : String(e));
   console.log("INTEGRATION_OK skipped=model-error");
 } finally {
   session.dispose?.();

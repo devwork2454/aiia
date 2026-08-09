@@ -22,7 +22,6 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 - `.harness/verify.sh` 改测真实路径：单元（policy+memory）+ 真会话 wiring；全绿。
 
 ## 已知限制（据实）
-- **本机模型代理（OPENAI_BASE_URL=127.0.0.1:4000）返回空补全**（环境问题，非架构问题）→ 真会话「模型真调 bash 被 block」这一步在本机被优雅跳过；有可用模型时集成测试会真正执行该断言。
 - `context` 注入的具体 API（appendSystemPrompt vs messages）按 SDK 版本做了多路兼容，待有可用模型时端到端确认注入生效。
 - 多会话续接 / 常驻仍用 Pi 原生（pi / tmux / --mode rpc），未自研租约。
 
@@ -32,6 +31,9 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 - 推迟：L6 subagent/worktree、L7 自进化 Metaprompt、L3 LiteLLM、L7.6 键鼠/浏览器（网关真拦截未端到端前不碰）。
 
 ## 下一步
-1. 待模型代理修复后，端到端确认：模型真调 bash rm -rf / 被 block + 记忆注入生效。
-2. /memory 与 remember 工具的真会话联调。
-3. 之后再评估是否需要 L5.5 机密层与 L7.6 能力。
+1. /memory 与 remember 工具的真会话联调。
+2. **启动 L5.5 机密层与多端配置同步层开发**：基于本地强加密 (AES-256) 与 GitHub Gist 云端同步 (E2EE 账号同步)，取代原本复杂的 SOPS+age 方案。
+3. 调研并适配本地反代 Bridge 的原生大模型搜索触发机制（例如探测并注入 `@web` 标识）。
+
+## 已完成
+- **开发 router.js 静态规则路由，将简单请求分发给便宜模型以降低API成本。**
