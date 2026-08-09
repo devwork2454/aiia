@@ -11,8 +11,8 @@ if [[ ! -d node_modules/@earendil-works/pi-coding-agent ]]; then
   npm install --ignore-scripts >/tmp/aiia-npm-install.log 2>&1 || { cat /tmp/aiia-npm-install.log; exit 1; }
 fi
 
-echo "[verify] unit: policy (safety) + memory store"
-node --test test/policy.test.js test/memory-store.test.js
+echo "[verify] unit: policy (safety) + memory store + vault/sync crypto + secret-gate redaction"
+node --test test/policy.test.js test/memory-store.test.js test/vault-sync-crypto.test.js test/secret-gate-router.test.js
 
 echo "[verify] real hook: safety.js loaded by Pi actually BLOCKS dangerous cmd (no model, cannot skip)"
 node --test test/safety-hook.test.mjs
