@@ -228,12 +228,14 @@ export default function subagentWorktreeExtension(pi) {
         try {
           mergeResult = runGit(`git merge "${branch}" --no-ff -m "merge(subagent): merge worktree branch ${branch} into ${currentBranch}"`, ctx.cwd);
         } catch (mergeErr) {
-          // 如果合并冲突退回
-          runGit('git merge --abort', ctx.cwd);
+          // 如果合并冲突退回；无 MERGE_HEAD 时 abort 会失败，忽略即可
+          try {
+            runGit('git merge --abort', ctx.cwd);
+          } catch {}
           return {
             status: 'conflict',
             branch,
-            message: `❌ 合并遇到代码冲突，已中断合并。请前往 ${worktreeDir} 手动解决冲突。`
+            message: `❌ 合并遇到代码冲突或失败，已中断合并。请前往 ${worktreeDir} 手动解决。详情: ${mergeErr.message}`
           };
         }
 

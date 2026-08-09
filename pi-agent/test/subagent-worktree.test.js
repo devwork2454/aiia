@@ -1,26 +1,48 @@
-import { test, describe, before } from 'node:test';
+import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execSync } from 'child_process';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import subagentWorktreeExtension from '../extensions/subagent-worktree.js';
 
-describe('Phase 2 P2: Subagent Worktree Orchestration Tests', () => {
+function run(cmd, cwd) {
+  return execSync(cmd, { cwd, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+}
+
+describe('Phase 2 P2: Subagent Worktree Orchestration Tests', { concurrency: false }, () => {
   const tools = {};
-  const mockContext = { cwd: process.cwd() };
   const testBranch = 'test_feat_subagent_orch';
-  let gitRoot = process.cwd();
+  let repoRoot;
+  let mockContext;
 
   before(() => {
-    try {
-      gitRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
-    } catch {}
+    repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aiia-worktree-test-'));
+    run('git init -b main', repoRoot);
+    run('git config user.email "test@example.com"', repoRoot);
+    run('git config user.name "AIIA Test"', repoRoot);
+    fs.writeFileSync(path.join(repoRoot, 'README.md'), '# worktree test fixture\n');
+    run('git add README.md', repoRoot);
+    run('git commit -m "init"', repoRoot);
+
+    mockContext = { cwd: repoRoot };
+
     const mockPi = {
       registerTool: (tool) => {
         tools[tool.name] = tool;
       }
     };
     subagentWorktreeExtension(mockPi);
+  });
+
+  after(() => {
+    try {
+      run(`git worktree prune`, repoRoot);
+    } catch {}
+    try {
+      run(`git branch -D ${testBranch}`, repoRoot);
+    } catch {}
+    fs.rmSync(repoRoot, { recursive: true, force: true });
   });
 
   test('Tool registration asserts all 4 worktree tools present', () => {
@@ -54,7 +76,7 @@ describe('Phase 2 P2: Subagent Worktree Orchestration Tests', () => {
   test('merge_worktree_subagent commits changes and merges cleanly into main', async () => {
     const worktreePath = path.join(mockContext.cwd, '.agent', 'worktrees', testBranch);
     const dummyInWorktree = path.join(worktreePath, 'test_dummy_subagent_file.txt');
-    const dummyInGitRoot = path.join(gitRoot, 'test_dummy_subagent_file.txt');
+    const dummyInGitRoot = path.join(repoRoot, 'test_dummy_subagent_file.txt');
 
     fs.writeFileSync(dummyInWorktree, 'subagent worktree output content');
 
@@ -63,11 +85,8 @@ describe('Phase 2 P2: Subagent Worktree Orchestration Tests', () => {
       deleteAfterMerge: true
     }, mockContext);
 
-    assert.equal(mergeRes.status, 'success');
-    assert.equal(fs.existsSync(dummyInGitRoot), true); // Merged file in git repo root
-    if (fs.existsSync(dummyInGitRoot)) {
-      fs.unlinkSync(dummyInGitRoot); // Clean up from git root
-    }
+    assert.equal(mergeRes.status, 'success', mergeRes.message || '');
+    assert.equal(fs.existsSync(dummyInGitRoot), true);
   });
 
   test('cleanup_worktree_subagent cleans up remaining worktree artifacts', async () => {
