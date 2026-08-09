@@ -71,6 +71,11 @@ export default function secretGateExtension(pi) {
         resultStr = resultStr.split(val).join(`***REDACTED:${key}***`);
         redacted = true;
       }
+      const escapedVal = JSON.stringify(val).slice(1, -1);
+      if (escapedVal !== val && resultStr.includes(escapedVal)) {
+        resultStr = resultStr.split(escapedVal).join(`***REDACTED:${key}***`);
+        redacted = true;
+      }
     }
 
     if (redacted) {

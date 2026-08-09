@@ -7,16 +7,22 @@ export default function (pi) {
     if (input.length > 0) {
       const lastMsg = input[input.length - 1];
       if (lastMsg && lastMsg.role === "user") {
-        let text = "";
-        if (typeof lastMsg.content === "string") {
-          text = lastMsg.content;
-        } else if (Array.isArray(lastMsg.content)) {
-          text = lastMsg.content.map(c => c.text || "").join("");
+        let hasVision = false;
+        let totalTextLength = 0;
+        for (const msg of input) {
+          if (typeof msg.content === "string") {
+            totalTextLength += msg.content.length;
+          } else if (Array.isArray(msg.content)) {
+            for (const c of msg.content) {
+              if (c.type === "image_url") hasVision = true;
+              if (c.text) totalTextLength += c.text.length;
+            }
+          }
         }
 
         // Cost saving: Route short, simple initial requests to 'low'
         // If there is no long context and the prompt is short, use 'low'
-        if (input.length <= 3 && text.length < 100) {
+        if (!hasVision && input.length <= 3 && totalTextLength < 500) {
           targetModel = "low";
         }
       }

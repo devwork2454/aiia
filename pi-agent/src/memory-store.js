@@ -60,7 +60,8 @@ export class MemoryStore {
    */
   active({ threshold = 0.2, limit = 20 } = {}) {
     const now = Date.now();
-    const rows = this.db.prepare("SELECT * FROM memories").all();
+    // Limit to 5000 to prevent OOM on huge databases
+    const rows = this.db.prepare("SELECT * FROM memories ORDER BY last_accessed_at DESC LIMIT 5000").all();
     const scored = rows
       .map((r) => ({ r, w: this.weight(r, now) }))
       .filter((x) => x.w >= threshold)
@@ -72,7 +73,10 @@ export class MemoryStore {
     const out = [];
     const tx = this.db.transaction((items) => {
       for (const { r } of items) {
-        bump.run(now, r.id);
+        // Prevent runaway frequency loops: only bump if it hasn't been accessed in the last 60 seconds
+        if (now - r.last_accessed_at > 60000) {
+          bump.run(now, r.id);
+        }
         out.push(String(r.content));
       }
     });

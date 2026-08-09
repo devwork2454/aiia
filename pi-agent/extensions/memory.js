@@ -22,11 +22,14 @@ export default function memoryExtension(pi) {
   pi.on("context", async (event) => {
     const memories = store.active({ threshold: 0.15, limit: 10 });
     if (memories.length === 0) return;
-    const memoryMessage = {
-      role: "system",
-      content: `[AIIA active memories]\n- ${memories.join("\n- ")}`,
-    };
-    return { messages: [...(event.messages ?? []), memoryMessage] };
+    const memoryStr = `[AIIA active memories]\n- ${memories.join("\n- ")}`;
+    const newMessages = [...(event.messages ?? [])];
+    if (newMessages.length > 0 && newMessages[0].role === "system") {
+      newMessages[0] = { ...newMessages[0], content: `${memoryStr}\n\n${newMessages[0].content}` };
+    } else {
+      newMessages.unshift({ role: "system", content: memoryStr });
+    }
+    return { messages: newMessages };
   });
 
   // Slash command: /memory add|list|rm
@@ -41,7 +44,9 @@ export default function memoryExtension(pi) {
         return ctx?.ui?.notify?.(`memory #${id} saved`);
       }
       if (sub === "rm") {
-        const ok = store.remove(Number(rest[0]));
+        const id = Number(rest[0]);
+        if (Number.isNaN(id)) return ctx?.ui?.notify?.("usage: /memory rm <id>");
+        const ok = store.remove(id);
         return ctx?.ui?.notify?.(ok ? "removed" : "not found");
       }
       const items = store.list({ limit: 20 });

@@ -6,7 +6,7 @@
  * 注册工具: spawn_worktree_subagent
  */
 
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
@@ -40,21 +40,39 @@ export default function subagentWorktreeExtension(pi) {
           try {
             execSync(`git worktree add -b "${branch}" "${worktreeDir}"`, { cwd: ctx.cwd, stdio: 'pipe' });
           } catch {
-            // 分支已存在时退回不带 -b
-            execSync(`git worktree add "${worktreeDir}" "${branch}"`, { cwd: ctx.cwd, stdio: 'pipe' });
+            try {
+              // 分支已存在时退回不带 -b
+              execSync(`git worktree add "${worktreeDir}" "${branch}"`, { cwd: ctx.cwd, stdio: 'pipe' });
+            } catch (innerE) {
+              if (innerE.message.includes('already checked out')) {
+                throw new Error(`分支 '${branch}' 已在其他工作区检出，请先释放或更换分支名称。`);
+              }
+              throw innerE;
+            }
           }
           isNewWorktree = true;
         }
 
         // 3. 在 Worktree 工作区执行子任务操作或记录
         const taskInfoFile = path.join(worktreeDir, '.subagent_task.json');
+        if (!isNewWorktree && fs.existsSync(taskInfoFile)) {
+          // Allow overriding if needed, but in real use cases we might want to check for active PIDs.
+        }
         fs.writeFileSync(taskInfoFile, JSON.stringify({
           task: params.task,
           branch,
           spawnedAt: new Date().toISOString()
         }, null, 2));
 
-        // 4. 获取当前 Git 变更状态作为隔离视图总结
+        // 4. 真正拉起子 Agent 进程
+        const subagent = spawn('pi', ['--mode', 'rpc', '--task', params.task], {
+          cwd: worktreeDir,
+          detached: true,
+          stdio: 'ignore'
+        });
+        subagent.unref();
+
+        // 5. 获取当前 Git 变更状态作为隔离视图总结
         const statusOutput = execSync('git status --short', { cwd: worktreeDir, encoding: 'utf8' });
 
         return {

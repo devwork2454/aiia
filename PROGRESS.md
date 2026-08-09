@@ -55,5 +55,7 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 - **自动化安装与 Private 仓库上线**：
   - 编写并测试通过 `install.sh` 新系统一键全自动安装脚本。
   - 创建 GitHub 私有仓库 `devwork2454/aiia` 并成功提交推送全部最新代码。
-
+- **深度安全与核心逻辑重构 (Security & Logic Deep Fixes)**：
+  - **安全防线补漏**：修复 `sync.js` 目录恢复的 `Zip Slip` 穿越漏洞；将本地校验哈希从无盐 `SHA-256` 升级至加盐 `PBKDF2`；修复 `secret-gate.js` 中因 JSON 转义导致脱敏失效的盲区；强化 `policy.js` 拦截正则防注入绕过。
+  - **逻辑架构夯实**：为 `subagent-worktree.js` 补齐了真实的子进程拉起逻辑及并发冲突处理；彻底解决 `memory-store.js` 频繁交互导致艾宾浩斯衰减死锁与全表扫描 OOM 隐患；修正 `memory.js` 的大模型 System 注入规范与 `router.js` 的全局多模态路由检测。
 

@@ -37,6 +37,7 @@ const loader = new DefaultResourceLoader({
     join(extDir, "vault.js"),
     join(extDir, "secret-gate.js"),
     join(extDir, "subagent-worktree.js"),
+    join(extDir, "web-search-proxy.js"),
   ],
   // Independent probe hook to detect that tool_call reaches extensions at all.
   extensionFactories: [
@@ -54,7 +55,7 @@ const loader = new DefaultResourceLoader({
 await loader.reload();
 
 // ASSERTION 1 (model-independent): our extensions actually loaded, without error.
-// Must be >= 7 (probe factory + 7 extensions). An empty/broken load fails here,
+// Must be >= 8 (probe factory + 8 extensions). An empty/broken load fails here,
 // so a skip branch below can no longer hide broken wiring.
 const res = loader.getExtensions();
 if (res.errors.length > 0) {
@@ -63,8 +64,8 @@ if (res.errors.length > 0) {
 }
 const loadedCount = res.extensions.length;
 console.error(`[integration] extensions loaded: ${loadedCount} [${res.extensions.map((e) => e.name || e.id || "?").join(", ")}]`);
-if (loadedCount < 7) {
-  console.error(`[integration] EXPECTED >=7 extensions, got ${loadedCount} — wiring broken`);
+if (loadedCount < 8) {
+  console.error(`[integration] EXPECTED >=8 extensions, got ${loadedCount} — wiring broken`);
   process.exit(1);
 }
 

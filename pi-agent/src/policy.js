@@ -1,7 +1,7 @@
 /** Shared high-risk shell policy (used by safety extension + unit tests). */
 
 export const DANGEROUS =
-  /(\brm\s+-rf\s+[\/~]|\bsudo\b|\bgit\s+push\s+--force\b|\bmkfs\b|\bdd\s+if=|:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;|\bchmod\s+-R\s+777\s+\/|>\s*\/dev\/sd[a-z])/i;
+  /(\brm\s+-[A-Za-z]*[rR][A-Za-z]*f\s+[\/~]|\brm\s+-[A-Za-z]*f[A-Za-z]*[rR]\s+[\/~]|\bsudo\b|\bgit\s+push\s+--force\b|\bmkfs\b|\bdd\s+if=|:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;|\bchmod\s+-R\s+777\s+\/|>\s*\/dev\/sd[a-z])/i;
 
 const SHELL_TOOLS = new Set(["bash", "shell", "run_shell_command"]);
 

@@ -309,9 +309,10 @@ export default function (pi) {
               ctx.ui.notify('❌ 两次输入不一致，请重新运行 /sync login。', 'error');
               return;
             }
-            // 只存 SHA-256 哈希用于本机校验，不存明文
-            const pwHash = crypto.createHash('sha256').update(pw1).digest('hex');
-            saveCredentials({ token, username, authorizedAt: new Date().toISOString(), pwHash, hasSetPassword: true });
+            // 使用加盐 PBKDF2 存储本地校验哈希，防离线爆破
+            const pwSalt = crypto.randomBytes(16).toString('hex');
+            const pwHash = crypto.pbkdf2Sync(pw1, Buffer.from(pwSalt, 'hex'), ITERATIONS, KEY_LENGTH, DIGEST).toString('hex');
+            saveCredentials({ token, username, authorizedAt: new Date().toISOString(), pwHash, pwSalt, hasSetPassword: true });
             ctx.ui.notify('✅ 主密码设置成功！运行 /sync push 开始同步配置。', 'info');
           }
         } catch (e) {
@@ -332,7 +333,12 @@ export default function (pi) {
 
         // 校验主密码
         if (creds.pwHash) {
-          const inputHash = crypto.createHash('sha256').update(password).digest('hex');
+          let inputHash;
+          if (creds.pwSalt) {
+            inputHash = crypto.pbkdf2Sync(password, Buffer.from(creds.pwSalt, 'hex'), ITERATIONS, KEY_LENGTH, DIGEST).toString('hex');
+          } else {
+            inputHash = crypto.createHash('sha256').update(password).digest('hex');
+          }
           if (inputHash !== creds.pwHash) {
             ctx.ui.notify('❌ 主密码错误，同步已取消。', 'error');
             return;
@@ -443,8 +449,12 @@ export default function (pi) {
               if (target.type === 'directory') {
                 // 还原目录
                 fs.mkdirSync(target.path, { recursive: true, mode: 0o700 });
+                const resolvedTarget = path.resolve(target.path);
                 for (const [rel, b64] of Object.entries(content)) {
-                  const fullPath = path.join(target.path, rel);
+                  const fullPath = path.resolve(resolvedTarget, rel);
+                  if (!fullPath.startsWith(resolvedTarget + path.sep)) {
+                    throw new Error(`检测到非法的跨目录路径穿越: ${rel}`);
+                  }
                   fs.mkdirSync(path.dirname(fullPath), { recursive: true });
                   fs.writeFileSync(fullPath, Buffer.from(b64, 'base64'), { mode: 0o600 });
                 }

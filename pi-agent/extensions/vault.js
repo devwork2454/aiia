@@ -120,7 +120,12 @@ async function getMasterPassword(ctx, action = '操作') {
 
   // 如果有本地哈希则校验
   if (creds?.pwHash) {
-    const inputHash = crypto.createHash('sha256').update(password).digest('hex');
+    let inputHash;
+    if (creds.pwSalt) {
+      inputHash = crypto.pbkdf2Sync(password, Buffer.from(creds.pwSalt, 'hex'), ITERATIONS, KEY_LENGTH, DIGEST).toString('hex');
+    } else {
+      inputHash = crypto.createHash('sha256').update(password).digest('hex');
+    }
     if (inputHash !== creds.pwHash) throw new Error('主密码错误，操作已取消。');
   }
   return password;
