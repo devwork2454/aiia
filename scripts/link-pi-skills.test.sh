@@ -10,17 +10,27 @@ trap 'rm -rf "$TMP"' EXIT
 export HOME="$TMP"
 export AIIA_DIR="$ROOT"
 
-# 1) 首次链接
-bash "$SCRIPT" auto-harness
+# 1) 首次链接默认清单（含 auto-harness + goal）
+bash "$SCRIPT"
 link="$HOME/.pi/agent/skills/auto-harness"
+goal_link="$HOME/.pi/agent/skills/goal"
 [[ -L "$link" ]] || { echo "FAIL: not a symlink"; exit 1; }
+[[ -L "$goal_link" ]] || { echo "FAIL: goal skill not linked"; exit 1; }
 [[ "$(readlink "$link")" == "$ROOT/.agents/skills/auto-harness" ]] || {
   echo "FAIL: wrong target $(readlink "$link")"
   exit 1
 }
+[[ "$(readlink "$goal_link")" == "$ROOT/.agents/skills/goal" ]] || {
+  echo "FAIL: wrong goal target $(readlink "$goal_link")"
+  exit 1
+}
+[[ -f "$ROOT/.agents/skills/goal/SKILL.md" ]] || {
+  echo "FAIL: missing goal SKILL.md"
+  exit 1
+}
 
 # 2) 幂等
-bash "$SCRIPT" auto-harness
+bash "$SCRIPT"
 
 # 3) 更新错误指向
 ln -sfn /nonexistent "$link"

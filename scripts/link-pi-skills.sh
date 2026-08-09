@@ -11,7 +11,7 @@ AIIA_DIR="${AIIA_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 PI_SKILLS_DIR="${PI_SKILLS_DIR:-$HOME/.pi/agent/skills}"
 
 # 需要挂到全局 Pi 的 skill 清单（源：仓库 .agents/skills/<name>）
-DEFAULT_PI_SKILLS=(auto-harness)
+DEFAULT_PI_SKILLS=(auto-harness goal)
 
 link_skill() {
   local name="$1"

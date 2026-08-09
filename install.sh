@@ -130,15 +130,15 @@ else
 fi
 
 # ─── Step 6: 链接默认 Pi Skills（新机即用）───────────────────────────────────
-step "Step 6/7  链接默认 Pi Skills（auto-harness 等）"
+step "Step 6/7  链接默认 Pi Skills（auto-harness、goal 等）"
 
 if [[ ! -f "$AIIA_DIR/scripts/link-pi-skills.sh" ]]; then
-  error "缺少 $AIIA_DIR/scripts/link-pi-skills.sh（新机无法默认启用 auto-harness）"
+  error "缺少 $AIIA_DIR/scripts/link-pi-skills.sh（新机无法默认启用 auto-harness/goal）"
 fi
 info "正在将仓库 skills 链接到 ~/.pi/agent/skills ..."
 AIIA_DIR="$AIIA_DIR" bash "$AIIA_DIR/scripts/link-pi-skills.sh" \
-  || error "Pi skills 链接失败；请检查 $AIIA_DIR/.agents/skills/auto-harness"
-success "Pi 默认 skills 已链接（含 auto-harness）"
+  || error "Pi skills 链接失败；请检查 $AIIA_DIR/.agents/skills/{auto-harness,goal}"
+success "Pi 默认 skills 已链接（含 auto-harness、goal；支持 /goal）"
 
 # ─── Step 7: 配置环境变量 ─────────────────────────────────────────────────────
 step "Step 7/7  配置环境变量"

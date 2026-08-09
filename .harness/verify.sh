@@ -11,8 +11,8 @@ if [[ ! -d node_modules/@earendil-works/pi-coding-agent ]]; then
   npm install --ignore-scripts >/tmp/aiia-npm-install.log 2>&1 || { cat /tmp/aiia-npm-install.log; exit 1; }
 fi
 
-echo "[verify] unit: policy (safety) + memory store + vault/sync crypto + secret-gate + web-search-proxy + subagent-worktree + router + task-runner + cron-scheduler + sandbox-policy + quality-gate + trajectory + kb-search + os-browser + channel-adapter"
-node --test test/policy.test.js test/memory-store.test.js test/vault-sync-crypto.test.js test/secret-gate-router.test.js test/web-search-proxy.test.js test/subagent-worktree.test.js test/router.test.js test/task-runner.test.js test/cron-scheduler.test.js test/sandbox-policy.test.js test/quality-gate.test.js test/trajectory.test.js test/kb-search.test.js test/os-browser.test.js test/channel-adapter.test.js
+echo "[verify] unit: policy (safety) + memory store + vault/sync crypto + secret-gate + web-search-proxy + subagent-worktree + router + task-runner + cron-scheduler + sandbox-policy + quality-gate + trajectory + kb-search + os-browser + channel-adapter + goal"
+node --test test/policy.test.js test/memory-store.test.js test/vault-sync-crypto.test.js test/secret-gate-router.test.js test/web-search-proxy.test.js test/subagent-worktree.test.js test/router.test.js test/task-runner.test.js test/cron-scheduler.test.js test/sandbox-policy.test.js test/quality-gate.test.js test/trajectory.test.js test/kb-search.test.js test/os-browser.test.js test/channel-adapter.test.js test/goal-command.test.js
 
 echo "[verify] link-pi-skills: idempotent symlink into ~/.pi/agent/skills"
 bash "$ROOT/scripts/link-pi-skills.test.sh"
