@@ -123,7 +123,7 @@
 
 ## 8. 明确延后（非核心，按序解锁）
 
-1. L4 `quality-gate`：edit 后 lint/typecheck 回灌（PROGRESS S1，推荐下一刀）
+1. ~~L4 `quality-gate`~~：已落地 `pi-agent/extensions/quality-gate.js`（edit/write → lint/typecheck 回灌）
 2. L7 轨迹采集 → Metaprompt 优化器（S2；优化器更后）
 3. L5 LSP + LanceDB Hybrid RAG（条件项：语料/规模门槛）
 4. L7.6 OS 键鼠 / 指纹浏览器（条件项：桌面环境 + HITL；见 CAPABILITIES）
@@ -145,23 +145,23 @@ aiia/
 ├── docs/                 # CAPABILITIES 等补充设计
 └── .harness/verify.sh    # 分层验收
 ```
-待建控制面：`quality-gate`（PROGRESS S1）。
+控制面 `quality-gate` 已落地（PROGRESS S1）；余项见 S2–S5。
 
 ## 10. 分阶段路线（每阶段一个 verify 门）
 
 | 阶段 | 交付 | verify 门 |
 |---|---|---|
 | **0（已完成）** | 宿主雏形 + SQLite + safety 样例 + mock 闭环 | ✅ 现有 verify 全绿 |
-| **1 控制面核心** | `tool_call` 真拦截、`context` 记忆注入；（质量门 → S1） | 危险命令 block、记忆注入；quality-gate 待 S1 |
+| **1 控制面核心** | `tool_call` 真拦截、`context` 记忆注入、edit/write 质量门 | 危险命令 block、记忆注入、坏编辑 quality-gate 回灌 |
 | **2 模型分级** | `router.js` 四级路由 + 直连 provider 门禁 | router 单测 + Charon 不误改写 |
 | **3 真实会话** | `@earendil-works/pi-coding-agent` 真加载 extension | integration `INTEGRATION_OK` |
 | **4 Phase 2（已交付）** | P1–P7：搜索反代 / worktree / router / 记忆增强 / DAG / cron / sandbox | `.harness/verify.sh` 全绿 |
-| **4+ 余项** | quality-gate、轨迹、LSP+RAG、L7.6、接入层 | 见 PROGRESS 切片 S1–S5，各自独立验收 |
+| **4+ 余项** | 轨迹、LSP+RAG、L7.6、接入层 | 见 PROGRESS 切片 S2–S5，各自独立验收 |
 
 ---
 
 ### 一句话总结
-**Pi 当内核、控制面全用官方 Hook（安全/记忆/路由/沙箱等已落地）、记忆用 SQLite+艾宾浩斯+Lazy Skill；Phase 2（P1–P7）已交付；quality-gate、轨迹自进化、向量 RAG、L7.6、飞书接入按 PROGRESS S1–S5 切片推进。**
+**Pi 当内核、控制面全用官方 Hook（安全/记忆/路由/沙箱等已落地）、记忆用 SQLite+艾宾浩斯+Lazy Skill；Phase 2（P1–P7）与 S1 quality-gate 已交付；轨迹自进化、向量 RAG、L7.6、飞书接入按 PROGRESS S2–S5 切片推进。**
 
 > 能力扩展（机密/共享配置 · OS 键鼠 · 指纹浏览器）见 [docs/CAPABILITIES.md](docs/CAPABILITIES.md)（L5.5 核心 / L7.6 二期）。
 

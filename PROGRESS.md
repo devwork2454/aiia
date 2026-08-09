@@ -1,19 +1,19 @@
 # 项目进度
 
 ## GOAL
-用 harness 闭环完成第二期（Phase 2 P1–P7）开发交付收口：可复现安装、文档与阶段表一致、verify 绿、评估无 Critical/Major，并给出后续二期余项的可复制切片命令。
+实现 S1 quality-gate：`edit`/`write` 成功后跑 lint/typecheck，失败结果回灌到 `tool_result`，并增强 `.harness/verify.sh`。
 ### 验收标准
-- `.harness/verify.sh` 退出 0（含 Phase 2 单测 + link-pi-skills + 真会话 wiring）
-- `install.sh` 新机路径能幂等链接默认 Pi skills（auto-harness）
-- `PROGRESS.md` / `ARCHITECTURE.md` 阶段表与真实代码一致，不把延后项伪装为已交付
-- 写入第二期 harness 切片清单（已交付 / 下一刀）与 `artifacts/eval/EVAL.md`，无 Critical/Major
+- `pi-agent/src/quality-gate.js` + `extensions/quality-gate.js` 存在；失败时追加 `[AIIA Quality Gate]` 且 `isError: true`
+- `.harness/verify.sh` 包含 `quality-gate.test.js` 且退出 0
+- 坏 JS（`node --check` 失败）可测回灌；干净文件不误报
+- `artifacts/eval/EVAL.md` 无 Critical/Major；独立终审 PASS
 ### 状态
-通过（2026-08-09）：S0 交付收口完成；verify 绿；EVAL 无 Critical/Major。
+通过（2026-08-09）：S1 quality-gate 落地；verify 绿；终审 PASS。
 ### 本轮计划
-1. 锚定第二期定义（P1–P7 已实现）与交付缺口（安装打包 + 文档对齐）
-2. 写入 harness 切片清单（S0 收口 → S1+ 余项）
-3. 同步 ARCHITECTURE 阶段表；保留未提交的 install/scripts/verify 增强
-4. 跑 verify → 多维评估 → 停机并给出下一刀命令
+1. 实现 quality-gate 核心（node --check / 可选 tsc / py_compile）
+2. extension 挂 `tool_result`；单测覆盖失败回灌
+3. 增强 verify + 真会话加载 quality-gate
+4. 评估 → 终审 → commit
 
 
 ## 第二期 Harness 交付切片（机器可判定）
@@ -22,8 +22,8 @@
 
 | 切片 | 内容 | verify 门 | 状态 |
 |---|---|---|---|
-| **S0 交付收口** | P1–P7 已实现代码 + `scripts/link-pi-skills.sh` + `install.sh` Step 6 + 文档对齐 | verify 全绿；新机 skills 可链 | **本 GOAL** |
-| **S1 quality-gate** | `edit` 后 lint/typecheck 回灌（ARCHITECTURE 待建项） | 坏编辑触发失败回灌可测 | 下一刀（推荐） |
+| **S0 交付收口** | P1–P7 已实现代码 + `scripts/link-pi-skills.sh` + `install.sh` Step 6 + 文档对齐 | verify 全绿；新机 skills 可链 | 已完成 |
+| **S1 quality-gate** | `edit`/`write` 后 lint/typecheck 回灌 | 坏编辑触发失败回灌可测 | 已完成 |
 | **S2 trajectory** | L7 仅轨迹采集 `trajectories.jsonl`（优化器仍延后） | hook 落盘 + 单测 | 待定 |
 | **S3 Hybrid RAG** | LSP + LanceDB（记忆/文档上千才上） | 条件项；有语料门槛 | 条件项 |
 | **S4 L7.6 OS/浏览器** | ydotool / patchright（高风险，默认关） | 条件项；需桌面/HITL | 条件项 |
@@ -40,7 +40,8 @@
 
 ### 代定决策
 - 第二期「开发交付」= **P1–P7 + S0 打包收口**；ARCHITECTURE「4+ 二期」余项拆成 S1–S5，不在本 GOAL 内实现
-- 下一刀默认 **S1 quality-gate**（可逆、无桌面依赖、补齐控制面缺口）
+- S1 默认 `node --check`（JS）；可选 tsc/py_compile；`QUALITY_GATE_DISABLED=1` 可关
+- 下一刀默认 **S2 trajectory**（L7 仅轨迹采集）
 - verify 只增强（增加 link-pi-skills 检查），不弱化既有断言
 
 
@@ -78,6 +79,7 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 （无）
 
 ## 已完成
+- **S1 quality-gate**：`tool_result` 对 edit/write 跑质量门；失败回灌 `[AIIA Quality Gate]` + `isError:true`；`quality-gate.test.js` 进 verify。
 - **Pi 默认集成 auto-harness（新机可用）**：新增 `scripts/link-pi-skills.sh`，`install.sh` Step 6 幂等链接到 `~/.pi/agent/skills`；本机已链接。验证：`link-pi-skills.test.sh` + `.harness/verify.sh` 绿。
 - **修复 toolResult 误触发 web-search**：意图嗅探改为只看最近 user 消息，避免 bash 输出中的 `find` 把 Charon 打成 `grok-*-search`（`/usa` 回归）。verify 绿；`artifacts/eval/EVAL.md` 无 Critical/Major。
 - **修复 Charon 搜索意图被改成 grok-*-search**：`web-search-proxy.js` 对直连 provider 只注入提示词、不追加 `-search` 模型后缀；本地反代行为不变。`agy-bridge` 对 EADDRINUSE 容错。
