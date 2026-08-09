@@ -55,10 +55,10 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 - **自动化安装与 Private 仓库上线**：
   - 编写并测试通过 `install.sh` 新系统一键全自动安装脚本。
   - 创建 GitHub 私有仓库 `devwork2454/aiia` 并成功提交推送全部最新代码。
-- **Phase 2 P1 联网搜索反代深度适配 (`web-search-proxy.js`)**：
-  - 支持 Prompt 意图嗅探，覆盖 `@web`、`搜索`、`最新`、`实时`、`排查`、`find` 等多语言搜索关键字。
-  - 增强 `before_provider_request` 钩子，支持结构化注入 `[Web Search Active]` 增强指令（兼容 string 与 content 数组多模态格式）。
-  - 支持通过环境变量 `SEARCH_MODEL_OVERRIDE` 与 `SEARCH_PROXY_URL` 动态路由重定向反代（如 `litellm-cpa` / `cursor-openai-api`），无缝复用反代自带的联网搜索额度。
-  - 自动化单元与 Hook 集成测试 100% 通过（20/20 passed）。
+- **Phase 2 P2 L6 级多智能体 Worktree 并发编排 (`subagent-worktree.js`)**：
+  - 注册 4 大 Worktree 编排工具：`spawn_worktree_subagent` (拉起隔离工作区与后台进程), `list_worktree_subagents` (扫描监控活动/历史工作区 PID、任务与日志), `merge_worktree_subagent` (自动 WIP 提交、预检与安全合并至主分支), `cleanup_worktree_subagent` (强行回收/清理工作区与分支)。
+  - 完美解决 `.gitignore` 穿越与多工作区路径检测问题。
+  - 单元与并发编排测试 100% 通过（25/25 passed）。
+
 
 
