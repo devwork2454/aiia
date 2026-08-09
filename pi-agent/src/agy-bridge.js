@@ -157,6 +157,14 @@ export function startAgyBridgeServer(port = PORT) {
     res.end(JSON.stringify({ error: { message: 'Not Found' } }));
   });
 
+  server.on('error', (err) => {
+    if (err && err.code === 'EADDRINUSE') {
+      console.warn(`[AIIA AGY Bridge] port ${port} already in use, reuse existing listener`);
+      return;
+    }
+    console.error('[AIIA AGY Bridge] server error:', err);
+  });
+
   server.listen(port, '127.0.0.1', () => {
     console.log(`[AIIA AGY Bridge] Server running at http://127.0.0.1:${port}/v1`);
   });

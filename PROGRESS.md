@@ -40,6 +40,7 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
    - 实现 `spawn_subagent` 工具，利用 `git worktree` 为子任务创建物理隔离的临时代码空间，并发执行大重构或多模块开发。
 
 ## 已完成
+- **修复 Charon 搜索意图被改成 grok-*-search**：`web-search-proxy.js` 对直连 provider 只注入提示词、不追加 `-search` 模型后缀；本地反代行为不变。`agy-bridge` 对 EADDRINUSE 容错。
 - **subagent-worktree 测试隔离**：单测改用临时 git 仓，避免 merge 污染主仓；`merge --abort` 容错。验证：`.harness/verify.sh` 绿，独立终审 PASS。
 - **修复 Charon→xAI Grok 被 router 劫持**：`router.js` 默认仅对 `local-proxy` / `127.0.0.1:4000` / 层级别名（`low|medium|high|reasoning`）改写 model；直连 Charon/DeepSeek 等保留原 model（如 `grok-4.5`）。可用 `ROUTER_ENABLED` / `ROUTER_FORCE_MODEL` 覆盖。验证：router 单测 11/11 + `.harness/verify.sh` 绿。
 - **优化 auto-harness skill 输出展现 (Output Style Guidelines)**：增加 4 阶段进度面板、专家视角对比矩阵、决策卡片与测试驱动闭环规范。
