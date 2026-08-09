@@ -160,6 +160,7 @@ export function startAgyBridgeServer(port = PORT) {
   server.listen(port, '127.0.0.1', () => {
     console.log(`[AIIA AGY Bridge] Server running at http://127.0.0.1:${port}/v1`);
   });
+  server.unref(); // 允许测试和 Node 进程在无活跃请求时正常自然退出
 
   return server;
 }
