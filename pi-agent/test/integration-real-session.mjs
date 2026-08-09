@@ -29,7 +29,15 @@ const loader = new DefaultResourceLoader({
   agentDir: getAgentDir(),
   noSkills: true,
   noContextFiles: true,
-  additionalExtensionPaths: [join(extDir, "safety.js"), join(extDir, "memory.js"), join(extDir, "router.js")],
+  additionalExtensionPaths: [
+    join(extDir, "safety.js"),
+    join(extDir, "memory.js"),
+    join(extDir, "router.js"),
+    join(extDir, "sync.js"),
+    join(extDir, "vault.js"),
+    join(extDir, "secret-gate.js"),
+    join(extDir, "subagent-worktree.js"),
+  ],
   // Independent probe hook to detect that tool_call reaches extensions at all.
   extensionFactories: [
     (pi) => {
@@ -46,7 +54,7 @@ const loader = new DefaultResourceLoader({
 await loader.reload();
 
 // ASSERTION 1 (model-independent): our extensions actually loaded, without error.
-// Must be >= 3 (probe factory + safety.js + memory.js). An empty/broken load fails here,
+// Must be >= 7 (probe factory + 7 extensions). An empty/broken load fails here,
 // so a skip branch below can no longer hide broken wiring.
 const res = loader.getExtensions();
 if (res.errors.length > 0) {
@@ -55,8 +63,8 @@ if (res.errors.length > 0) {
 }
 const loadedCount = res.extensions.length;
 console.error(`[integration] extensions loaded: ${loadedCount} [${res.extensions.map((e) => e.name || e.id || "?").join(", ")}]`);
-if (loadedCount < 3) {
-  console.error(`[integration] EXPECTED >=3 extensions (probe+safety+memory), got ${loadedCount} — wiring broken`);
+if (loadedCount < 7) {
+  console.error(`[integration] EXPECTED >=7 extensions, got ${loadedCount} — wiring broken`);
   process.exit(1);
 }
 
