@@ -43,7 +43,7 @@ export function buildCapabilityCatalog({
     lines.push(`- ${t.name}: ${t.when || ""}`.trimEnd());
   }
   lines.push(
-    "Human slash control plane (optional): /goal /reply /add-dir /vault; more via /aiia help.",
+    "Human slash control plane (optional): /goal /imp /reply /add-dir /vault; rough tasks → skill `imp`; more via /aiia help.",
   );
 
   let text = lines.join("\n");

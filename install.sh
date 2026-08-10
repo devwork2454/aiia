@@ -129,16 +129,25 @@ else
   success "AIIA 注册完成"
 fi
 
+# 项目根 .pi/extensions → pi-agent/extensions 的半截软链会导致 jiti 按
+# <repo>/.pi/src 解析相对 import 而失败（真源在 pi-agent/src）。扩展应由
+# `pi install pi-agent` 加载，不要在仓库根再挂一层 extensions-only 软链。
+if [[ -L "$AIIA_DIR/.pi/extensions" ]]; then
+  warn "检测到损坏布局 $AIIA_DIR/.pi/extensions（软链）；正在移除以免 Pi 启动失败"
+  rm -f "$AIIA_DIR/.pi/extensions"
+  rmdir "$AIIA_DIR/.pi" 2>/dev/null || true
+fi
+
 # ─── Step 6: 链接默认 Pi Skills（新机即用）───────────────────────────────────
-step "Step 6/7  链接默认 Pi Skills（auto-harness、goal 等）"
+step "Step 6/7  链接默认 Pi Skills（auto-harness、goal、imp 等）"
 
 if [[ ! -f "$AIIA_DIR/scripts/link-pi-skills.sh" ]]; then
   error "缺少 $AIIA_DIR/scripts/link-pi-skills.sh（新机无法默认启用 auto-harness/goal）"
 fi
 info "正在将仓库 skills 链接到 ~/.pi/agent/skills ..."
 AIIA_DIR="$AIIA_DIR" bash "$AIIA_DIR/scripts/link-pi-skills.sh" \
-  || error "Pi skills 链接失败；请检查 $AIIA_DIR/.agents/skills/{auto-harness,goal}"
-success "Pi 默认 skills 已链接（含 auto-harness、goal；支持 /goal）"
+  || error "Pi skills 链接失败；请检查 $AIIA_DIR/.agents/skills/{auto-harness,goal,imp}"
+success "Pi 默认 skills 已链接（含 auto-harness、goal、imp；支持 /goal /imp）"
 
 
 # 推荐关闭 skill slash 补全（skill 仍可被 agent 发现）

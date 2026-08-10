@@ -58,8 +58,8 @@
 - **入口**：SDK `createAgentSession()` / `createAgentSessionRuntime()`（后者支持在同一进程内替换/续接/fork 会话，是内置 interactive/print/rpc 模式同一层）。
 - **内置工具**：`read / bash / edit / write`（默认），可选 `grep / find / ls`。自定义工具与之合并。
 - **会话能力**：消息树、`compact()` 压缩、`steer()/followUp()` 流中插话、`navigateTree()` 分支导航——**直接复用**，不重造。
-- **资源发现**：`DefaultResourceLoader` 从 `~/.pi/agent/extensions|skills` 与项目 `.pi/extensions|skills`、`.agents/skills` 自动加载。AIIA 的扩展就落在这些目录。
-- **默认全局 Skills**：仓库源在 `.agents/skills/`；新机由 `install.sh` Step 6 调用 `scripts/link-pi-skills.sh`，将 `auto-harness` 等幂等 symlink 到 `~/.pi/agent/skills`，任意 cwd 下的 Pi 均可加载。
+- **资源发现**：`DefaultResourceLoader` 从 `~/.pi/agent/extensions|skills` 与项目 `.pi/extensions|skills`、`.agents/skills` 自动加载。AIIA 扩展经 `pi install <repo>/pi-agent` 注册（见 `install.sh` Step 5），由 package 路径加载 `pi-agent/extensions` + 旁路 `pi-agent/src`；**不要**在仓库根挂 `.pi/extensions → pi-agent/extensions` 半截软链——jiti 会按 `<repo>/.pi/src` 解析相对 import 并启动失败。
+- **默认全局 Skills**：仓库源在 `.agents/skills/`；新机由 `install.sh` Step 6 调用 `scripts/link-pi-skills.sh`，将 `auto-harness` / `goal` / `imp` 等幂等 symlink 到 `~/.pi/agent/skills`，任意 cwd 下的 Pi 均可加载。
 
 ## 3. L2 宿主层（AIIA 自研，stage-0 已有雏形）
 

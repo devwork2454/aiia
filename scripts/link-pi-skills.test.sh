@@ -10,12 +10,14 @@ trap 'rm -rf "$TMP"' EXIT
 export HOME="$TMP"
 export AIIA_DIR="$ROOT"
 
-# 1) 首次链接默认清单（含 auto-harness + goal）
+# 1) 首次链接默认清单（含 auto-harness + goal + imp）
 bash "$SCRIPT"
 link="$HOME/.pi/agent/skills/auto-harness"
 goal_link="$HOME/.pi/agent/skills/goal"
+imp_link="$HOME/.pi/agent/skills/imp"
 [[ -L "$link" ]] || { echo "FAIL: not a symlink"; exit 1; }
 [[ -L "$goal_link" ]] || { echo "FAIL: goal skill not linked"; exit 1; }
+[[ -L "$imp_link" ]] || { echo "FAIL: imp skill not linked"; exit 1; }
 [[ "$(readlink "$link")" == "$ROOT/.agents/skills/auto-harness" ]] || {
   echo "FAIL: wrong target $(readlink "$link")"
   exit 1
@@ -24,8 +26,16 @@ goal_link="$HOME/.pi/agent/skills/goal"
   echo "FAIL: wrong goal target $(readlink "$goal_link")"
   exit 1
 }
+[[ "$(readlink "$imp_link")" == "$ROOT/.agents/skills/imp" ]] || {
+  echo "FAIL: wrong imp target $(readlink "$imp_link")"
+  exit 1
+}
 [[ -f "$ROOT/.agents/skills/goal/SKILL.md" ]] || {
   echo "FAIL: missing goal SKILL.md"
+  exit 1
+}
+[[ -f "$ROOT/.agents/skills/imp/SKILL.md" ]] || {
+  echo "FAIL: missing imp SKILL.md"
   exit 1
 }
 

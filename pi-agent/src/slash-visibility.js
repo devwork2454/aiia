@@ -4,6 +4,7 @@
 
 export const DEFAULT_SLASH_ALLOWLIST = Object.freeze([
   "goal",
+  "imp",
   "reply",
   "add-dir",
   "vault",
@@ -13,6 +14,7 @@ export const DEFAULT_SLASH_ALLOWLIST = Object.freeze([
 /** Commands owned by AIIA that may be hidden from autocomplete. */
 export const AIIA_MANAGED_SLASH_COMMANDS = Object.freeze([
   "goal",
+  "imp",
   "reply",
   "add-dir",
   "rm-dir",
@@ -112,7 +114,7 @@ export async function routeAiiaSubcommand(sub, rest, handlers, ctx) {
       "  /aiia help",
       ...names.map((n) => `  /aiia ${n} ...`),
       "",
-      "Visible slash shortcuts: /goal /reply /add-dir /vault",
+      "Visible slash shortcuts: /goal /imp /reply /add-dir /vault",
       "Prefer tools from the capability catalog for agent work.",
     ];
     ctx?.ui?.notify?.(lines.join("\n"), "info");

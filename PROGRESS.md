@@ -1,20 +1,18 @@
 # 项目进度
 
 ## GOAL
-Slash UX / Tool-First：减少 `/` 菜单噪音，能力目录 + `/aiia` 聚合，memory/dirs 走 tool。
+将 Pi 向 `/imp` 内置为默认 skill + slash，与 `/goal` 分工清晰。
 ### 验收标准
-- S-UX-1：`capability-catalog` 注入短目录（含 kb_search/remember/memory_search）；`enableSkillCommands=false` 推荐落地；长度 ≤2048
-- S-UX-2：补全白名单默认 goal/reply/add-dir/vault/aiia；`/aiia` 可路由到 registry handlers；冷门命令可手打
-- S-UX-3：`memory_search`/`memory_list`/`list_additional_dirs` 工具可用；catalog 覆盖
-- `.harness/verify.sh` 含 capability-catalog + slash-ux 单测且退出 0
+- `.agents/skills/imp/SKILL.md` 存在且无 Cursor `/next`/OhMy 依赖
+- `link-pi-skills` 默认清单含 `imp`；测试断言链接
+- `extensions/imp.js` + `imp-command` 单测；slash 白名单含 `imp`
+- `.harness/verify.sh` 退出 0
 ### 状态
-通过（2026-08-09）：S-UX-1/2/3 完成；verify 绿
+通过（2026-08-10）：/imp 内置；verify 绿；本机已 link；终审 PASS
 ### 本轮计划
-1. S-UX-1 capability-catalog + settings 推荐
-2. S-UX-2 slash-ux 白名单 + /aiia
-3. S-UX-3 memory/dirs tool-first
-4. verify → 终审 → commit
-
+1. skill + slash + link 链
+2. 单测与 verify
+3. 终审
 
 ## 第二期 Harness 交付切片（机器可判定）
 
@@ -87,6 +85,9 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 - **Slash UX / Tool-First**：`capability-catalog` 短目录注入；`slash-ux` 白名单+`/aiia`；`memory_search`/`memory_list`/`list_additional_dirs`；推荐 `enableSkillCommands=false`（`docs/pi-settings-recommended.json` + install 补缺）。
 - **Pi /reply**：全局回复语言/风格（`~/.config/aiia/reply-prefs.json`）；`/reply lang|style|on|off|reset`；before_agent_start 注入。
 - **Pi /add-dir**：会话附加工作目录；持久化 `.agent/additional-dirs.json`；system prompt 注入 + skills 发现。
+- **Pi /imp 内置**：Pi 向 skill + `/imp` slash + `link-pi-skills` 默认链；与 `/goal` 分工（整形 vs 闭环）。
+- **Pi 启动冒烟（无模型）**：`smoke-pi-startup.mjs` 查半截 `.pi/extensions` + 从仓库根加载全部扩展；进 `verify.sh`。
+- **修复 Pi 启动扩展加载失败**：根因是 gitignored 的 `.pi/extensions` 半截软链；jiti 不按 realpath 解析 `../src`。已移除坏链，`install.sh` Step 5 增加清理，ARCHITECTURE 标明应走 `pi install`。
 - **Pi /goal**：`extensions/goal.js` 注册 `/goal`；skill `.agents/skills/goal` 链到 `~/.pi/agent/skills/goal`。
 - **S5 channel-adapter**：cli 归一化就绪；飞书 archived；web deferred/stub；不重开飞书运行时。
 - **S4 os-browser**：L7.6 工具接口+默认关+tool_call 闸门+dry-run；真桌面驱动未做。

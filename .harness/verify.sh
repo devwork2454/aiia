@@ -11,8 +11,14 @@ if [[ ! -d node_modules/@earendil-works/pi-coding-agent ]]; then
   npm install --ignore-scripts >/tmp/aiia-npm-install.log 2>&1 || { cat /tmp/aiia-npm-install.log; exit 1; }
 fi
 
-echo "[verify] unit: policy (safety) + memory store + vault/sync crypto + secret-gate + web-search-proxy + subagent-worktree + router + task-runner + cron-scheduler + sandbox-policy + quality-gate + trajectory + kb-search + os-browser + channel-adapter + goal + add-dir + reply-prefs + capability-catalog + slash-ux"
-node --test test/policy.test.js test/memory-store.test.js test/vault-sync-crypto.test.js test/secret-gate-router.test.js test/web-search-proxy.test.js test/subagent-worktree.test.js test/router.test.js test/task-runner.test.js test/cron-scheduler.test.js test/sandbox-policy.test.js test/quality-gate.test.js test/trajectory.test.js test/kb-search.test.js test/os-browser.test.js test/channel-adapter.test.js test/goal-command.test.js test/add-dir.test.js test/reply-prefs.test.js test/capability-catalog.test.js test/slash-ux.test.js
+echo "[verify] unit: policy (safety) + memory store + vault/sync crypto + secret-gate + web-search-proxy + subagent-worktree + router + task-runner + cron-scheduler + sandbox-policy + quality-gate + trajectory + kb-search + os-browser + channel-adapter + goal + imp + add-dir + reply-prefs + capability-catalog + slash-ux + smoke-pi-startup"
+node --test test/policy.test.js test/memory-store.test.js test/vault-sync-crypto.test.js test/secret-gate-router.test.js test/web-search-proxy.test.js test/subagent-worktree.test.js test/router.test.js test/task-runner.test.js test/cron-scheduler.test.js test/sandbox-policy.test.js test/quality-gate.test.js test/trajectory.test.js test/kb-search.test.js test/os-browser.test.js test/channel-adapter.test.js test/goal-command.test.js test/imp-command.test.js test/add-dir.test.js test/reply-prefs.test.js test/capability-catalog.test.js test/slash-ux.test.js test/smoke-pi-startup.test.js
+
+echo "[verify] smoke: repo-root layout + extension load (no model)"
+# Catches half-symlink .pi/extensions and jiti load failures before real `pi` use.
+OUT="$(node test/smoke-pi-startup.mjs 2>/tmp/aiia-smoke.log)"
+echo "$OUT"
+echo "$OUT" | grep -q '^SMOKE_OK' || { echo "[verify] smoke FAILED:" >&2; cat /tmp/aiia-smoke.log >&2; exit 1; }
 
 echo "[verify] link-pi-skills: idempotent symlink into ~/.pi/agent/skills"
 bash "$ROOT/scripts/link-pi-skills.test.sh"
