@@ -12,7 +12,14 @@ import {
   formatContextCardPrompt,
   isProfileDisabled,
   MAX_PROFILE_PROMPT_CHARS,
+  computeProjectFingerprint,
+  isCardStale,
+  buildRuleBasedDraft,
+  writeProjectDraft,
+  applyProjectDraft,
+  parseProfileArgs,
 } from "../src/context-card.js";
+import { clearAiiaHandlers, getAiiaHandler } from "../src/command-registry.js";
 import contextCardExtension from "../extensions/context-card.js";
 
 function tmp() {
@@ -69,6 +76,68 @@ describe("context-card store", () => {
 
   test("kill switch", () => {
     assert.equal(isProfileDisabled({ AIIA_PROFILE_DISABLED: "1" }), true);
+  });
+
+  test("fingerprint stable for same files; stale when missing fingerprint", () => {
+    const cwd = tmp();
+    fs.writeFileSync(path.join(cwd, "package.json"), "{}");
+    const fp1 = computeProjectFingerprint(cwd);
+    const fp2 = computeProjectFingerprint(cwd);
+    assert.equal(fp1, fp2);
+    assert.equal(fp1.length, 16);
+    const card = normalizeCard({ intent: "x" });
+    assert.equal(isCardStale(card, cwd), true);
+    card.fingerprint = fp1;
+    assert.equal(isCardStale(card, cwd), false);
+  });
+
+  test("rule draft detects node+python and refresh/apply flow", () => {
+    const cwd = tmp();
+    fs.writeFileSync(path.join(cwd, "package.json"), '{"name":"z"}');
+    fs.writeFileSync(path.join(cwd, "pyproject.toml"), "[project]\nname='z'\n");
+    fs.writeFileSync(path.join(cwd, "PROGRESS.md"), "## GOAL\nShip context cards\n");
+    const draft = buildRuleBasedDraft(cwd);
+    assert.ok(draft.stack.includes("node"));
+    assert.ok(draft.stack.includes("python"));
+    assert.match(draft.intent, /Ship context cards/);
+    writeProjectDraft(cwd, draft);
+    const applied = applyProjectDraft(cwd);
+    assert.equal(applied.intent, draft.intent);
+    assert.equal(applied.fingerprint, computeProjectFingerprint(cwd));
+    assert.ok(!fs.existsSync(path.join(cwd, ".agent", "project-card.draft.json")));
+  });
+
+  test("parseProfileArgs", () => {
+    assert.equal(parseProfileArgs("").action, "show");
+    assert.equal(parseProfileArgs("refresh").action, "refresh");
+    assert.equal(parseProfileArgs("apply").action, "apply");
+    assert.deepEqual(parseProfileArgs("set intent hello"), {
+      action: "set",
+      scope: "project",
+      field: "intent",
+      value: "hello",
+    });
+    assert.equal(parseProfileArgs("set --user tags a,b").scope, "user");
+  });
+
+  test("extension registers /profile and off hints AIIA_PROFILE_DISABLED", async () => {
+    clearAiiaHandlers();
+    const cwd = tmp();
+    const commands = {};
+    const mockPi = {
+      registerCommand: (n, o) => {
+        commands[n] = o;
+      },
+      on() {},
+    };
+    contextCardExtension(mockPi);
+    assert.equal(typeof commands.profile?.handler, "function");
+    assert.equal(typeof getAiiaHandler("profile"), "function");
+
+    const notes = [];
+    const ctx = { cwd, ui: { notify: (m) => notes.push(m) } };
+    await commands.profile.handler("off", ctx);
+    assert.ok(notes.some((n) => /AIIA_PROFILE_DISABLED/.test(n)));
   });
 
   test("extension injects summary on before_agent_start", async () => {

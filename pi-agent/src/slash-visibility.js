@@ -8,6 +8,7 @@ export const DEFAULT_SLASH_ALLOWLIST = Object.freeze([
   "reply",
   "add-dir",
   "vault",
+  "profile",
   "aiia",
 ]);
 
@@ -21,6 +22,7 @@ export const AIIA_MANAGED_SLASH_COMMANDS = Object.freeze([
   "list-dirs",
   "memory",
   "vault",
+  "profile",
   "sync",
   "aiia",
 ]);
