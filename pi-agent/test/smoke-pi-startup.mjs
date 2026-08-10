@@ -12,7 +12,7 @@ import { existsSync, lstatSync, mkdtempSync, mkdirSync, readdirSync, rmSync, sym
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DefaultResourceLoader, getAgentDir } from "@earendil-works/pi-coding-agent";
+import { DefaultResourceLoader } from "@earendil-works/pi-coding-agent";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const piAgentRoot = join(here, "..");
@@ -54,19 +54,28 @@ export async function loadAiiaExtensionsFromRepoRoot(root) {
     .map((f) => join(extensionsDir, f))
     .sort();
 
-  const loader = new DefaultResourceLoader({
-    cwd: root,
-    agentDir: getAgentDir(),
-    noSkills: true,
-    noContextFiles: true,
-  });
-  await loader.reload();
-  const res = loader.getExtensions();
-  const loadedPaths = res.extensions
-    .map((e) => e.resolvedPath || e.path || "")
-    .filter(Boolean)
-    .sort();
-  return { errors: res.errors ?? [], loadedPaths, expected };
+  // Hermetic agentDir: ignore ~/.pi packages (main + worktree dual-install
+  // otherwise registers the same tools twice and fails with conflicts).
+  const agentDir = mkdtempSync(join(tmpdir(), "aiia-smoke-agent-"));
+  try {
+    const loader = new DefaultResourceLoader({
+      cwd: root,
+      agentDir,
+      noSkills: true,
+      noContextFiles: true,
+      noExtensions: true,
+      additionalExtensionPaths: expected,
+    });
+    await loader.reload();
+    const res = loader.getExtensions();
+    const loadedPaths = res.extensions
+      .map((e) => e.resolvedPath || e.path || "")
+      .filter(Boolean)
+      .sort();
+    return { errors: res.errors ?? [], loadedPaths, expected };
+  } finally {
+    rmSync(agentDir, { recursive: true, force: true });
+  }
 }
 
 function assertDetectorSelfCheck() {
@@ -113,7 +122,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.error(`[smoke] load OK: ${expected.length} pi-agent extensions (+ any global)`);
+  console.error(`[smoke] load OK: ${expected.length} pi-agent extensions (isolated agentDir)`);
   console.log("SMOKE_OK");
 }
 
