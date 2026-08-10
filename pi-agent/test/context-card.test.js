@@ -91,6 +91,35 @@ describe("context-card store", () => {
     assert.equal(isCardStale(card, cwd), false);
   });
 
+  test("applyProjectDraft throws on corrupt draft without wiping project card", () => {
+    const cwd = tmp();
+    const agentDir = path.join(cwd, ".agent");
+    fs.mkdirSync(agentDir, { recursive: true });
+    const projectCard = path.join(agentDir, "project-card.json");
+    const draftFile = path.join(agentDir, "project-card.draft.json");
+    fs.writeFileSync(
+      projectCard,
+      JSON.stringify({ intent: "keep-me", stack: ["node"] }, null, 2) + "\n",
+    );
+    fs.writeFileSync(draftFile, "{not valid json");
+
+    assert.throws(
+      () => applyProjectDraft(cwd),
+      /corrupt|invalid JSON/i,
+    );
+    const kept = JSON.parse(fs.readFileSync(projectCard, "utf8"));
+    assert.equal(kept.intent, "keep-me");
+    assert.deepEqual(kept.stack, ["node"]);
+  });
+
+  test("saveProjectCard stamps fingerprint so card is not stale", () => {
+    const cwd = tmp();
+    fs.writeFileSync(path.join(cwd, "package.json"), "{}");
+    const saved = saveProjectCard({ intent: "manual set", stack: ["node"] }, cwd);
+    assert.equal(isCardStale(saved, cwd), false);
+    assert.equal(saved.fingerprint, computeProjectFingerprint(cwd));
+  });
+
   test("rule draft detects node+python and refresh/apply flow", () => {
     const cwd = tmp();
     fs.writeFileSync(path.join(cwd, "package.json"), '{"name":"z"}');

@@ -164,7 +164,22 @@ export function saveUserCard(patch, env = process.env) {
 }
 
 export function saveProjectCard(patch, cwd = process.cwd()) {
-  return saveCard(projectCardPath(cwd), patch);
+  const file = projectCardPath(cwd);
+  const dir = dirname(file);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  const current = normalizeCard(readJsonFile(file));
+  const next = {
+    ...current,
+    ...Object.fromEntries(
+      Object.entries(patch || {}).filter(([, v]) => v !== undefined),
+    ),
+    updated_at: new Date().toISOString(),
+  };
+  const cardBody = normalizeCard({ ...next, fingerprint: "" });
+  const fp = computeProjectFingerprint(cwd, { projectCardOverride: cardBody });
+  const normalized = normalizeCard({ ...cardBody, fingerprint: fp });
+  writeFileSync(file, JSON.stringify(normalized, null, 2) + "\n");
+  return normalized;
 }
 
 /**
@@ -308,7 +323,13 @@ export function applyProjectDraft(cwd = process.cwd()) {
   if (!existsSync(draftFile)) {
     throw new Error("No project-card draft found. Run /profile refresh first.");
   }
-  const draft = normalizeCard(readJsonFile(draftFile));
+  const rawDraft = readJsonFile(draftFile);
+  if (rawDraft === null) {
+    throw new Error(
+      "Project-card draft is corrupt or invalid JSON. Fix or delete .agent/project-card.draft.json and run /profile refresh.",
+    );
+  }
+  const draft = normalizeCard(rawDraft);
   const cardBody = normalizeCard({ ...draft, fingerprint: "", updated_at: new Date().toISOString() });
   const fp = computeProjectFingerprint(cwd, { projectCardOverride: cardBody });
   const next = normalizeCard({ ...cardBody, fingerprint: fp });
