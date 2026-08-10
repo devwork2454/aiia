@@ -25,15 +25,20 @@ export const DEFAULT_CATALOG_ENTRIES = Object.freeze([
 ]);
 
 /**
- * @param {{ tools?: CatalogEntry[], env?: NodeJS.ProcessEnv, maxChars?: number }} [opts]
+ * @param {{ tools?: CatalogEntry[], env?: NodeJS.ProcessEnv, card?: import("./context-card.js").Card, maxChars?: number }} [opts]
  * @returns {string}
  */
 export function buildCapabilityCatalog({
   tools = DEFAULT_CATALOG_ENTRIES,
   env = process.env,
+  card,
   maxChars = MAX_CATALOG_CHARS,
 } = {}) {
   if (isCatalogDisabled(env)) return "";
+
+  if (card) {
+    tools = filterCatalogEntries(tools, card);
+  }
 
   const lines = [
     "AIIA tools (prefer calling tools; do not ask the user to memorize slash commands):",
@@ -67,4 +72,22 @@ export function formatCapabilityCatalogPrompt(catalogText) {
 export function isCatalogDisabled(env = process.env) {
   const v = env.AIIA_CAPABILITY_CATALOG_DISABLED;
   return v === "1" || v === "true";
+}
+
+/**
+ * @param {CatalogEntry[]} entries
+ * @param {import("./context-card.js").Card | null | undefined} card
+ * @returns {CatalogEntry[]}
+ */
+export function filterCatalogEntries(entries, card) {
+  const avoid = new Set((card?.avoid_tools || []).map(String));
+  const prefer = (card?.prefer_tools || []).map(String);
+  const base = entries.filter((e) => e?.name && !avoid.has(e.name));
+  if (!prefer.length) return base;
+  const rank = new Map(prefer.map((n, i) => [n, i]));
+  return [...base].sort((a, b) => {
+    const ra = rank.has(a.name) ? rank.get(a.name) : 1000;
+    const rb = rank.has(b.name) ? rank.get(b.name) : 1000;
+    return ra - rb || a.name.localeCompare(b.name);
+  });
 }

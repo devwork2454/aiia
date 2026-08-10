@@ -2,10 +2,13 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
   MAX_CATALOG_CHARS,
+  DEFAULT_CATALOG_ENTRIES,
+  filterCatalogEntries,
   buildCapabilityCatalog,
   formatCapabilityCatalogPrompt,
   isCatalogDisabled,
 } from "../src/capability-catalog.js";
+import { normalizeCard } from "../src/context-card.js";
 import capabilityCatalogExtension from "../extensions/capability-catalog.js";
 
 describe("capability catalog", () => {
@@ -38,6 +41,23 @@ describe("capability catalog", () => {
     const p = formatCapabilityCatalogPrompt("hello");
     assert.match(p, /\[AIIA capability catalog\]/);
     assert.match(p, /hello/);
+  });
+
+  test("filterCatalogEntries drops avoid_tools and fronts prefer_tools", () => {
+    const card = normalizeCard({
+      avoid_tools: ["spawn_worktree_subagent"],
+      prefer_tools: ["kb_search"],
+    });
+    const filtered = filterCatalogEntries(DEFAULT_CATALOG_ENTRIES, card);
+    assert.ok(!filtered.some((e) => e.name === "spawn_worktree_subagent"));
+    assert.equal(filtered[0].name, "kb_search");
+  });
+
+  test("buildCapabilityCatalog respects card avoid list", () => {
+    const card = normalizeCard({ avoid_tools: ["remember"] });
+    const text = buildCapabilityCatalog({ card });
+    assert.ok(!text.includes("- remember:"));
+    assert.ok(text.includes("kb_search"));
   });
 
   test("extension injects on before_agent_start unless disabled", async () => {

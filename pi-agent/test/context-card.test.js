@@ -13,6 +13,7 @@ import {
   isProfileDisabled,
   MAX_PROFILE_PROMPT_CHARS,
 } from "../src/context-card.js";
+import contextCardExtension from "../extensions/context-card.js";
 
 function tmp() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "aiia-card-"));
@@ -68,5 +69,30 @@ describe("context-card store", () => {
 
   test("kill switch", () => {
     assert.equal(isProfileDisabled({ AIIA_PROFILE_DISABLED: "1" }), true);
+  });
+
+  test("extension injects summary on before_agent_start", async () => {
+    const cwd = tmp();
+    const envPath = path.join(tmp(), "user.json");
+    const env = { AIIA_USER_CARD_PATH: envPath };
+    saveUserCard({ intent: "inject-me", stack: ["node"] }, env);
+    process.env.AIIA_USER_CARD_PATH = envPath;
+    delete process.env.AIIA_PROFILE_DISABLED;
+
+    let hook;
+    const mockPi = {
+      registerCommand() {},
+      on(ev, fn) {
+        if (ev === "before_agent_start") hook = fn;
+      },
+    };
+    contextCardExtension(mockPi);
+    const res = await hook({}, { cwd });
+    assert.match(res.appendSystemPrompt, /inject-me/);
+
+    process.env.AIIA_PROFILE_DISABLED = "1";
+    const res2 = await hook({}, { cwd });
+    assert.equal(res2, undefined);
+    delete process.env.AIIA_PROFILE_DISABLED;
   });
 });

@@ -7,12 +7,15 @@ import {
   formatCapabilityCatalogPrompt,
   isCatalogDisabled,
 } from "../src/capability-catalog.js";
+import { loadMergedCard, isProfileDisabled } from "../src/context-card.js";
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
 export default function capabilityCatalogExtension(pi) {
-  pi.on("before_agent_start", async () => {
+  pi.on("before_agent_start", async (_event, ctx) => {
     if (isCatalogDisabled()) return;
-    const catalog = buildCapabilityCatalog();
+    const cwd = ctx?.cwd || process.cwd();
+    const card = isProfileDisabled() ? null : loadMergedCard({ cwd });
+    const catalog = buildCapabilityCatalog({ card: card || undefined });
     const block = formatCapabilityCatalogPrompt(catalog);
     if (!block) return;
     return { appendSystemPrompt: "\n\n" + block };
