@@ -42,6 +42,9 @@ Context Card 路线 A 最小闭环（S-CARD-1..4）。
 | **S3 Hybrid RAG** | `kb_search` 最小切片（记忆+MD）；LSP+LanceDB 仍延后 | kb_search 单测 + verify | 已完成 |
 | **S4 L7.6 OS/浏览器** | 接口+默认关+dry-run（真桌面仍条件） | os-browser 单测 + verify | 已完成 |
 | **S5 接入层** | 入站归一化；cli 就绪；飞书 archived | channel 单测 + verify | 已完成 |
+| **S6 确定性状态机** | `task-runner` 引入状态机（State Machine）控制流，减少无意义 Chat Loop | DAG 节点验证 + 单测 + verify | 研发中 |
+| **S7 微上下文 Handoff** | `subagent-worktree` 子任务派发与结果回收时进行上下文严格剪裁 (Input/Output Handoff) | Handoff 剪裁验证 + verify | 规划中 |
+| **S8 质量门局域重试** | `quality-gate` 实现本地编译/Lint失败时的内部自动重试闭环 | 重试拦截单测 + verify | 规划中 |
 
 ### Phase 2 已交付能力（P1–P7，代码在 `pi-agent/`）
 - **P1** `web-search-proxy.js`：搜索意图嗅探、指令注入；直连 Charon 不追加 `-search`
@@ -53,15 +56,15 @@ Context Card 路线 A 最小闭环（S-CARD-1..4）。
 - **P7** `sandbox-policy.js`：路径/高危 shell/白名单
 
 ### 代定决策
-- 第二期「开发交付」= **P1–P7 + S0 打包收口**；ARCHITECTURE「4+ 二期」余项拆成 S1–S5，不在本 GOAL 内实现
+- 第一/二期「开发交付」= **P1–P7 + S0 打包收口**；S1–S5 作为二期补充扩展已完成验证。
+- **第三期（Phase 3: 深度控制与质量闭环）= S6–S8**：不再依赖自由对话，向确定性状态机、极简微上下文（Handoff）与局域自动纠错演进。
 - S1 默认 `node --check`（JS）；可选 tsc/py_compile；`QUALITY_GATE_DISABLED=1` 可关
 - S2 默认落盘 `<cwd>/.agent/trajectories.jsonl`；`TRAJECTORY_DISABLED=1` 可关；优化器仍延后
 - S3 最小切片 = builtin 混合检索（MemoryStore + knowledge Markdown）；qmd 可选；LanceDB/LSP 仍条件延后（语料门槛）
 - `KB_SEARCH_DISABLED=1` 可关；默认根：`~/.config/aiia/knowledge` + `<cwd>/knowledge`（`AIIA_KB_PATHS` 可覆写）
 - S4 默认全关；`AIIA_OS_ENABLED`/`AIIA_BROWSER_ENABLED` 显式开启；`AIIA_OS_BROWSER_DRY_RUN=1`（测试默认）不调用真实 ydotool/patchright
 - S5 不重开飞书运行时：仅 channel 归一化 + 状态枚举；飞书保持 legacy 归档
-- verify 只增强（os-browser + channel-adapter），不弱化既有断言
-- **切片表 S0–S5 已全部完成**；无下一刀建议。表外延后项见「推迟」。
+- **切片表 S0–S5 已全部完成**；目前重点转入 S6–S8 规划与执行。表外延后项见「推迟」。
 
 
 ## 当前架构（A 路线：Pi 原生 extension，砍掉自研宿主与双栈）
