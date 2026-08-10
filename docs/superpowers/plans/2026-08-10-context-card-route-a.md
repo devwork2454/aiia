@@ -445,8 +445,9 @@ EOF
 **Interfaces:**
 - Produces:
   - `computeProjectFingerprint(cwd) => string`  
-    对存在的文件按路径排序后拼接 `relpath:mtimeMs:size`，再 `createHash("sha256").update(...).digest("hex").slice(0, 16)`。  
-    探测文件（存在才计入）：`package.json`、`pyproject.toml`、`requirements.txt`、`ARCHITECTURE.md`、`PROGRESS.md`、`Cargo.toml`、`go.mod`、`pom.xml`、`.agent/project-card.json`。
+    对存在的探测文件按路径排序后拼接指纹片段，再 `createHash("sha256").update(...).digest("hex").slice(0, 16)`。  
+    探测文件（存在才计入）：`package.json`、`pyproject.toml`、`requirements.txt`、`ARCHITECTURE.md`、`PROGRESS.md`、`Cargo.toml`、`go.mod`、`pom.xml`、`.agent/project-card.json`。  
+    **片段规则**：`.agent/project-card.json` 用**除 `fingerprint` 外 card 字段的内容 hash**（`JSON.stringify(rest)` → SHA256）；其余文件仍用 `relpath:mtimeMs:size`。
   - `isCardStale(card, cwd) => boolean`：`!card.fingerprint || card.fingerprint !== computeProjectFingerprint(cwd)`
   - `buildRuleBasedDraft(cwd) => Partial<Card>`：  
     - 见 `package.json` → stack 加 `node`；见 `pyproject.toml`/`requirements.txt` → `python`；见 `ARCHITECTURE.md` 含 `Pi` → tags/intent 启发  

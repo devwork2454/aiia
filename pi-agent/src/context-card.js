@@ -200,28 +200,39 @@ export function isProfileDisabled(env = process.env) {
   return env.AIIA_PROFILE_DISABLED === "1" || env.AIIA_PROFILE_DISABLED === "true";
 }
 
-function fingerprintPart(root, rel) {
+function projectCardContentHash(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const { fingerprint: _fp, ...rest } = /** @type {Record<string, unknown>} */ (raw);
+  return createHash("sha256").update(JSON.stringify(rest)).digest("hex");
+}
+
+/** @param {string} root @param {string} rel @param {{ projectCardOverride?: Partial<Card> }} [opts] */
+function fingerprintPart(root, rel, { projectCardOverride } = {}) {
   const file = join(root, rel);
+  if (rel === ".agent/project-card.json" && projectCardOverride) {
+    const hash = projectCardContentHash(normalizeCard(projectCardOverride));
+    return hash ? `${rel}:${hash}` : null;
+  }
   if (!existsSync(file)) return null;
   if (rel === ".agent/project-card.json") {
     const raw = readJsonFile(file);
-    if (!raw || typeof raw !== "object") {
+    const hash = projectCardContentHash(raw);
+    if (!hash) {
       const st = statSync(file);
       return `${rel}:${st.mtimeMs}:${st.size}`;
     }
-    const { fingerprint: _fp, ...rest } = /** @type {Record<string, unknown>} */ (raw);
-    return `${rel}:${createHash("sha256").update(JSON.stringify(rest)).digest("hex")}`;
+    return `${rel}:${hash}`;
   }
   const st = statSync(file);
   return `${rel}:${st.mtimeMs}:${st.size}`;
 }
 
-/** @param {string} [cwd] */
-export function computeProjectFingerprint(cwd = process.cwd()) {
+/** @param {string} [cwd] @param {{ projectCardOverride?: Partial<Card> }} [opts] */
+export function computeProjectFingerprint(cwd = process.cwd(), { projectCardOverride } = {}) {
   const root = resolve(cwd);
   const parts = [];
   for (const rel of [...FINGERPRINT_FILES].sort()) {
-    const part = fingerprintPart(root, rel);
+    const part = fingerprintPart(root, rel, { projectCardOverride });
     if (part) parts.push(part);
   }
   return createHash("sha256").update(parts.join("\n")).digest("hex").slice(0, 16);
@@ -298,8 +309,13 @@ export function applyProjectDraft(cwd = process.cwd()) {
     throw new Error("No project-card draft found. Run /profile refresh first.");
   }
   const draft = normalizeCard(readJsonFile(draftFile));
-  saveProjectCard({ ...draft, fingerprint: "" }, cwd);
-  const next = saveProjectCard({ fingerprint: computeProjectFingerprint(cwd) }, cwd);
+  const cardBody = normalizeCard({ ...draft, fingerprint: "", updated_at: new Date().toISOString() });
+  const fp = computeProjectFingerprint(cwd, { projectCardOverride: cardBody });
+  const next = normalizeCard({ ...cardBody, fingerprint: fp });
+  const file = projectCardPath(cwd);
+  const dir = dirname(file);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  writeFileSync(file, JSON.stringify(next, null, 2) + "\n");
   unlinkSync(draftFile);
   return next;
 }

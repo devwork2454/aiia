@@ -18,7 +18,7 @@
 
 | 通道 | 给谁 | 约定 |
 |---|---|---|
-| **Slash** | 人 | 会话控制与高敏入口；默认补全白名单：`/goal` `/reply` `/add-dir` `/vault` `/aiia` |
+| **Slash** | 人 | 会话控制与高敏入口；默认补全白名单：`/goal` `/reply` `/profile` `/add-dir` `/vault` `/aiia` |
 | **Tool** | 模型 | 业务能力（`remember`/`memory_search`/`kb_search`/…）；由 capability-catalog 短目录注入 |
 | **Skill** | 模型（懒） | 长说明书可发现；推荐 `enableSkillCommands=false`，不进 `/` 菜单 |
 
@@ -127,6 +127,14 @@
 **Lazy Skill**：知识条目以 skill 形式存在，平时一行摘要，触发意图才展开完整内容与工具 schema。
 **S3 最小切片已落地**：`kb_search`（`extensions/kb-search.js`）对 MemoryStore + Markdown knowledge 做词法混合检索，只回 path/title/snippet/score；可选 qmd。
 **仍预留（条件延后）**：LSP client + LanceDB 语义 RAG——**记忆/文档上千或需代码库语义检索时才上**。
+
+**Context Card（路线 A，已落地 `extensions/context-card.js`）**
+- **定位**：结构化私有属性（UserCard/ProjectCard），**非** LLM 微调；与 memory 边界——memory=软事实/经验；card=硬约束（intent/stack/tags）、工具偏好（`prefer_tools`/`avoid_tools`）、目录过滤（`noise_deny`）。
+- **路径与 merge**：全局 `~/.config/aiia/user-card.json`（`AIIA_USER_CARD_PATH` 可覆写）+ 项目 `.agent/project-card.json` deep-merge，**项目优先**；`before_agent_start` 注入 ≤900 字符短摘要（`MAX_PROFILE_PROMPT_CHARS`），禁止整卡 JSON 灌进 system prompt。
+- **catalog 过滤**：`capability-catalog` 读取 merged card 的 `avoid_tools`/`prefer_tools` 降噪工具目录；kill switch `AIIA_PROFILE_DISABLED=1` 时**不注入、不过滤**。
+- **指纹与草案**：`/profile refresh` 按规则扫描项目文件生成 `.agent/project-card.draft.json`（**不自动写盘**）；`/profile apply` 人审后写入 `project-card.json` 并更新 `fingerprint`。指纹算法：对存在的探测文件按路径排序拼接——**`.agent/project-card.json` 用除 `fingerprint` 外字段的内容 hash**；其余探测文件（`package.json`、`pyproject.toml`、`requirements.txt`、`ARCHITECTURE.md`、`PROGRESS.md`、`Cargo.toml`、`go.mod`、`pom.xml`）仍用 `relpath:mtimeMs:size`；再 SHA256 取前 16 位。
+- **延后**：LLM 自动画像刷新、trajectory 反哺卡片——本计划只留 hook 点。详见 [docs/superpowers/plans/2026-08-10-context-card-route-a.md](docs/superpowers/plans/2026-08-10-context-card-route-a.md).
+
 
 ## 7. L6 调度层 + L7 自进化层
 

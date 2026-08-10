@@ -1,6 +1,22 @@
 # 项目进度
 
 ## GOAL
+Context Card 路线 A 最小闭环（S-CARD-1..4）。
+### 验收标准
+- UserCard + ProjectCard schema/merge + 短摘要注入（≤900 字符）
+- capability-catalog 按 avoid/prefer 过滤；kill switch `AIIA_PROFILE_DISABLED=1`
+- `/profile refresh|apply|set` 规则指纹草案 + 人审写盘
+- `test/context-card.test.js` 进 verify；integration 加载 `context-card.js`
+- `.harness/verify.sh` 退出 0
+### 状态
+通过（2026-08-10）：S-CARD-1..4 完成；verify 绿
+### 代定决策
+- Kill switch：`AIIA_PROFILE_DISABLED=1` 时不注入摘要、不过滤 catalog（v1 不持久化 enabled 字段）
+- 草案流程：`/profile refresh` 写 `.agent/project-card.draft.json`；**必须** `/profile apply` 才写入 `project-card.json` 并更新 fingerprint
+- 指纹：`.agent/project-card.json` 用除 `fingerprint` 外字段的内容 hash；其余探测文件仍用 `relpath:mtimeMs:size`
+- LLM 自动画像 / trajectory 反哺卡片：**延后**
+
+## GOAL（已完成）
 将 Pi 向 `/imp` 内置为默认 skill + slash，与 `/goal` 分工清晰。
 ### 验收标准
 - `.agents/skills/imp/SKILL.md` 存在且无 Cursor `/next`/OhMy 依赖
@@ -82,6 +98,7 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 （无）
 
 ## 已完成
+- **Context Card 路线 A（S-CARD-1..4）**：`context-card.js` 存储层 + 扩展注入；UserCard/ProjectCard merge；capability-catalog 降噪；规则指纹草案 + `/profile` 人控；verify/integration/ARCHITECTURE 收口。
 - **Slash UX / Tool-First**：`capability-catalog` 短目录注入；`slash-ux` 白名单+`/aiia`；`memory_search`/`memory_list`/`list_additional_dirs`；推荐 `enableSkillCommands=false`（`docs/pi-settings-recommended.json` + install 补缺）。
 - **Pi /reply**：全局回复语言/风格（`~/.config/aiia/reply-prefs.json`）；`/reply lang|style|on|off|reset`；before_agent_start 注入。
 - **Pi /add-dir**：会话附加工作目录；持久化 `.agent/additional-dirs.json`；system prompt 注入 + skills 发现。
