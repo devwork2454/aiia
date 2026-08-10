@@ -14,7 +14,6 @@ import { tmpdir } from "node:os";
 import {
   DefaultResourceLoader,
   ExtensionRunner,
-  getAgentDir,
   SessionManager,
   ModelRegistry,
 } from "@earendil-works/pi-coding-agent";
@@ -36,11 +35,13 @@ describe("memory.js loaded by Pi (real context injection)", () => {
     store.add({ content: "SENTINEL_PREFERENCE_XYZ" });
     store.close();
 
+    const agentDir = mkdtempSync(join(tmpdir(), "aiia-mem-agent-"));
     const loader = new DefaultResourceLoader({
       cwd: process.cwd(),
-      agentDir: getAgentDir(),
+      agentDir,
       noSkills: true,
       noContextFiles: true,
+      noExtensions: true,
       additionalExtensionPaths: [memoryPath],
     });
     await loader.reload();
@@ -55,6 +56,7 @@ describe("memory.js loaded by Pi (real context injection)", () => {
       SessionManager.inMemory(),
       new ModelRegistry(),
     );
+    rmSync(agentDir, { recursive: true, force: true });
   });
 
   after(() => {

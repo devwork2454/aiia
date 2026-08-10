@@ -13,8 +13,9 @@ import {
   SessionManager,
   DefaultResourceLoader,
   ModelRuntime,
-  getAgentDir,
 } from "@earendil-works/pi-coding-agent";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -24,11 +25,13 @@ const extDir = join(here, "..", "extensions");
 let toolCallFired = false;
 let blocked = false;
 
+const agentDir = mkdtempSync(join(tmpdir(), "aiia-integration-agent-"));
 const loader = new DefaultResourceLoader({
   cwd: process.cwd(),
-  agentDir: getAgentDir(),
+  agentDir,
   noSkills: true,
   noContextFiles: true,
+  noExtensions: true,
   additionalExtensionPaths: [
     join(extDir, "safety.js"),
     join(extDir, "memory.js"),
@@ -65,6 +68,7 @@ const loader = new DefaultResourceLoader({
 });
 
 await loader.reload();
+rmSync(agentDir, { recursive: true, force: true });
 
 // ASSERTION 1 (model-independent): our extensions actually loaded, without error.
 // Must be >= 20 (probe factory + extensions including context-card). An empty/broken load fails here,

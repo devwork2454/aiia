@@ -10,12 +10,13 @@
  */
 import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
   DefaultResourceLoader,
   ExtensionRunner,
-  getAgentDir,
   SessionManager,
   ModelRegistry,
 } from "@earendil-works/pi-coding-agent";
@@ -35,26 +36,32 @@ describe("safety.js loaded by Pi (real hook, real event shape)", () => {
   let loadedNames;
 
   before(async () => {
-    const loader = new DefaultResourceLoader({
-      cwd: process.cwd(),
-      agentDir: getAgentDir(),
-      noSkills: true,
-      noContextFiles: true,
-      additionalExtensionPaths: [safetyPath],
-    });
-    await loader.reload();
-    const res = loader.getExtensions();
-    assert.equal(res.errors.length, 0, `extension load errors: ${JSON.stringify(res.errors)}`);
-    loadedNames = res.extensions.map((e) => e.name || e.id || "?");
-    assert.ok(res.extensions.length >= 1, "safety extension must actually load");
+    const agentDir = mkdtempSync(join(tmpdir(), "aiia-safety-agent-"));
+    try {
+      const loader = new DefaultResourceLoader({
+        cwd: process.cwd(),
+        agentDir,
+        noSkills: true,
+        noContextFiles: true,
+        noExtensions: true,
+        additionalExtensionPaths: [safetyPath],
+      });
+      await loader.reload();
+      const res = loader.getExtensions();
+      assert.equal(res.errors.length, 0, `extension load errors: ${JSON.stringify(res.errors)}`);
+      loadedNames = res.extensions.map((e) => e.name || e.id || "?");
+      assert.ok(res.extensions.length >= 1, "safety extension must actually load");
 
-    runner = new ExtensionRunner(
-      res.extensions,
-      res.runtime,
-      process.cwd(),
-      SessionManager.inMemory(),
-      new ModelRegistry(),
-    );
+      runner = new ExtensionRunner(
+        res.extensions,
+        res.runtime,
+        process.cwd(),
+        SessionManager.inMemory(),
+        new ModelRegistry(),
+      );
+    } finally {
+      rmSync(agentDir, { recursive: true, force: true });
+    }
   });
 
   it("the registered hook BLOCKS rm -rf /", async () => {
