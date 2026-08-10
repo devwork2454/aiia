@@ -8,8 +8,15 @@ import {
   formatCapabilityCatalogPrompt,
   isCatalogDisabled,
 } from "../src/capability-catalog.js";
-import { normalizeCard } from "../src/context-card.js";
+import { normalizeCard, saveUserCard, saveProjectCard } from "../src/context-card.js";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import capabilityCatalogExtension from "../extensions/capability-catalog.js";
+
+function tmp() {
+  return fs.mkdtempSync(path.join(os.tmpdir(), "aiia-catalog-"));
+}
 
 describe("capability catalog", () => {
   test("buildCapabilityCatalog includes key tools and stays short", () => {
@@ -86,13 +93,45 @@ describe("capability catalog", () => {
       else process.env.AIIA_CAPABILITY_CATALOG_DISABLED = prev;
     }
   });
+  test("extension skips catalog filtering when profile disabled", async () => {
+    const cwd = tmp();
+    const envPath = path.join(tmp(), "user.json");
+    saveUserCard({ avoid_tools: ["remember"] }, { AIIA_USER_CARD_PATH: envPath });
+    fs.mkdirSync(path.join(cwd, ".agent"), { recursive: true });
+    saveProjectCard({ avoid_tools: ["remember"] }, cwd);
+
+    const hooks = {};
+    const pi = {
+      on: (ev, fn) => {
+        hooks[ev] = fn;
+      },
+    };
+    capabilityCatalogExtension(pi);
+
+    const prevUserPath = process.env.AIIA_USER_CARD_PATH;
+    const prevProfileDisabled = process.env.AIIA_PROFILE_DISABLED;
+    const prevCatalogDisabled = process.env.AIIA_CAPABILITY_CATALOG_DISABLED;
+
+    process.env.AIIA_USER_CARD_PATH = envPath;
+    process.env.AIIA_PROFILE_DISABLED = "1";
+    delete process.env.AIIA_CAPABILITY_CATALOG_DISABLED;
+
+    try {
+      const res = await hooks.before_agent_start({}, { cwd });
+      assert.match(res.appendSystemPrompt, /- remember:/);
+    } finally {
+      if (prevUserPath === undefined) delete process.env.AIIA_USER_CARD_PATH;
+      else process.env.AIIA_USER_CARD_PATH = prevUserPath;
+      if (prevProfileDisabled === undefined) delete process.env.AIIA_PROFILE_DISABLED;
+      else process.env.AIIA_PROFILE_DISABLED = prevProfileDisabled;
+      if (prevCatalogDisabled === undefined) delete process.env.AIIA_CAPABILITY_CATALOG_DISABLED;
+      else process.env.AIIA_CAPABILITY_CATALOG_DISABLED = prevCatalogDisabled;
+    }
+  });
 });
 
 import memoryExtension from "../extensions/memory.js";
 import { clearAiiaHandlers } from "../src/command-registry.js";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 
 describe("memory tool-first", () => {
   test("registers memory_search/list tools and handler registry", async () => {
