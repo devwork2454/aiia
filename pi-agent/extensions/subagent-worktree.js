@@ -157,6 +157,18 @@ export default function subagentWorktreeExtension(pi) {
           } catch {}
         }
 
+        let handoffOutput = undefined;
+        const handoffFileJson = path.join(fullPath, ".subagent_handoff.json");
+        const handoffFileMd = path.join(fullPath, ".subagent_output.md");
+        if (fs.existsSync(handoffFileJson)) {
+          try {
+             const data = JSON.parse(fs.readFileSync(handoffFileJson, "utf8"));
+             handoffOutput = data.payload || JSON.stringify(data);
+          } catch {}
+        } else if (fs.existsSync(handoffFileMd)) {
+          handoffOutput = fs.readFileSync(handoffFileMd, "utf8").trim();
+        }
+
         let gitStatus = '';
         try {
           gitStatus = runGit('git status --short', fullPath);
@@ -172,7 +184,8 @@ export default function subagentWorktreeExtension(pi) {
           task: meta.task || '未知任务',
           spawnedAt: meta.spawnedAt || null,
           gitStatus: gitStatus || 'clean',
-          logTail: logTail || '(无日志输出)'
+          logTail: logTail || '(无日志输出)',
+          handoffOutput
         });
       }
 
@@ -241,6 +254,20 @@ export default function subagentWorktreeExtension(pi) {
 
         // 4. 更新 task meta
         const taskInfoFile = path.join(worktreeDir, '.subagent_task.json');
+        
+        // 5. Read handoff output before deleting the worktree
+        let handoffOutput;
+        const handoffFileJson = path.join(worktreeDir, '.subagent_handoff.json');
+        const handoffFileMd = path.join(worktreeDir, '.subagent_output.md');
+        if (fs.existsSync(handoffFileJson)) {
+          try {
+             const data = JSON.parse(fs.readFileSync(handoffFileJson, 'utf8'));
+             handoffOutput = data.payload || JSON.stringify(data);
+          } catch {}
+        } else if (fs.existsSync(handoffFileMd)) {
+          handoffOutput = fs.readFileSync(handoffFileMd, 'utf8').trim();
+        }
+
         if (fs.existsSync(taskInfoFile)) {
           try {
             const meta = JSON.parse(fs.readFileSync(taskInfoFile, 'utf8'));
@@ -250,7 +277,7 @@ export default function subagentWorktreeExtension(pi) {
           } catch {}
         }
 
-        // 5. 若请求清理则回收资源
+        // 6. 若请求清理则回收资源
         if (shouldDelete) {
           try {
             runGit(`git worktree remove --force "${worktreeDir}"`, ctx.cwd);
@@ -258,13 +285,15 @@ export default function subagentWorktreeExtension(pi) {
           } catch {}
         }
 
-        return {
+        const _res = {
           status: 'success',
           branch,
           targetBranch: currentBranch,
           message: `✅ 成功将分支 ${branch} 合并到 ${currentBranch}`,
-          mergeLog: mergeResult
+          mergeLog: mergeResult,
+          handoffOutput
         };
+        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
       } catch (e) {
         return {
           status: 'error',
