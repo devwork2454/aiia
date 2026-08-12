@@ -6,8 +6,16 @@
  * Real failures are rate-limited to console.error + .agent/error.log.
  */
 
-const GC_TOKEN_THRESHOLD = 8000; // Trigger GC if approximate tokens exceed this
-const GC_KEEP_RECENT = 10; // Number of recent messages to keep in Eden
+// Soft trigger: only compact when context is large (avoid every-turn folding).
+const GC_TOKEN_THRESHOLD = 32000;
+// Soft trigger by raw message count (pair-heavy tool loops).
+const GC_MSG_THRESHOLD = 80;
+// Hard emergency: ignore min-interval when tokens explode past this.
+const GC_EMERGENCY_TOKEN_THRESHOLD = 96000;
+// Keep a long recent tail so mid-task details survive between rare GCs.
+const GC_KEEP_RECENT = 28;
+// Do not run normal GC more often than this (per process).
+const GC_MIN_INTERVAL_MS = 3 * 60 * 1000;
 const GC_FAIL_COOLDOWN_MS = 5 * 60 * 1000; // Skip LLM summarize after repeated failures
 const GC_ERROR_LOG_INTERVAL_MS = 60 * 1000; // At most one console/file error per minute
 
@@ -24,6 +32,8 @@ import path from "node:path";
 /** @type {{ until: number, reason: string } | null} */
 let llmCircuitOpen = null;
 let lastErrorLogAt = 0;
+/** @type {number} */
+let lastGcAt = 0;
 
 function ensureAgentDir(cwd) {
   const dir = path.join(cwd || process.cwd(), ".agent");
@@ -425,8 +435,13 @@ export default function contextGCExtension(pi) {
     if (process.env.AIIA_DISABLE_GC === "1") return req;
 
     const currentTokens = estimateTokens(req.messages);
+    const overSoft =
+      currentTokens > GC_TOKEN_THRESHOLD || req.messages.length > GC_MSG_THRESHOLD;
+    const emergency = currentTokens > GC_EMERGENCY_TOKEN_THRESHOLD;
+    const intervalOk = Date.now() - lastGcAt >= GC_MIN_INTERVAL_MS;
 
-    if (currentTokens > GC_TOKEN_THRESHOLD || req.messages.length > 40) {
+    // Rare compaction: soft threshold + min interval; emergency bypasses interval only.
+    if (overSoft && (intervalOk || emergency)) {
       const targetIndex = Math.max(1, req.messages.length - GC_KEEP_RECENT);
       const cutoff = findSafeCutoffIndex(req.messages, targetIndex);
 
@@ -454,6 +469,7 @@ export default function contextGCExtension(pi) {
             ...tail,
           ];
         }
+        lastGcAt = Date.now();
       }
     }
 
@@ -476,8 +492,16 @@ export const _test = {
   setLastErrorLogAt: (t) => {
     lastErrorLogAt = t;
   },
+  setLastGcAt: (t) => {
+    lastGcAt = t;
+  },
+  getLastGcAt: () => lastGcAt,
   GC_FAIL_COOLDOWN_MS,
   GC_TOKEN_THRESHOLD,
+  GC_MSG_THRESHOLD,
+  GC_EMERGENCY_TOKEN_THRESHOLD,
+  GC_MIN_INTERVAL_MS,
+  GC_KEEP_RECENT,
   MONOLOGUE_TEXT_CHARS,
   KEEP_FULL_THINKING,
   THINKING_STUB_CHARS,

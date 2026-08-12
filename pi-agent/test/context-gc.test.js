@@ -41,6 +41,8 @@ describe("Context GC", () => {
     process.env.AIIA_DISABLE_GC = "0";
     _test.clearCircuit();
     _test.setLastErrorLogAt(0);
+    // Allow GC immediately in tests (no min-interval wait).
+    _test.setLastGcAt(0);
   });
 
   test("estimateTokens grows with large tool payloads", () => {
@@ -217,5 +219,52 @@ describe("Context GC", () => {
     };
     await hookFn({ payload: req }, { model: { id: "x" } });
     assert.match(req.messages[1].content[0].text, /planning monologue collapsed/i);
+  });
+
+  test("min interval skips soft GC; emergency tokens still compact", async () => {
+    const hookFn = loadHook();
+    const ctx = {
+      cwd: process.cwd(),
+      model: { id: "m1", provider: "openai", baseUrl: "http://127.0.0.1:9/v1" },
+      modelRegistry: {
+        getApiKeyAndHeaders: async () => ({
+          ok: true,
+          apiKey: "k",
+          baseUrl: "http://127.0.0.1:9/v1",
+        }),
+      },
+    };
+
+    // First GC at soft+emergency size
+    const req1 = buildBloatedReq();
+    const len1 = req1.messages.length;
+    await hookFn({ payload: req1 }, ctx);
+    assert.ok(req1.messages.length < len1, "first GC should compact");
+
+    // Immediately after: soft-over but within min interval → skip
+    _test.setLastGcAt(Date.now());
+    const req2 = buildBloatedReq();
+    // shrink payload so tokens are above soft (32k) but below emergency (96k)
+    // 50k chars * 4 tool msgs ≈ enough for soft; use fewer loops
+    req2.messages = req2.messages.slice(0, 8); // system+user+3 pairs with 50k each ≈ high
+    // Actually 3 * 50k/4 ≈ 37k tokens soft; need under 96k — fine with 8 msgs of 50k
+    const len2 = req2.messages.length;
+    await hookFn({ payload: req2 }, ctx);
+    assert.equal(req2.messages.length, len2, "soft GC blocked by min interval");
+
+    // Emergency: force lastGc recent but tokens huge (full bloated)
+    _test.setLastGcAt(Date.now());
+    const req3 = buildBloatedReq();
+    const len3 = req3.messages.length;
+    // 20 * 50k / 4 ≈ 250k tokens >> emergency 96k
+    await hookFn({ payload: req3 }, ctx);
+    assert.ok(req3.messages.length < len3, "emergency GC bypasses min interval");
+  });
+
+  test("thresholds are intentionally high (infrequent GC)", () => {
+    assert.ok(_test.GC_TOKEN_THRESHOLD >= 32000);
+    assert.ok(_test.GC_MSG_THRESHOLD >= 80);
+    assert.ok(_test.GC_KEEP_RECENT >= 24);
+    assert.ok(_test.GC_MIN_INTERVAL_MS >= 3 * 60 * 1000);
   });
 });
