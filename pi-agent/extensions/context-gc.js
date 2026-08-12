@@ -3,8 +3,27 @@
  * Dynamically folds old process context into summarized Survivor memories.
  */
 
-const GC_THRESHOLD = 25; // Trigger GC if messages exceed this count
+const GC_TOKEN_THRESHOLD = 8000; // Trigger GC if approximate tokens exceed this
 const GC_KEEP_RECENT = 10; // Number of recent messages to keep in Eden
+
+function estimateTokens(messages) {
+  let totalLength = 0;
+  for (const msg of messages) {
+    if (typeof msg.content === 'string') {
+      totalLength += msg.content.length;
+    } else if (Array.isArray(msg.content)) {
+      for (const part of msg.content) {
+        if (part.type === 'text' && part.text) {
+          totalLength += part.text.length;
+        }
+      }
+    }
+    if (msg.tool_calls) {
+      totalLength += JSON.stringify(msg.tool_calls).length;
+    }
+  }
+  return Math.ceil(totalLength / 4);
+}
 
 function findSafeCutoffIndex(messages, targetIndex) {
   // Find a safe message to cut off at (must not split tool_calls and tool_results)
@@ -20,7 +39,6 @@ function findSafeCutoffIndex(messages, targetIndex) {
 
 async function summarizeWithLLM(messagesToSummarize, ctx) {
   // Try to use the active model's base URL and provider to summarize.
-  // We use the same model by default, or append -flash if it's a known fast tier.
   const baseUrl = ctx?.model?.baseUrl || 'http://127.0.0.1:4000/v1';
   const modelId = ctx?.model?.id || 'high';
   
@@ -28,10 +46,13 @@ async function summarizeWithLLM(messagesToSummarize, ctx) {
   const payload = {
     model: modelId,
     messages: [
-      { role: 'system', content: 'You are an AI Context GC module. Summarize the following execution process, tool calls, and results into a highly condensed single-paragraph state update. Focus ONLY on final outcomes, critical errors resolved, and facts discovered. Do NOT output markdown formatting like JSON blocks, just pure text.' },
+      { 
+        role: 'system', 
+        content: `You are an AI Context GC module. Summarize the following execution process, tool calls, and results into a condensed state update. \nCRITICAL RULE (Lossless Entity Extraction): You MUST extract and retain all absolute file paths, configuration keys, environment variables, git commits, and precise error codes/messages. \nDo NOT output markdown formatting like JSON blocks, just pure text, but ensure technical entities are preserved perfectly.`
+      },
       { role: 'user', content: JSON.stringify(messagesToSummarize) }
     ],
-    max_tokens: 500,
+    max_tokens: 800,
     temperature: 0.1
   };
 
@@ -63,13 +84,19 @@ export default function contextGCExtension(pi) {
     const req = event?.req || event?.payload;
     if (!req || !req.messages || !Array.isArray(req.messages)) return;
     
-    if (req.messages.length > GC_THRESHOLD && process.env.AIIA_DISABLE_GC !== '1') {
-      const cutoff = findSafeCutoffIndex(req.messages, req.messages.length - GC_KEEP_RECENT);
+    if (process.env.AIIA_DISABLE_GC === '1') return;
+
+    const currentTokens = estimateTokens(req.messages);
+    
+    // We also keep a fallback message count threshold to prevent array bloat
+    if (currentTokens > GC_TOKEN_THRESHOLD || req.messages.length > 40) {
+      const targetIndex = Math.max(1, req.messages.length - GC_KEEP_RECENT);
+      const cutoff = findSafeCutoffIndex(req.messages, targetIndex);
       
       if (cutoff > 1) {
         const messagesToSummarize = req.messages.slice(1, cutoff + 1);
         
-        console.log(`[AIIA Context GC] Triggered Minor GC! Compacting ${messagesToSummarize.length} messages (Eden -> Survivor).`);
+        console.log(`[AIIA Context GC] Triggered Minor GC! Tokens ~${currentTokens} > ${GC_TOKEN_THRESHOLD}. Compacting ${messagesToSummarize.length} messages (Eden -> Survivor).`);
         
         let summaryText = await summarizeWithLLM(messagesToSummarize, ctx);
         
@@ -80,7 +107,7 @@ export default function contextGCExtension(pi) {
 
         const survivorMessage = {
           role: 'assistant',
-          content: `[AIIA GC Survivor Memory] 过去几轮执行的微小结：\n${summaryText}`
+          content: `[AIIA GC Survivor Memory] 过去几轮执行的微小结与核心实体提取：\n${summaryText}`
         };
 
         // Mutate req.messages: Keep [0] (System), add Survivor, keep [cutoff + 1 ... end]
@@ -90,7 +117,7 @@ export default function contextGCExtension(pi) {
           ...req.messages.slice(cutoff + 1)
         ];
         
-        console.log(`[AIIA Context GC] Context array compressed from ${req.messages.length + messagesToSummarize.length - 1} to ${req.messages.length}.`);
+        console.log(`[AIIA Context GC] Context compressed. Old msg count: ${req.messages.length + messagesToSummarize.length - 1}, New msg count: ${req.messages.length}.`);
       }
     }
   });
