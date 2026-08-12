@@ -152,7 +152,7 @@ export default function contextGCExtension(pi) {
       if (cutoff > 1) {
         const messagesToSummarize = req.messages.slice(1, cutoff + 1);
         
-        console.log(`[AIIA Context GC] Triggered Minor GC! Tokens ~${currentTokens} > ${GC_TOKEN_THRESHOLD}. Compacting ${messagesToSummarize.length} messages (Eden -> Survivor).`);
+        console.debug(`[AIIA Context GC] Triggered Minor GC! Tokens ~${currentTokens} > ${GC_TOKEN_THRESHOLD}. Compacting ${messagesToSummarize.length} messages (Eden -> Survivor).`);
         
         let summaryText = await summarizeWithLLM(messagesToSummarize, ctx);
         
@@ -173,7 +173,7 @@ export default function contextGCExtension(pi) {
           ...req.messages.slice(cutoff + 1)
         ];
         
-        console.log(`[AIIA Context GC] Context compressed. Old msg count: ${req.messages.length + messagesToSummarize.length - 1}, New msg count: ${req.messages.length}.`);
+        console.debug(`[AIIA Context GC] Context compressed. Old msg count: ${req.messages.length + messagesToSummarize.length - 1}, New msg count: ${req.messages.length}.`);
       }
     }
   });
