@@ -30,8 +30,9 @@ function findSafeCutoffIndex(messages, targetIndex) {
   // We walk backward from targetIndex.
   for (let i = targetIndex; i > 1; i--) {
     const msg = messages[i];
-    // Safe boundary: a user message or an assistant message without tool_calls
+    // Safe boundary: a user message, an assistant message without tool_calls, or a tool result
     if (msg.role === 'user') return i;
+    if (msg.role === 'tool') return i;
     if (msg.role === 'assistant' && (!msg.tool_calls || msg.tool_calls.length === 0)) return i;
   }
   return -1; // No safe cutoff found
