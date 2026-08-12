@@ -45,8 +45,22 @@ export function startAgyBridgeServer(port = PORT) {
       res.end(JSON.stringify({
         object: 'list',
         data: [
-          { id: 'agy-deepmind', object: 'model', created: Date.now(), owned_by: 'google-deepmind' },
-          { id: 'antigravity-web', object: 'model', created: Date.now(), owned_by: 'google-deepmind' }
+          { 
+            id: 'agy-deepmind', 
+            object: 'model', 
+            created: Date.now(), 
+            owned_by: 'google-deepmind',
+            context_window: 2000000,
+            max_tokens: 8192
+          },
+          { 
+            id: 'antigravity-web', 
+            object: 'model', 
+            created: Date.now(), 
+            owned_by: 'google-deepmind',
+            context_window: 200000,
+            max_tokens: 8192
+          }
         ]
       }));
       return;
@@ -168,7 +182,10 @@ export function startAgyBridgeServer(port = PORT) {
   server.listen(port, '127.0.0.1', () => {
     console.log(`[AIIA AGY Bridge] Server running at http://127.0.0.1:${port}/v1`);
   });
-  server.unref(); // 允许测试和 Node 进程在无活跃请求时正常自然退出
+  // 仅当非独立运行时才 unref (以便测试自然退出)
+  if (import.meta.url !== `file://${process.argv[1]}`) {
+    server.unref(); 
+  }
 
   return server;
 }

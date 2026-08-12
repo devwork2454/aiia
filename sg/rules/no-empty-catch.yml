@@ -1,0 +1,12 @@
+id: no-empty-catch
+language: javascript
+severity: error
+message: Empty catch blocks hide failures; log, rethrow, or handle explicitly.
+rule:
+  pattern: try { $$$A } catch ($E) {}
+files:
+  - 'pi-agent/src/**/*.js'
+  - 'pi-agent/extensions/**/*.js'
+ignores:
+  - '**/node_modules/**'
+  - '**/test/**'

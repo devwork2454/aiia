@@ -4,11 +4,9 @@
 
 export const DEFAULT_SLASH_ALLOWLIST = Object.freeze([
   "goal",
-  "imp",
-  "reply",
-  "add-dir",
+  "steer",
+  "config",
   "vault",
-  "profile",
   "aiia",
 ]);
 
@@ -23,6 +21,8 @@ export const AIIA_MANAGED_SLASH_COMMANDS = Object.freeze([
   "memory",
   "vault",
   "profile",
+  "config",
+  "steer",
   "sync",
   "aiia",
 ]);
@@ -116,7 +116,7 @@ export async function routeAiiaSubcommand(sub, rest, handlers, ctx) {
       "  /aiia help",
       ...names.map((n) => `  /aiia ${n} ...`),
       "",
-      "Visible slash shortcuts: /goal /imp /reply /add-dir /vault",
+      "Visible slash shortcuts: /goal /steer /config /vault",
       "Prefer tools from the capability catalog for agent work.",
     ];
     ctx?.ui?.notify?.(lines.join("\n"), "info");

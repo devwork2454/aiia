@@ -119,8 +119,6 @@ export default function webSearchProxyExtension(pi) {
 
         if (process.env.SEARCH_PROXY_URL) {
           req.baseUrl = process.env.SEARCH_PROXY_URL;
-        } else if (req.baseUrl && (req.baseUrl.includes('4000') || req.baseUrl.includes('litellm'))) {
-          req.baseUrl = req.baseUrl;
         }
       }
     }

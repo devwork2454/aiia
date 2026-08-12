@@ -102,7 +102,7 @@
 | 能力 | Pi Hook | 机制 |
 |---|---|---|
 | **安全网关** | `pi.on("tool_call")` | 命中高危（`rm -rf /`、`sudo`、`git push --force`…）→ **返回 `{ block: true, reason, terminate? }`**（不是抛异常）；可选 `user_bash` 拦手动命令 |
-| **质量门** | `tool_call`/`tool_result`（edit/write 后） | 文件写入后自动 lint/typecheck；失败把错误回灌下一轮 |
+| **质量门** | `tool_result`（edit/write 后） | 写后确定性检查：JS=`node --check`+Biome；PY=`py_compile`+Ruff；失败回灌；S8 局域重试。全量静态见 `scripts/quality-check.sh`（Biome+Ruff F/B+ast-grep），用法见 [docs/QUALITY.md](docs/QUALITY.md) |
 | **上下文注入** | `pi.on("context")` | 把「活跃记忆 + 相关 skill 摘要」注入本轮上下文（对应 PDF 的记忆注入，真实钩子名是 `context`） |
 | **模型路由** | `pi.on("model_select")` / `before_provider_request` | 按任务分级选模型、header 注入、限流；**只做合法路由，不改写以绕过安全策略** |
 | **HITL 人审** | `tool_call` 返回 block + 宿主通知 | 高危操作挂起等待人工确认（接入层回来后接 IM/终端） |
@@ -143,7 +143,7 @@
 
 ## 8. 明确延后（非核心，按序解锁）
 
-1. ~~L4 `quality-gate`~~：已落地 `pi-agent/extensions/quality-gate.js`（edit/write → lint/typecheck 回灌）
+1. ~~L4 `quality-gate`~~：已落地 `pi-agent/extensions/quality-gate.js`（edit/write → lint/typecheck 回灌）；配套 Biome/Ruff/ast-grep/pre-commit + `scripts/quality-check.sh` 已进 verify，详见 [docs/QUALITY.md](docs/QUALITY.md)
 2. ~~L7 轨迹采集~~ 已落地（S2）；Metaprompt 优化器仍延后
 3. ~~L5 `kb_search` 最小切片~~：已落地；LSP + LanceDB 语义层仍条件延后（语料/规模门槛）
 4. ~~L7.6 接口闸门~~：已落地 `os-browser`（默认关+dry-run）；真 ydotool/patchright 桌面仍条件

@@ -42,9 +42,17 @@ Context Card 路线 A 最小闭环（S-CARD-1..4）。
 | **S3 Hybrid RAG** | `kb_search` 最小切片（记忆+MD）；LSP+LanceDB 仍延后 | kb_search 单测 + verify | 已完成 |
 | **S4 L7.6 OS/浏览器** | 接口+默认关+dry-run（真桌面仍条件） | os-browser 单测 + verify | 已完成 |
 | **S5 接入层** | 入站归一化；cli 就绪；飞书 archived | channel 单测 + verify | 已完成 |
-| **S6 确定性状态机** | `task-runner` 引入状态机（State Machine）控制流，减少无意义 Chat Loop | DAG 节点验证 + 单测 + verify | 研发中 |
-| **S7 微上下文 Handoff** | `subagent-worktree` 子任务派发与结果回收时进行上下文严格剪裁 (Input/Output Handoff) | Handoff 剪裁验证 + verify | 规划中 |
-| **S8 质量门局域重试** | `quality-gate` 实现本地编译/Lint失败时的内部自动重试闭环 | 重试拦截单测 + verify | 规划中 |
+| **S6 确定性状态机** | `task-runner` 引入状态机（State Machine）控制流，减少无意义 Chat Loop | DAG 节点验证 + 单测 + verify | 已完成 |
+| **S7 微上下文 Handoff** | `subagent-worktree` 子任务派发与结果回收时进行上下文严格剪裁 (Input/Output Handoff) | Handoff 剪裁验证 + verify | 已完成 |
+
+## 第四期 Harness 交付切片（Phase 4: 自愈与自我进化）
+
+| 切片 | 内容 | verify 门 | 状态 |
+|---|---|---|---|
+| **S8 质量门局域重试** | `quality-gate` 实现本地编译/Lint失败时的内部自动重试闭环。**[优化]** 已修复子节点调用逻辑、增设 fallback rollback 保护与硬阻断注入，100% 内部收口，绝不透传冗余报错 | 重试拦截单测 + verify | 已完成 (优化版) |
+| **S9 L7 优化器反哺** | 基于 Trajectory 轨迹提取经验，优化系统 Prompt 与规则指纹 | 反思提纯流程 + verify | 已完成 |
+| **S10 向量检索(纯JS平替)** | 更换纯净版“平替”向量引擎，基于 better-sqlite3 + node-fetch 实现本地零编译的混合向量与语义索引库，提供 `semantic_index_workspace` 和 `semantic_search` 工具 | 烟雾测试 + verify | 已完成 |
+| **S11 LSP 底层代码协议** | 实现基于 JSON-RPC 2.0 (stdio) 的轻量级、零依赖 LSP 客户端，提供 `lsp_start`, `lsp_goto_definition`, `lsp_find_references` 等精准代码跳转能力 | 质量门 + verify | 已完成 |
 
 ### Phase 2 已交付能力（P1–P7，代码在 `pi-agent/`）
 - **P1** `web-search-proxy.js`：搜索意图嗅探、指令注入；直连 Charon 不追加 `-search`
@@ -57,14 +65,15 @@ Context Card 路线 A 最小闭环（S-CARD-1..4）。
 
 ### 代定决策
 - 第一/二期「开发交付」= **P1–P7 + S0 打包收口**；S1–S5 作为二期补充扩展已完成验证。
-- **第三期（Phase 3: 深度控制与质量闭环）= S6–S8**：不再依赖自由对话，向确定性状态机、极简微上下文（Handoff）与局域自动纠错演进。
-- S1 默认 `node --check`（JS）；可选 tsc/py_compile；`QUALITY_GATE_DISABLED=1` 可关
+- **第三期（Phase 3: 深度控制）= S6–S7**：彻底根治自由对话，向确定性状态机与极简微上下文（Handoff）演进（已全量收官）。
+- **第四期（Phase 4: 自愈与进化）= S8–S9**：局域自动纠错重试（S8）与基于轨迹的经验反哺（S9）。
+- S1 quality-gate：JS=`node --check`+Biome error；PY=`py_compile`+Ruff；全量 `scripts/quality-check.sh`（+ast-grep 架构红线）已挂 `.harness/verify.sh`；pre-commit 见 `.pre-commit-config.yaml`；用法 [docs/QUALITY.md](docs/QUALITY.md)；`QUALITY_GATE_DISABLED=1` / `QUALITY_GATE_SKIP_BIOME=1` / `QUALITY_GATE_SKIP_RUFF=1` 可关
 - S2 默认落盘 `<cwd>/.agent/trajectories.jsonl`；`TRAJECTORY_DISABLED=1` 可关；优化器仍延后
 - S3 最小切片 = builtin 混合检索（MemoryStore + knowledge Markdown）；qmd 可选；LanceDB/LSP 仍条件延后（语料门槛）
 - `KB_SEARCH_DISABLED=1` 可关；默认根：`~/.config/aiia/knowledge` + `<cwd>/knowledge`（`AIIA_KB_PATHS` 可覆写）
 - S4 默认全关；`AIIA_OS_ENABLED`/`AIIA_BROWSER_ENABLED` 显式开启；`AIIA_OS_BROWSER_DRY_RUN=1`（测试默认）不调用真实 ydotool/patchright
 - S5 不重开飞书运行时：仅 channel 归一化 + 状态枚举；飞书保持 legacy 归档
-- **切片表 S0–S5 已全部完成**；目前重点转入 S6–S8 规划与执行。表外延后项见「推迟」。
+- **第三期切片 S6–S7 已全部完成并收官**；后续重点将转入 Phase 4（S8/S9）的规划与执行。表外延后项见「推迟」。
 
 
 ## 当前架构（A 路线：Pi 原生 extension，砍掉自研宿主与双栈）
@@ -95,7 +104,8 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 ## 砍掉 / 降级（对单人自用去镀金）
 - 删：自研 HTTP 宿主、Python adapter、飞书全套、extensions/safety.ts 孤儿文件 → 移入 legacy/。
 - 降级：L5.5 机密先用 .env + sops exec-env（direnv/qmd 提前优化，推迟）。
-- 推迟（非切片表）：L7 Metaprompt 优化器、L3 LiteLLM、LanceDB/LSP 语义层、真 ydotool/patchright 桌面驱动。
+- 降级（环境自愈）：LanceDB 向量引擎原生编译失败，**自动降级替换** 为基于 `better-sqlite3` + 原生 JS 内存余弦相似度计算的混合搜索方案，`Tree-sitter` 使用 WASM 版保证零 C++ 依赖。
+- 推迟（非切片表）：L7 Metaprompt 优化器、L3 LiteLLM、真 ydotool/patchright 桌面驱动。
 
 ## 阻塞
 （无）
@@ -142,4 +152,5 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
   - **P5 任务依赖 DAG 调度器 (`task-runner.js`)**：`TaskDAGRunner` 拓扑依赖计算、入度队列调度、失败重试与 `.agent/dag_runner` 断点续传存盘。
   - **P6 后台 Cron 定时任务系统 (`cron-scheduler.js`)**：5 段式 Cron 表达式匹配引擎、到期判定轮询与状态持久化 (`register_cron_task` / `list_cron_tasks` / `remove_cron_task`)。
   - **P7 MCP & Skill 沙箱安全策略 (`sandbox-policy.js`)**：资源访问控制、敏感路径屏蔽、二重危险 Shell 拦截与白名单模式 (`set_sandbox_policy` / `get_sandbox_policy_status`)。
+  - **P8 无状态临时子代理与模型自动升级 (`ephemeral-job.js`)**：注册 `run_ephemeral_job` 杂活任务接口，支持按梯队 `low` -> `medium` -> `high` 错误自动升级降级试错重试，独立隔离容器运行，主会话零污染。
   - **闭环质量**：全量单元与端到端测试经 `.harness/verify.sh` 绿色通过。

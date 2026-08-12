@@ -96,4 +96,33 @@ describe('Phase 2 P2: Subagent Worktree Orchestration Tests', { concurrency: fal
 
     assert.equal(cleanupRes.status, 'success');
   });
+  test('S7 Micro-context Handoff: outputs are read from .subagent_output.md', async () => {
+    const branch = 's7_handoff_test';
+    
+    // Spawn worktree
+    await tools.spawn_worktree_subagent.execute({
+      task: 'Test S7 Handoff',
+      branchName: branch,
+      handoffInput: 'Strict context input',
+      handoffFiles: []
+    }, mockContext);
+
+    const worktreePath = path.join(mockContext.cwd, '.agent', 'worktrees', branch);
+    
+    // Simulate subagent generating the output handoff file
+    fs.writeFileSync(path.join(worktreePath, '.subagent_output.md'), 'STRICT HANDOFF OUTPUT PAYLOAD');
+
+    // List should return the handoffOutput
+    const listRes = await tools.list_worktree_subagents.execute({}, mockContext);
+    const listed = listRes.worktrees.find(w => w.branch === branch);
+    assert.equal(listed.handoffOutput, 'STRICT HANDOFF OUTPUT PAYLOAD');
+
+    // Merge should return the handoffOutput
+    const mergeRes = await tools.merge_worktree_subagent.execute({
+      branchName: branch,
+      deleteAfterMerge: true
+    }, mockContext);
+    assert.equal(mergeRes.status, 'success');
+    assert.equal(mergeRes.handoffOutput, 'STRICT HANDOFF OUTPUT PAYLOAD');
+  });
 });

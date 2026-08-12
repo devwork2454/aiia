@@ -1,0 +1,11 @@
+id: no-ts-ignore
+language: typescript
+severity: error
+message: Do not suppress type errors with as any.
+rule:
+  pattern: $X as any
+files:
+  - 'pi-agent/**/*.ts'
+  - 'pi-agent/**/*.tsx'
+ignores:
+  - '**/node_modules/**'

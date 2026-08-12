@@ -72,7 +72,8 @@ export default function taskRunnerExtension(pi) {
       try {
         const runner = new TaskDAGRunner({ dagId: params.dagId, storageDir: path.join(ctx.cwd, '.agent', 'dag_runner') });
         if (!runner.loadCheckpoint()) {
-          return { status: 'error', message: `未找到 DAG 图 #${params.dagId} 的检查点文件，请先通过 create_dag_task 创建` };
+          const _res = { status: 'error', message: `未找到 DAG 图 #${params.dagId} 的检查点文件，请先通过 create_dag_task 创建` };
+        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
         }
 
         const finalStatus = await runner.run();
@@ -106,7 +107,8 @@ export default function taskRunnerExtension(pi) {
       try {
         const runner = new TaskDAGRunner({ dagId: params.dagId, storageDir: path.join(ctx.cwd, '.agent', 'dag_runner') });
         if (!runner.loadCheckpoint()) {
-          return { status: 'error', message: `未找到 DAG 图 #${params.dagId} 的信息` };
+          const _res = { status: 'error', message: `未找到 DAG 图 #${params.dagId} 的信息` };
+        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
         }
         return {
           status: 'success',

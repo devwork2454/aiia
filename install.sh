@@ -30,7 +30,7 @@ echo "  ╚═══════════════════════
 echo -e "${RESET}"
 
 # ─── Step 1: 检查 Node.js ────────────────────────────────────────────────────
-step "Step 1/7  检查 Node.js 环境"
+step "Step 1/8  检查 Node.js 环境"
 
 if command -v node &>/dev/null; then
   NODE_VER=$(node --version)
@@ -67,7 +67,7 @@ if [ "$install_node" = true ]; then
 fi
 
 # ─── Step 2: 安装 pi CLI ──────────────────────────────────────────────────────
-step "Step 2/7  安装 Pi CLI"
+step "Step 2/8  安装 Pi CLI"
 
 if command -v pi &>/dev/null; then
   PI_VER=$(pi --version 2>/dev/null || echo "未知")
@@ -79,7 +79,7 @@ else
 fi
 
 # ─── Step 3: 获取 AIIA 项目 ──────────────────────────────────────────────────
-step "Step 3/7  获取 AIIA 项目"
+step "Step 3/8  获取 AIIA 项目"
 
 if [ -d "$AIIA_DIR/pi-agent" ]; then
   success "AIIA 项目已存在于 $AIIA_DIR"
@@ -110,7 +110,7 @@ else
 fi
 
 # ─── Step 4: 安装 Pi-agent 依赖 ───────────────────────────────────────────────
-step "Step 4/7  安装 AIIA 依赖"
+step "Step 4/8  安装 AIIA 依赖"
 
 cd "$AIIA_DIR/pi-agent"
 info "正在安装 npm 依赖..."
@@ -118,7 +118,7 @@ npm install --prefer-offline 2>/dev/null || npm install
 success "依赖安装完成"
 
 # ─── Step 5: 注册为 Pi Package ───────────────────────────────────────────────
-step "Step 5/7  注册 AIIA 为 Pi 全局插件"
+step "Step 5/8  注册 AIIA 为 Pi 全局插件"
 
 # 检查是否已注册
 if pi list 2>/dev/null | grep -q "aiia"; then
@@ -139,7 +139,7 @@ if [[ -L "$AIIA_DIR/.pi/extensions" ]]; then
 fi
 
 # ─── Step 6: 链接默认 Pi Skills（新机即用）───────────────────────────────────
-step "Step 6/7  链接默认 Pi Skills（auto-harness、goal、imp 等）"
+step "Step 6/8  链接默认 Pi Skills（auto-harness、goal、imp 等）"
 
 if [[ ! -f "$AIIA_DIR/scripts/link-pi-skills.sh" ]]; then
   error "缺少 $AIIA_DIR/scripts/link-pi-skills.sh（新机无法默认启用 auto-harness/goal）"
@@ -173,7 +173,7 @@ fs.writeFileSync(settingsPath, JSON.stringify(s,null,2)+"\n");
 fi
 
 # ─── Step 7: 配置环境变量 ─────────────────────────────────────────────────────
-step "Step 7/7  配置环境变量"
+step "Step 7/8  配置环境变量"
 
 SHELL_RC=""
 if [ -f "$HOME/.zshrc" ]; then
@@ -197,6 +197,32 @@ ENVEOF
   success "环境变量已写入 $SHELL_RC"
 else
   success "环境变量已配置（跳过）"
+fi
+
+# ─── Step 8: Tmux AI 助手配置 ─────────────────────────────────────────────────
+step "Step 8/8  Tmux AI 助手配置 (可选)"
+
+if command -v tmux &>/dev/null; then
+  echo -e "${YELLOW}检测到系统已安装 Tmux。是否为您配置 AIIA 的 Tmux 屏幕抓取助手？${RESET}"
+  echo -e "配置后，在 Tmux 内按 Prefix + q 即可弹窗抓取屏幕报错并呼叫 Pi。"
+  
+  if [ -t 0 ] || [ -c /dev/tty ]; then
+    read -p "是否安装配置？(y/N): " -n 1 -r < /dev/tty || true
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      if [ -f "$AIIA_DIR/scripts/setup-tmux-ai.sh" ]; then
+        bash "$AIIA_DIR/scripts/setup-tmux-ai.sh"
+      else
+        warn "未找到 $AIIA_DIR/scripts/setup-tmux-ai.sh，跳过配置。"
+      fi
+    else
+      info "跳过 Tmux 配置。"
+    fi
+  else
+    info "非交互式环境，跳过 Tmux 配置。"
+  fi
+else
+  info "未检测到 Tmux，跳过该步。"
 fi
 
 # ─── 完成 ─────────────────────────────────────────────────────────────────────

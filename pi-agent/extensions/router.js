@@ -12,6 +12,40 @@ const COMPLEX_KEYWORDS = ['refactor', 'architecture', 'debug', 'redesign', '重�
 const REASONING_KEYWORDS = ['证明', '深度推导', '数学建模', 'prover', 'formal verification', 'benchmark'];
 const TIER_MODELS = new Set(['low', 'medium', 'high', 'reasoning']);
 
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+
+/**
+ * 自动去 1api 真实配置目录中寻找档位对应的真实模型 ID
+ */
+function resolve1apiTier(tierAlias, baseUrl) {
+  if (!['low', 'mid', 'medium', 'high', 'reasoning'].includes(tierAlias)) return tierAlias;
+  const targetKey = tierAlias === 'medium' ? 'mid' : tierAlias;
+  
+  try {
+    const configHome = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+    const providersDir = path.join(configHome, '1api', 'providers');
+    if (!fs.existsSync(providersDir)) return tierAlias;
+    
+    for (const name of fs.readdirSync(providersDir)) {
+      const pPath = path.join(providersDir, name, 'provider.json');
+      if (fs.existsSync(pPath)) {
+        const data = JSON.parse(fs.readFileSync(pPath, 'utf8'));
+        // 若提供了 baseUrl 且不匹配，则跳过
+        if (baseUrl && data.endpoint && !baseUrl.includes(data.endpoint.replace(/\/+$/, ''))) {
+          continue;
+        }
+        if (data[targetKey]) return data[targetKey];
+        if (data['mid']) return data['mid']; // Fallback
+      }
+    }
+  } catch(e) {
+    console.debug('Failed to resolve 1api tier:', e.message);
+  }
+  return tierAlias;
+}
+
 /**
  * 根据 payload 消息特征计算目标模型路由
  * @param {object} payload
@@ -130,7 +164,14 @@ export function resolveRoutedPayload(payload = {}, ctx = {}, env = process.env) 
   if (!shouldRewriteModel(ctx, env)) {
     return undefined;
   }
-  const targetModel = evaluateModelRoute(payload, env);
+  let targetModel = evaluateModelRoute(payload, env);
+  
+  // 真源翻译：如果是 1api 提供的直连，绝对不能发别名，必须翻译成真实的 provider.json 里的 ID
+  const provider = String(ctx?.model?.provider || '');
+  if (provider === '1api' || provider === 'charon') {
+    targetModel = resolve1apiTier(targetModel, ctx?.model?.baseUrl);
+  }
+  
   return { ...payload, model: targetModel };
 }
 

@@ -17,25 +17,66 @@ export class TaskDAGRunner {
     this.maxRetries = maxRetries;
     this.nodes = new Map();
     this.checkpointFile = path.join(this.storageDir, `${this.dagId}.json`);
+    this.smRulesFile = path.join(process.cwd(), '.agent', 'state_machine.json');
+    this.smRules = this.loadStateMachineRules();
 
     if (!fs.existsSync(this.storageDir)) {
       fs.mkdirSync(this.storageDir, { recursive: true });
     }
   }
 
+  loadStateMachineRules() {
+    const defaultRules = {
+      transitions: {
+        'PLANNING': ['EXECUTION', 'PLANNING'],
+        'EXECUTION': ['EXECUTION', 'ASSERTION'],
+        'ASSERTION': ['ASSERTION', 'MERGE', 'ROLLBACK'],
+        'MERGE': ['MERGE'],
+        'ROLLBACK': ['ROLLBACK']
+      },
+      maxAssertionRetries: 3
+    };
+    if (fs.existsSync(this.smRulesFile)) {
+      try {
+        const custom = JSON.parse(fs.readFileSync(this.smRulesFile, 'utf8'));
+        return { ...defaultRules, ...custom };
+      } catch (e) {
+        return defaultRules;
+      }
+    }
+    return defaultRules;
+  }
+
   /**
    * 添加任务节点
    * @param {{ id: string, name?: string, command?: string, dependsOn?: string[] }} node
    */
-  addNode({ id, name, command, dependsOn = [] }) {
+  addNode({ id, name, command, dependsOn = [], type = 'EXECUTION' }) {
     if (this.nodes.has(id)) {
       throw new Error(`Node with id '${id}' already exists.`);
     }
+
+    if (this.smRules) {
+      if (!Object.keys(this.smRules.transitions).includes(type)) {
+        throw new Error(`Invalid node type '${type}'. Allowed types: ${Object.keys(this.smRules.transitions).join(', ')}`);
+      }
+      for (const depId of (Array.isArray(dependsOn) ? dependsOn : [])) {
+        const depNode = this.nodes.get(depId);
+        if (depNode) {
+          const allowedNext = this.smRules.transitions[depNode.type] || [];
+          if (!allowedNext.includes(type)) {
+            throw new Error(`State machine transition error: cannot transition from ${depNode.type} to ${type}`);
+          }
+        }
+      }
+    }
+
     this.nodes.set(id, {
       id,
       name: name || id,
       command: command || '',
       dependsOn: Array.isArray(dependsOn) ? dependsOn : [],
+      type,
       status: 'pending',
       retryAttempts: 0,
       output: null,
@@ -84,27 +125,73 @@ export class TaskDAGRunner {
     const ready = [];
     for (const node of this.nodes.values()) {
       if (node.status !== 'pending' && node.status !== 'failed') continue;
-      if (node.status === 'failed' && node.retryAttempts >= this.maxRetries) continue;
 
-      const depsOk = node.dependsOn.every(depId => {
-        const depNode = this.nodes.get(depId);
-        return depNode && depNode.status === 'completed';
-      });
-
-      const depsFailed = node.dependsOn.some(depId => {
-        const depNode = this.nodes.get(depId);
-        return depNode && (depNode.status === 'skipped' || (depNode.status === 'failed' && depNode.retryAttempts >= this.maxRetries));
-      });
-
-      if (depsFailed) {
-        node.status = 'skipped';
-        node.updatedAt = new Date().toISOString();
-        this.saveCheckpoint();
-        continue;
+      let nodeMaxRetries = this.maxRetries;
+      if (node.type === 'ASSERTION' && this.smRules && this.smRules.maxAssertionRetries !== undefined) {
+        nodeMaxRetries = this.smRules.maxAssertionRetries;
       }
 
-      if (depsOk) {
-        ready.push(node);
+      if (node.status === 'failed' && node.retryAttempts >= nodeMaxRetries) continue;
+
+      let depsOk = true;
+      let depsFailed = false;
+      let shouldRollback = false;
+
+      for (const depId of node.dependsOn) {
+        const depNode = this.nodes.get(depId);
+        if (!depNode) continue;
+
+        let depMaxRetries = this.maxRetries;
+        if (depNode.type === 'ASSERTION' && this.smRules && this.smRules.maxAssertionRetries !== undefined) {
+          depMaxRetries = this.smRules.maxAssertionRetries;
+        }
+
+        const isDepFailedForever = (depNode.status === 'skipped' || (depNode.status === 'failed' && depNode.retryAttempts >= depMaxRetries));
+        const isDepCompleted = depNode.status === 'completed';
+
+        if (node.type === 'MERGE' && depNode.type === 'ASSERTION') {
+           const hasPass = isDepCompleted && typeof depNode.output === 'string' && depNode.output.includes('PASS');
+           if (!hasPass && isDepCompleted) {
+             depsFailed = true;
+           } else if (!isDepCompleted) {
+             depsOk = false;
+           }
+           if (isDepFailedForever) depsFailed = true;
+        } else if (node.type === 'ROLLBACK' && depNode.type === 'ASSERTION') {
+           const hasPass = isDepCompleted && typeof depNode.output === 'string' && depNode.output.includes('PASS');
+           if (isDepFailedForever || (isDepCompleted && !hasPass)) {
+             shouldRollback = true;
+           } else if (!isDepCompleted) {
+             depsOk = false;
+           }
+        } else {
+           if (!isDepCompleted) depsOk = false;
+           if (isDepFailedForever) depsFailed = true;
+        }
+      }
+
+      if (node.type === 'ROLLBACK') {
+        if (shouldRollback) {
+          ready.push(node);
+        } else if (depsFailed) {
+          node.status = 'skipped';
+          node.updatedAt = new Date().toISOString();
+          this.saveCheckpoint();
+        } else if (depsOk && node.dependsOn.length > 0) {
+           node.status = 'skipped';
+           node.updatedAt = new Date().toISOString();
+           this.saveCheckpoint();
+        } else if (depsOk && node.dependsOn.length === 0) {
+           ready.push(node);
+        }
+      } else {
+        if (depsFailed) {
+          node.status = 'skipped';
+          node.updatedAt = new Date().toISOString();
+          this.saveCheckpoint();
+        } else if (depsOk) {
+          ready.push(node);
+        }
       }
     }
     return ready;

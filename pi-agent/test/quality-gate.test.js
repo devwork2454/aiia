@@ -10,6 +10,8 @@ import {
   evaluateToolResultQuality,
   formatQualityFeedback,
   buildQualityGatePatch,
+  defaultPickRunners,
+  resolveLocalBin,
 } from '../src/quality-gate.js';
 import qualityGateExtension from '../extensions/quality-gate.js';
 
@@ -108,6 +110,28 @@ describe('S1 Quality Gate core', () => {
     assert.match(patch.content[1].text, /boom/);
     assert.equal(patch.isError, true);
   });
+
+  test('defaultPickRunners includes node --check and biome for JS', () => {
+    const runners = defaultPickRunners('/tmp/sample.js', {});
+    const names = runners.map((r) => r.name);
+    assert.ok(names.includes('node --check'));
+    const biome = resolveLocalBin('@biomejs/biome', 'biome');
+    if (biome) {
+      assert.ok(names.includes('biome lint'), `expected biome lint, got ${names.join(',')}`);
+    }
+  });
+
+  test('defaultPickRunners includes py_compile and optional ruff for Python', () => {
+    const runners = defaultPickRunners('/tmp/sample.py', {});
+    const names = runners.map((r) => r.name);
+    assert.ok(names.includes('py_compile'));
+  });
+
+  test('QUALITY_GATE_SKIP_BIOME drops biome runner', () => {
+    const runners = defaultPickRunners('/tmp/sample.js', { QUALITY_GATE_SKIP_BIOME: '1' });
+    assert.equal(runners.some((r) => r.name === 'biome lint'), false);
+    assert.ok(runners.some((r) => r.name === 'node --check'));
+  });
 });
 
 describe('S1 Quality Gate extension', () => {
@@ -122,6 +146,7 @@ describe('S1 Quality Gate extension', () => {
     assert.equal(typeof hookFn, 'function');
 
     const { file } = tmpFile('ext-bad.js', 'const x = ;\n');
+    process.env.QUALITY_GATE_MAX_RETRIES = '0'; // skip S8 retry loop in unit test
     const patch = await hookFn(
       {
         type: 'tool_result',
@@ -147,6 +172,7 @@ describe('S1 Quality Gate extension', () => {
       },
     });
     const { file } = tmpFile('ext-ok.js', 'export const n = 42;\n');
+    process.env.QUALITY_GATE_MAX_RETRIES = '0';
     const patch = await hookFn(
       {
         type: 'tool_result',

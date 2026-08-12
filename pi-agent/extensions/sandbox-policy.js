@@ -11,12 +11,22 @@ let currentPolicy = new SandboxPolicy({ mode: 'sandbox' });
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
 export default function sandboxPolicyExtension(pi) {
   // 1. 挂载 tool_call 安全过滤钩子
-  pi.on('tool_call', async (event) => {
-    const toolName = event?.tool || event?.name || '';
+  pi.on('tool_call', async (event, ctx) => {
+    const toolName = event?.toolName || event?.tool || event?.name || '';
     const input = event?.input || event?.args || {};
 
     const evalRes = currentPolicy.evaluate(toolName, input);
     if (!evalRes.allowed) {
+      if (ctx?.hasUI) {
+        const cmdStr = input?.command || input?.code || input?.CodeContent || JSON.stringify(input);
+        const confirmed = await ctx?.ui.confirm(
+          "⚠ 沙箱拦截警告",
+          `该命令被沙箱策略标记为高危：\n${evalRes.reason}\n\n指令内容：\n${cmdStr}\n\n是否仍要强制执行？`
+        );
+        if (confirmed) {
+          return { block: false };
+        }
+      }
       return {
         block: true,
         reason: `[Sandbox Policy Blocked]: ${evalRes.reason}`

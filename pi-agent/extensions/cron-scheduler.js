@@ -29,17 +29,19 @@ export default function cronSchedulerExtension(pi) {
       try {
         const scheduler = new CronScheduler({ storageDir: path.join(ctx.cwd, '.agent', 'cron_scheduler') });
         const task = scheduler.register(params);
-        return {
+        const _res = {
           status: 'success',
           id: task.id,
           message: `✅ 已成功注册 Cron 定时任务 #${task.id} (${task.cronExpr})`,
           task
         };
+        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
       } catch (e) {
-        return {
+        const _res = {
           status: 'error',
           message: `❌ 注册 Cron 任务失败: ${e.message}`
         };
+        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
       }
     }
   });
@@ -56,16 +58,18 @@ export default function cronSchedulerExtension(pi) {
       try {
         const scheduler = new CronScheduler({ storageDir: path.join(ctx.cwd, '.agent', 'cron_scheduler') });
         const tasks = scheduler.list();
-        return {
+        const _res = {
           status: 'success',
           count: tasks.length,
           tasks
         };
+        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
       } catch (e) {
-        return {
+        const _res = {
           status: 'error',
           message: `❌ 获取 Cron 任务列表失败: ${e.message}`
         };
+        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
       }
     }
   });
@@ -85,16 +89,18 @@ export default function cronSchedulerExtension(pi) {
       try {
         const scheduler = new CronScheduler({ storageDir: path.join(ctx.cwd, '.agent', 'cron_scheduler') });
         const ok = scheduler.unregister(params.id);
-        return {
+        const _res = {
           status: ok ? 'success' : 'not_found',
           id: params.id,
           message: ok ? `✅ 已成功移除 Cron 任务 #${params.id}` : `⚠️ 未找到 Cron 任务 #${params.id}`
         };
+        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
       } catch (e) {
-        return {
+        const _res = {
           status: 'error',
           message: `❌ 移除 Cron 任务失败: ${e.message}`
         };
+        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
       }
     }
   });

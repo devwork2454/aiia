@@ -1,0 +1,32 @@
+# AIIA local quality gates — install: pip install pre-commit && pre-commit install
+# Run all: pre-commit run --all-files
+repos:
+  - repo: local
+    hooks:
+      - id: biome-lint
+        name: biome lint (pi-agent)
+        entry: bash -c 'cd pi-agent && ./node_modules/.bin/biome lint --diagnostic-level=error --colors=off src extensions test'
+        language: system
+        pass_filenames: false
+        files: ^pi-agent/.*\.(js|mjs|cjs|ts|tsx|json)$
+
+      - id: ruff-legacy
+        name: ruff check (legacy)
+        entry: bash -c 'command -v ruff >/dev/null || exit 0; ruff check legacy --select F,B --quiet'
+        language: system
+        pass_filenames: false
+        files: ^legacy/.*\.py$
+
+      - id: ast-grep-arch
+        name: ast-grep architecture rules
+        entry: bash -c './pi-agent/node_modules/.bin/ast-grep scan --config sgconfig.yml'
+        language: system
+        pass_filenames: false
+        files: ^pi-agent/.*\.(js|mjs|cjs|ts|tsx)$
+
+      - id: quality-gate-unit
+        name: quality-gate unit tests
+        entry: bash -c 'cd pi-agent && node --test test/quality-gate.test.js'
+        language: system
+        pass_filenames: false
+        files: ^pi-agent/(src/quality-gate\.js|extensions/quality-gate\.js|test/quality-gate\.test\.js)$

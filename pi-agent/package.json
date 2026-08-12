@@ -5,18 +5,26 @@
   "type": "module",
   "description": "AIIA as Pi extensions (memory + safety), no self-hosted HTTP",
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "lint": "biome lint --diagnostic-level=error --colors=off src extensions test",
+    "lint:fix": "biome check --write src extensions test",
+    "quality": "bash ../scripts/quality-check.sh"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "^0.84.1",
-    "better-sqlite3": "^13.0.3"
+    "better-sqlite3": "^13.0.3",
+    "web-tree-sitter": "^0.26.12"
   },
   "pi": {
     "extensions": [
       "./extensions"
     ]
+  },
+  "devDependencies": {
+    "@ast-grep/cli": "^0.45.1",
+    "@biomejs/biome": "^2.5.7"
   }
 }

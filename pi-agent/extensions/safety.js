@@ -10,9 +10,19 @@ import { evaluateToolCallEvent } from "../src/policy.js";
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
 export default function safetyExtension(pi) {
-  pi.on("tool_call", async (event) => {
+  pi.on("tool_call", async (event, ctx) => {
     const verdict = evaluateToolCallEvent(event);
     if (verdict.block) {
+      if (ctx.hasUI) {
+        const command = event?.input?.command || event?.args?.command || event?.args?.cmd || '';
+        const confirmed = await ctx.ui.confirm(
+          "⚠ 安全拦截警告",
+          `该命令包含高危操作：\n${verdict.reason}\n\n指令内容：\n${command}\n\n是否仍要强制执行？`
+        );
+        if (confirmed) {
+          return { block: false };
+        }
+      }
       return { block: true, reason: verdict.reason };
     }
   });

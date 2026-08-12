@@ -1,0 +1,72 @@
+[
+  {
+    "instance_id": "astropy__astropy-12907",
+    "repo": "astropy/astropy",
+    "base_commit": "d16bfe05a744909de4b27f5875fe0d4ed41ce607",
+    "problem_statement": "Modeling's `separability_matrix` does not compute separability correctly for nested CompoundModels\nConsider the following model:\r\n\r\n```python\r\nfrom astropy.modeling import models as m\r\nfrom astropy.modeling.separable import separability_matrix\r\n\r\ncm = m.Linear1D(10) & m.Linear1D(5)\r\n```\r\n\r\nIt's separability matrix as you might expect is a diagonal:\r\n\r\n```python\r\n>>> separability_matrix(cm)\r\narray([[ True, False],\r\n       [False,  True]])\r\n```\r\n\r\nIf I make the model more complex:\r\n```python\r\n>>> ... [truncated]",
+    "version": "4.3"
+  },
+  {
+    "instance_id": "astropy__astropy-14182",
+    "repo": "astropy/astropy",
+    "base_commit": "a5917978be39d13cd90b517e1de4e7a539ffaa48",
+    "problem_statement": "Please support header rows in RestructuredText output\n### Description\r\n\r\nIt would be great if the following would work:\r\n\r\n```Python\r\n>>> from astropy.table import QTable\r\n>>> import astropy.units as u\r\n>>> import sys\r\n>>> tbl = QTable({'wave': [350,950]*u.nm, 'response': [0.7, 1.2]*u.count})\r\n>>> tbl.write(sys.stdout,  format=\"ascii.rst\")\r\n===== ========\r\n wave response\r\n===== ========\r\n350.0      0.7\r\n950.0      1.2\r\n===== ========\r\n>>> tbl.write(sys.stdout,  format=\"ascii.fixed_width\", header... [truncated]",
+    "version": "5.1"
+  },
+  {
+    "instance_id": "astropy__astropy-14365",
+    "repo": "astropy/astropy",
+    "base_commit": "7269fa3e33e8d02485a647da91a5a2a60a06af61",
+    "problem_statement": "ascii.qdp Table format assumes QDP commands are upper case\n### Description\n\nascii.qdp assumes that commands in a QDP file are upper case, for example, for errors they must be \"READ SERR 1 2\" whereas QDP itself is not case sensitive and case use \"read serr 1 2\". \r\n\r\nAs many QDP files are created by hand, the expectation that all commands be all-caps should be removed.\n\n### Expected behavior\n\nThe following qdp file should read into a `Table` with errors, rather than crashing.\r\n```\r\nread serr 1 2 \r... [truncated]",
+    "version": "5.1"
+  },
+  {
+    "instance_id": "astropy__astropy-14995",
+    "repo": "astropy/astropy",
+    "base_commit": "b16c7d12ccbc7b2d20364b89fb44285bcbfede54",
+    "problem_statement": "In v5.3, NDDataRef mask propagation fails when one of the operand does not have a mask\n### Description\n\nThis applies to v5.3. \r\n\r\nIt looks like when one of the operand does not have a mask, the mask propagation when doing arithmetic, in particular with `handle_mask=np.bitwise_or` fails.  This is not a problem in v5.2.\r\n\r\nI don't know enough about how all that works, but it seems from the error that the operand without a mask is set as a mask of None's and then the bitwise_or tries to operate on ... [truncated]",
+    "version": "5.2"
+  },
+  {
+    "instance_id": "astropy__astropy-6938",
+    "repo": "astropy/astropy",
+    "base_commit": "c76af9ed6bb89bfba45b9f5bc1e635188278e2fa",
+    "problem_statement": "Possible bug in io.fits related to D exponents\nI came across the following code in ``fitsrec.py``:\r\n\r\n```python\r\n        # Replace exponent separator in floating point numbers\r\n        if 'D' in format:\r\n            output_field.replace(encode_ascii('E'), encode_ascii('D'))\r\n```\r\n\r\nI think this may be incorrect because as far as I can tell ``replace`` is not an in-place operation for ``chararray`` (it returns a copy). Commenting out this code doesn't cause any tests to fail so I think this code ... [truncated]",
+    "version": "1.3"
+  },
+  {
+    "instance_id": "astropy__astropy-7746",
+    "repo": "astropy/astropy",
+    "base_commit": "d5bd3f68bb6d5ce3a61bdce9883ee750d1afade5",
+    "problem_statement": "Issue when passing empty lists/arrays to WCS transformations\nThe following should not fail but instead should return empty lists/arrays:\r\n\r\n```\r\nIn [1]: from astropy.wcs import WCS\r\n\r\nIn [2]: wcs = WCS('2MASS_h.fits')\r\n\r\nIn [3]: wcs.wcs_pix2world([], [], 0)\r\n---------------------------------------------------------------------------\r\nInconsistentAxisTypesError                Traceback (most recent call last)\r\n<ipython-input-3-e2cc0e97941a> in <module>()\r\n----> 1 wcs.wcs_pix2world([], [], 0)\r\n\r\n~... [truncated]",
+    "version": "1.3"
+  },
+  {
+    "instance_id": "django__django-10914",
+    "repo": "django/django",
+    "base_commit": "e7fd69d051eaa67cb17f172a39b57253e9cb831a",
+    "problem_statement": "Set default FILE_UPLOAD_PERMISSION to 0o644.\nDescription\n\t\nHello,\nAs far as I can see, the ​File Uploads documentation page does not mention any permission issues.\nWhat I would like to see is a warning that in absence of explicitly configured FILE_UPLOAD_PERMISSIONS, the permissions for a file uploaded to FileSystemStorage might not be consistent depending on whether a MemoryUploadedFile or a TemporaryUploadedFile was used for temporary storage of the uploaded data (which, with the default FILE_... [truncated]",
+    "version": "3.0"
+  },
+  {
+    "instance_id": "django__django-10924",
+    "repo": "django/django",
+    "base_commit": "bceadd2788dc2dad53eba0caae172bd8522fd483",
+    "problem_statement": "Allow FilePathField path to accept a callable.\nDescription\n\t\nI have a special case where I want to create a model containing the path to some local files on the server/dev machine. Seeing as the place where these files are stored is different on different machines I have the following:\nimport os\nfrom django.conf import settings\nfrom django.db import models\nclass LocalFiles(models.Model):\n\tname = models.CharField(max_length=255)\n\tfile = models.FilePathField(path=os.path.join(settings.LOCAL_FILE_D... [truncated]",
+    "version": "3.0"
+  },
+  {
+    "instance_id": "django__django-11001",
+    "repo": "django/django",
+    "base_commit": "ef082ebb84f00e38af4e8880d04e8365c2766d34",
+    "problem_statement": "Incorrect removal of order_by clause created as multiline RawSQL\nDescription\n\t\nHi.\nThe SQLCompiler is ripping off one of my \"order by\" clause, because he \"thinks\" the clause was already \"seen\" (in SQLCompiler.get_order_by()). I'm using expressions written as multiline RawSQLs, which are similar but not the same. \nThe bug is located in SQLCompiler.get_order_by(), somewhere around line computing part of SQL query without ordering:\nwithout_ordering = self.ordering_parts.search(sql).group(1)\nThe sql... [truncated]",
+    "version": "3.0"
+  },
+  {
+    "instance_id": "django__django-11019",
+    "repo": "django/django",
+    "base_commit": "93e892bb645b16ebaf287beb5fe7f3ffe8d10408",
+    "problem_statement": "Merging 3 or more media objects can throw unnecessary MediaOrderConflictWarnings\nDescription\n\t\nConsider the following form definition, where text-editor-extras.js depends on text-editor.js but all other JS files are independent:\nfrom django import forms\nclass ColorPicker(forms.Widget):\n\tclass Media:\n\t\tjs = ['color-picker.js']\nclass SimpleTextWidget(forms.Widget):\n\tclass Media:\n\t\tjs = ['text-editor.js']\nclass FancyTextWidget(forms.Widget):\n\tclass Media:\n\t\tjs = ['text-editor.js', 'text-editor-extr... [truncated]",
+    "version": "3.0"
+  }
+]

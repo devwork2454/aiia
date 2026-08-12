@@ -7,12 +7,19 @@
  *   QUALITY_GATE_TIMEOUT_MS     default 15000
  *   QUALITY_GATE_CMD            custom shell with {file} placeholder
  *   QUALITY_GATE_MAX_OUTPUT     default 4096
+ *   QUALITY_GATE_SKIP_BIOME=1   skip biome (still run node --check)
+ *   QUALITY_GATE_SKIP_RUFF=1    skip ruff (still run py_compile)
  */
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 const MUTATING_TOOLS = new Set(['edit', 'write']);
+const __qgDir = path.dirname(fileURLToPath(import.meta.url));
+const __piAgentRoot = path.resolve(__qgDir, '..');
+const requireFromPi = createRequire(path.join(__piAgentRoot, 'package.json'));
 
 export function isMutatingFileTool(toolName) {
   return MUTATING_TOOLS.has(String(toolName || ''));
@@ -35,9 +42,49 @@ function extOf(filePath) {
 }
 
 function which(cmd) {
-  const r = spawnSync('sh', ['-c', `command -v ${cmd}`], { encoding: 'utf8' });
+  const r = spawnSync('sh', ['-c', `command -v ${JSON.stringify(cmd)}`], { encoding: 'utf8' });
   if (r.status !== 0) return null;
   return (r.stdout || '').trim() || null;
+}
+
+/** Resolve local package bin (pi-agent node_modules) then PATH. */
+export function resolveLocalBin(pkgName, binName, env = process.env) {
+  try {
+    const pkgJson = requireFromPi.resolve(`${pkgName}/package.json`);
+    const pkgDir = path.dirname(pkgJson);
+    const pkg = JSON.parse(fs.readFileSync(pkgJson, 'utf8'));
+    let binRel = pkg.bin;
+    if (binRel && typeof binRel === 'object') binRel = binRel[binName] || binRel[pkgName];
+    if (typeof binRel === 'string') {
+      const abs = path.join(pkgDir, binRel);
+      if (fs.existsSync(abs)) return abs;
+    }
+  } catch {
+    // fall through to PATH
+  }
+  const nmBin = path.join(__piAgentRoot, 'node_modules', '.bin', binName);
+  if (fs.existsSync(nmBin)) return nmBin;
+  return which(binName) || which(pkgName);
+}
+
+function truthyEnv(v) {
+  return v === '1' || v === 'true';
+}
+
+function buildBiomeRunner(filePath, env = process.env) {
+  const biome = resolveLocalBin('@biomejs/biome', 'biome', env);
+  if (!biome) return null;
+  const gateConfig = path.join(__piAgentRoot, 'biome.gate.json');
+  const argv = [biome, 'lint', '--diagnostic-level=error', '--colors=off'];
+  if (fs.existsSync(gateConfig)) {
+    argv.push('--config-path', gateConfig);
+  }
+  argv.push(filePath);
+  return {
+    name: 'biome lint',
+    argv,
+    optional: true,
+  };
 }
 
 /**
@@ -54,6 +101,10 @@ export function defaultPickRunners(filePath, env = process.env) {
 
   if (['.js', '.mjs', '.cjs'].includes(ext)) {
     runners.push({ name: 'node --check', argv: ['node', '--check', filePath] });
+    if (!truthyEnv(env.QUALITY_GATE_SKIP_BIOME)) {
+      const biomeRunner = buildBiomeRunner(filePath, env);
+      if (biomeRunner) runners.push(biomeRunner);
+    }
   }
 
   if (['.ts', '.tsx', '.mts', '.cts'].includes(ext)) {
@@ -64,12 +115,15 @@ export function defaultPickRunners(filePath, env = process.env) {
         argv: [tsc, '--noEmit', '--pretty', 'false', '--skipLibCheck', filePath],
       });
     } else {
-      // Node 22+ can syntax-check TS via strip-types; ignore if unsupported.
       runners.push({
         name: 'node --check (strip-types)',
         argv: ['node', '--experimental-strip-types', '--check', filePath],
         optional: true,
       });
+    }
+    if (!truthyEnv(env.QUALITY_GATE_SKIP_BIOME)) {
+      const biomeRunner = buildBiomeRunner(filePath, env);
+      if (biomeRunner) runners.push(biomeRunner);
     }
   }
 
@@ -77,6 +131,16 @@ export function defaultPickRunners(filePath, env = process.env) {
     const py = which('python3') || which('python');
     if (py) {
       runners.push({ name: 'py_compile', argv: [py, '-m', 'py_compile', filePath] });
+    }
+    if (!truthyEnv(env.QUALITY_GATE_SKIP_RUFF)) {
+      const ruff = which('ruff');
+      if (ruff) {
+        runners.push({
+          name: 'ruff check',
+          argv: [ruff, 'check', '--quiet', filePath],
+          optional: true,
+        });
+      }
     }
   }
 
@@ -112,14 +176,16 @@ export function runRunner(runner, { timeoutMs = 15000, spawn = spawnSync } = {})
   const timedOut = Boolean(r.error && r.error.code === 'ETIMEDOUT');
   const ok = !timedOut && r.status === 0;
 
-  // optional runners: missing binary / unsupported flag → treat as skip, not fail
+  // optional runners: missing binary / unsupported / path ignored → skip, not fail
   if (!ok && runner.optional) {
     const msg = `${r.error?.message || ''}\n${output}`.toLowerCase();
     if (
       r.error?.code === 'ENOENT' ||
       msg.includes('bad option') ||
       msg.includes('unknown option') ||
-      msg.includes('experimental-strip-types')
+      msg.includes('experimental-strip-types') ||
+      msg.includes('no files were processed') ||
+      msg.includes('not found')
     ) {
       return { ok: true, skipped: true, name: runner.name, exitCode: r.status ?? 1, output };
     }

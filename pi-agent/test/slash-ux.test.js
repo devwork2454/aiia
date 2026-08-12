@@ -18,9 +18,8 @@ import slashUxExtension from "../extensions/slash-ux.js";
 describe("slash visibility", () => {
   test("default allowlist and env override", () => {
     assert.ok(DEFAULT_SLASH_ALLOWLIST.includes("goal"));
-    assert.ok(DEFAULT_SLASH_ALLOWLIST.includes("imp"));
-    assert.ok(DEFAULT_SLASH_ALLOWLIST.includes("aiia"));
-    assert.ok(DEFAULT_SLASH_ALLOWLIST.includes("profile"));
+    assert.ok(DEFAULT_SLASH_ALLOWLIST.includes("config"));
+    assert.ok(DEFAULT_SLASH_ALLOWLIST.includes("steer"));
     const custom = resolveSlashAllowlist({ AIIA_SLASH_ALLOWLIST: "goal,vault" });
     assert.deepEqual(custom.sort(), ["aiia", "goal", "vault"].sort());
   });

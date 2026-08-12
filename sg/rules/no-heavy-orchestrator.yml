@@ -1,0 +1,22 @@
+id: no-heavy-orchestrator
+language: javascript
+severity: error
+message: AIIA forbids heavy agent frameworks (LangGraph/Mastra/LangChain). Use native Pi extensions.
+rule:
+  any:
+    - pattern: import $X from 'langgraph'
+    - pattern: import $X from 'langchain'
+    - pattern: import $X from 'mastra'
+    - pattern: import $X from '@langchain/core'
+    - pattern: import $X from '@mastra/core'
+    - pattern: require('langgraph')
+    - pattern: require('langchain')
+    - pattern: require('mastra')
+    - pattern: require('@langchain/core')
+    - pattern: require('@mastra/core')
+files:
+  - 'pi-agent/**/*.js'
+  - 'pi-agent/**/*.mjs'
+  - 'pi-agent/**/*.cjs'
+ignores:
+  - '**/node_modules/**'
