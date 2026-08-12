@@ -7,6 +7,10 @@
 
 AIIA /add-dir — Claude Code-style additional workspace directories for Pi. Commands: /add-dir <path>       add directory /add-dir list         list (also bare /add-dir) /add-dir rm <path>    remove /rm-dir <path>        alias for remove /list-dirs            alias for list Effects: - Persist under <cwd>/.agent/additional-dirs.json - Inject path list into system prompt each turn - resources_discover: skill roots under added dirs
 
+## `auto-router.js`
+
+AIIA Autonomous Router Extension Injects a global directive to empower the Main Agent to proactively use Subagents for complex tasks, effectively transforming it into an autonomous dispatcher.
+
 ## `capability-catalog.js`
 
 Inject a short tool capability catalog each turn (tool-first UX). Kill switch: AIIA_CAPABILITY_CATALOG_DISABLED=1
