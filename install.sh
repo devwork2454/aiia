@@ -30,7 +30,7 @@ echo "  ╚═══════════════════════
 echo -e "${RESET}"
 
 # ─── Step 1: 检查 Node.js ────────────────────────────────────────────────────
-step "Step 1/8  检查 Node.js 环境"
+step "Step 1/9  检查 Node.js 环境"
 
 if command -v node &>/dev/null; then
   NODE_VER=$(node --version)
@@ -67,7 +67,7 @@ if [ "$install_node" = true ]; then
 fi
 
 # ─── Step 2: 安装 pi CLI ──────────────────────────────────────────────────────
-step "Step 2/8  安装 Pi CLI"
+step "Step 2/9  安装 Pi CLI"
 
 if [ "${AIIA_MIRROR:-}" = "gitee" ]; then
   info "启用 Gitee 镜像模式，设置 NPM 淘宝源加速..."
@@ -84,7 +84,7 @@ else
 fi
 
 # ─── Step 3: 获取 AIIA 项目 ──────────────────────────────────────────────────
-step "Step 3/8  获取 AIIA 项目"
+step "Step 3/9  获取 AIIA 项目"
 
 if [ -d "$AIIA_DIR/pi-agent" ]; then
   success "AIIA 项目已存在于 $AIIA_DIR"
@@ -119,15 +119,29 @@ else
 fi
 
 # ─── Step 4: 安装 Pi-agent 依赖 ───────────────────────────────────────────────
-step "Step 4/8  安装 AIIA 依赖"
+step "Step 4/9  安装 AIIA 依赖"
 
 cd "$AIIA_DIR/pi-agent"
 info "正在安装 npm 依赖..."
 npm install --prefer-offline 2>/dev/null || npm install
 success "依赖安装完成"
 
-# ─── Step 5: 注册为 Pi Package ───────────────────────────────────────────────
-step "Step 5/8  注册 AIIA 为 Pi 全局插件"
+# ─── Step 5: 编译并全局挂载 AIIA CLI ──────────────────────────────────────────
+step "Step 5/9  编译并全局挂载 AIIA 双屏 CLI"
+
+if [ -d "$AIIA_DIR/cli" ]; then
+  cd "$AIIA_DIR/cli"
+  info "正在安装 CLI 依赖..."
+  npm install --prefer-offline 2>/dev/null || npm install
+  info "正在全局挂载 aiia 命令..."
+  npm link
+  success "aiia 全局命令挂载完成"
+else
+  warn "未检测到 cli 目录，跳过 CLI 安装。"
+fi
+
+# ─── Step 6: 注册为 Pi Package ───────────────────────────────────────────────
+step "Step 6/9  注册 AIIA 为 Pi 全局插件"
 
 # 检查是否已注册
 if pi list 2>/dev/null | grep -q "aiia"; then
@@ -147,8 +161,8 @@ if [[ -L "$AIIA_DIR/.pi/extensions" ]]; then
   rmdir "$AIIA_DIR/.pi" 2>/dev/null || true
 fi
 
-# ─── Step 6: 链接默认 Pi Skills（新机即用）───────────────────────────────────
-step "Step 6/8  链接默认 Pi Skills（auto-harness、goal、imp 等）"
+# ─── Step 7: 链接默认 Pi Skills（新机即用）───────────────────────────────────
+step "Step 7/9  链接默认 Pi Skills（auto-harness、goal、imp 等）"
 
 if [[ ! -f "$AIIA_DIR/scripts/link-pi-skills.sh" ]]; then
   error "缺少 $AIIA_DIR/scripts/link-pi-skills.sh（新机无法默认启用 auto-harness/goal）"
@@ -181,8 +195,8 @@ fs.writeFileSync(settingsPath, JSON.stringify(s,null,2)+"\n");
   fi
 fi
 
-# ─── Step 7: 配置环境变量 ─────────────────────────────────────────────────────
-step "Step 7/8  配置环境变量"
+# ─── Step 8: 配置环境变量 ─────────────────────────────────────────────────────
+step "Step 8/9  配置环境变量"
 
 SHELL_RC=""
 if [ -f "$HOME/.zshrc" ]; then
@@ -208,8 +222,8 @@ else
   success "环境变量已配置（跳过）"
 fi
 
-# ─── Step 8: Tmux AI 助手配置 ─────────────────────────────────────────────────
-step "Step 8/8  Tmux AI 助手配置 (可选)"
+# ─── Step 9: Tmux AI 助手配置 ─────────────────────────────────────────────────
+step "Step 9/9  Tmux AI 助手配置 (可选)"
 
 if command -v tmux &>/dev/null; then
   echo -e "${YELLOW}检测到系统已安装 Tmux。是否为您配置 AIIA 的 Tmux 屏幕抓取助手？${RESET}"
