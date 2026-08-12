@@ -14,26 +14,26 @@ export default function uiTaskBoardExtension(pi) {
 
     const root = new VStack();
     
-    // 渲染标题区 (简约风格)
-    root.addChild(new Text(theme.fg("dim", "┌── Task Pipeline"), 0, 0));
+    // 渲染标题区 (独立对比色，不与普通文本混淆)
+    root.addChild(new Text(theme.fg("secondary", "┌── Task Pipeline"), 0, 0));
     
     // 渲染任务列表区
     for (const t of tasks) {
       const row = new HStack();
       if (t.status === 'done') {
-        row.addChild(new Text(theme.fg("dim", "│ ✓ "), 0, 0));
+        row.addChild(new Text(theme.fg("secondary", "│ ") + theme.fg("success", "✓ "), 0, 0));
         row.addChild(new Text(theme.fg("dim", t.task), 0, 0));
       } else if (t.status === 'doing') {
-        row.addChild(new Text("│ ⟳ ", 0, 0));
-        row.addChild(new Text("\x1b[1m" + t.task + "\x1b[22m", 0, 0));
+        row.addChild(new Text(theme.fg("secondary", "│ ") + theme.fg("primary", "⟳ "), 0, 0));
+        row.addChild(new Text(theme.fg("primary", "\x1b[1m" + t.task + "\x1b[22m"), 0, 0));
       } else {
-        row.addChild(new Text(theme.fg("dim", "│ · "), 0, 0));
+        row.addChild(new Text(theme.fg("secondary", "│ ") + theme.fg("dim", "· "), 0, 0));
         row.addChild(new Text(theme.fg("dim", t.task), 0, 0));
       }
       root.addChild(row);
     }
 
-    root.addChild(new Text(theme.fg("dim", "└──"), 0, 0));
+    root.addChild(new Text(theme.fg("secondary", "└──"), 0, 0));
 
     return root;
   });
