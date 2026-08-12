@@ -23,6 +23,10 @@ AIIA /config command — unified configuration hub. Merges the UI of /profile an
 
 Inject merged UserCard/ProjectCard summary each turn. Commands: /profile show|refresh|apply|set ... Kill switch: AIIA_PROFILE_DISABLED=1
 
+## `context-gc.js`
+
+AIIA Context GC Extension (JVM Generational GC inspired) Dynamically folds old process context into summarized Survivor memories.
+
 ## `cron-scheduler.js`
 
 AIIA Cron Scheduler Extension (Phase 2 P6) 注册工具: - register_cron_task: 注册 5 段式 Cron 周期性自动化任务 - list_cron_tasks: 列表显示当前全部 Cron 定时任务与运行状态 - remove_cron_task: 注销/移除指定 Cron 任务
