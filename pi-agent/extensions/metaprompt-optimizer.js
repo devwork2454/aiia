@@ -66,8 +66,7 @@ export default function metapromptOptimizer(pi) {
 
       // 如果本次积攒了足够多的错题（比如 > 2次），就自动执行提纯
       if (errorCount > 0) {
-        // [后台静默日志] 发现历史错题，正在自动写回规则指纹...
-        console.log(`[L7 Auto-Optimizer] Detected ${errorCount} recent errors. Running background metaprompt reflection...`);
+        // Background reflection path (silent on success; errors go through catch below)
         // 这里对接真正的大模型写回逻辑
       }
     } catch (e) {

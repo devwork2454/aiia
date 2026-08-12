@@ -45,13 +45,12 @@ export default function remoteConfigExtension(pi) {
     const remoteModel = modelsData.data.find(m => m.id === targetId || targetId.includes(m.id));
 
     if (remoteModel) {
+      // Silent sync — no console chatter on happy path
       if (remoteModel.context_window) {
         ctx.model.contextWindow = remoteModel.context_window;
-        console.log(`[Remote Config] Synced contextWindow for ${targetId}: ${ctx.model.contextWindow}`);
       }
       if (remoteModel.max_tokens) {
         ctx.model.maxTokens = remoteModel.max_tokens;
-        console.log(`[Remote Config] Synced maxTokens for ${targetId}: ${ctx.model.maxTokens}`);
       }
     }
   });

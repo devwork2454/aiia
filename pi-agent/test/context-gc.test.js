@@ -1,49 +1,160 @@
-import { test, describe } from 'node:test';
-import assert from 'node:assert/strict';
-import contextGCExtension from '../extensions/context-gc.js';
+import { test, describe, beforeEach } from "node:test";
+import assert from "node:assert/strict";
+import contextGCExtension, { _test } from "../extensions/context-gc.js";
 
-describe('Phase 3 P1: Context GC Stability & Boundaries', () => {
-  test('Token estimator calculates roughly correctly', async () => {
-    // We cannot import estimateTokens directly since it's not exported, but we can test behavior implicitly,
-    // or by feeding massive content that triggers GC.
-    assert.ok(true); // Placeholder, real test below
+function loadHook() {
+  let hookFn;
+  const mockPi = {
+    on: (event, fn) => {
+      if (event === "before_provider_request") hookFn = fn;
+    },
+  };
+  contextGCExtension(mockPi);
+  return hookFn;
+}
+
+function buildBloatedReq() {
+  const massiveOutput = "A".repeat(50000);
+  const req = {
+    model: "deepseek-v4-flash-0731",
+    messages: [
+      { role: "system", content: "system" },
+      { role: "user", content: "user start /home/zakza/project/aiia/README.md" },
+    ],
+  };
+  for (let i = 0; i < 20; i++) {
+    req.messages.push({
+      role: "assistant",
+      tool_calls: [{ id: `call_${i}`, name: "cmd", input: "test" }],
+    });
+    req.messages.push({
+      role: "tool",
+      name: "cmd",
+      content: `${massiveOutput}\nError: boom status 500 at /tmp/fail.log`,
+    });
+  }
+  return req;
+}
+
+describe("Context GC", () => {
+  beforeEach(() => {
+    process.env.AIIA_DISABLE_GC = "0";
+    _test.clearCircuit();
+    _test.setLastErrorLogAt(0);
   });
 
-  test('GC preserves tool_calls structure without breaking API format', async () => {
-    let hookFn;
-    const mockPi = {
-      on: (event, fn) => { if (event === 'before_provider_request') hookFn = fn; }
-    };
-    
-    contextGCExtension(mockPi);
-    
-    // Simulate env to disable fetch error spam during tests
-    process.env.AIIA_DISABLE_GC = '0';
+  test("estimateTokens grows with large tool payloads", () => {
+    const n = _test.estimateTokens([
+      { role: "user", content: "x".repeat(400) },
+    ]);
+    assert.ok(n >= 100);
+  });
 
-    const massiveOutput = "A".repeat(50000); // Massive token size to force trigger
-    const req = {
-      messages: [
-        { role: 'system', content: 'system' },
-        { role: 'user', content: 'user start' }
-      ]
-    };
-    
-    // Create an artificial long history
-    for(let i=0; i<20; i++) {
-      req.messages.push({ role: 'assistant', tool_calls: [{id: 'call_1', name: 'cmd', input: 'test'}] });
-      req.messages.push({ role: 'tool', name: 'cmd', content: massiveOutput });
-    }
+  test("findSafeCutoffIndex does not land inside tool_call pairs", () => {
+    const messages = [
+      { role: "system", content: "s" },
+      { role: "user", content: "u" },
+      { role: "assistant", tool_calls: [{ id: "1" }] },
+      { role: "tool", content: "out" },
+      { role: "user", content: "next" },
+    ];
+    const cut = _test.findSafeCutoffIndex(messages, 3);
+    assert.ok(cut === 3 || cut === 1);
+  });
 
-    const event = { req };
+  test("buildHeuristicSummary retains paths and errors", () => {
+    const summary = _test.buildHeuristicSummary([
+      { role: "user", content: "edit /home/zakza/project/aiia/foo.js" },
+      { role: "tool", content: "Error: FAILED to compile status 500" },
+    ]);
+    assert.match(summary, /\/home\/zakza\/project\/aiia\/foo\.js/);
+    assert.match(summary, /Error|FAILED|status 500/i);
+  });
+
+  test("resolveSummarizeAuth uses modelRegistry.getApiKeyAndHeaders", async () => {
+    const ctx = {
+      model: { id: "m1", provider: "1api", baseUrl: "https://api.example.com/v1" },
+      modelRegistry: {
+        getApiKeyAndHeaders: async () => ({
+          ok: true,
+          apiKey: "secret-key",
+          baseUrl: "https://api.example.com/v1",
+        }),
+      },
+    };
+    const auth = await _test.resolveSummarizeAuth(ctx);
+    assert.equal(auth.apiKey, "secret-key");
+    assert.equal(auth.modelId, "m1");
+    assert.match(auth.baseUrl, /api\.example\.com/);
+  });
+
+  test("GC preserves structure and injects survivor without spam", async () => {
+    const hookFn = loadHook();
+    const req = buildBloatedReq();
     const originalLength = req.messages.length;
 
-    await hookFn(event, {});
+    // Auth available but fetch forced to fail → heuristic path, circuit opens once
+    const ctx = {
+      cwd: process.cwd(),
+      model: { id: "m1", provider: "openai", baseUrl: "http://127.0.0.1:9/v1" },
+      modelRegistry: {
+        getApiKeyAndHeaders: async () => ({ ok: true, apiKey: "k", baseUrl: "http://127.0.0.1:9/v1" }),
+      },
+    };
 
-    // Should compact down significantly
-    assert.ok(req.messages.length < originalLength, 'GC should compress message length');
-    
-    // The second message should be the GC survivor message
-    assert.ok(req.messages[1].role === 'assistant', 'Second message must be assistant survivor');
-    assert.ok(req.messages[1].content.includes('[AIIA GC Survivor Memory]'), 'Must contain GC tag');
+    const event = { type: "before_provider_request", payload: req };
+    const returned = await hookFn(event, ctx);
+
+    assert.ok(returned === req || returned?.messages);
+    assert.ok(req.messages.length < originalLength, "GC should compress message length");
+    assert.equal(req.messages[0].role, "system");
+    // Survivor is folded into system prompt (not a fake assistant turn)
+    assert.match(req.messages[0].content, /\[AIIA GC Survivor Memory\]/);
+    assert.match(req.messages[0].content, /path|Error|Folded|intent/i);
+  });
+
+  test("circuit breaker skips repeated LLM attempts after failure", async () => {
+    const hookFn = loadHook();
+    let authCalls = 0;
+    const ctx = {
+      cwd: process.cwd(),
+      model: { id: "m1", provider: "openai", baseUrl: "http://127.0.0.1:9/v1" },
+      modelRegistry: {
+        getApiKeyAndHeaders: async () => {
+          authCalls += 1;
+          return { ok: true, apiKey: "k", baseUrl: "http://127.0.0.1:9/v1" };
+        },
+      },
+    };
+
+    const req1 = buildBloatedReq();
+    await hookFn({ payload: req1 }, ctx);
+    const callsAfterFirst = authCalls;
+
+    const req2 = buildBloatedReq();
+    await hookFn({ payload: req2 }, ctx);
+    // Second GC should short-circuit LLM path (no extra auth resolve while circuit open)
+    // resolveSummarizeAuth is only called when circuit is closed
+    assert.equal(authCalls, callsAfterFirst, "should not re-resolve auth while circuit open");
+  });
+
+  test("AIIA_DISABLE_GC=1 is a hard kill switch", async () => {
+    process.env.AIIA_DISABLE_GC = "1";
+    const hookFn = loadHook();
+    const req = buildBloatedReq();
+    const len = req.messages.length;
+    await hookFn({ payload: req }, { model: { id: "x" } });
+    assert.equal(req.messages.length, len);
+  });
+
+  test("source has no console.debug / happy-path console.log for GC", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const src = fs.readFileSync(
+      path.resolve(import.meta.dirname, "../extensions/context-gc.js"),
+      "utf8",
+    );
+    assert.equal(/console\.debug/.test(src), false);
+    assert.equal(/console\.log\(/.test(src), false);
   });
 });

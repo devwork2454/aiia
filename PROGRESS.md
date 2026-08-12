@@ -111,6 +111,7 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 （无）
 
 ## 已完成
+- **Context GC 静默 + 401 熔断修复**：根因是 `ctx.model` 不含 apiKey，GC 用 dummy 反复 401 刷屏；现经 `modelRegistry.getApiKeyAndHeaders` 取钥、5 分钟熔断、仅异常限流 `console.error`、启发式摘要保留路径/错误、Survivor 折入 system；顺带去掉 trajectory/remote-config/metaprompt 成功路径 console.log；`test/context-gc.test.js` 进 verify。
 - **修复 `/demo-board` 看板回退为 `[checklist]` 原文**：根因是 `theme.fg("primary"/"secondary")` 非 dark 主题合法色键，渲染抛错被 Pi 静默吞掉；已改为 `accent`/`muted`，`display: true`；`test/ui-task-board.test.js` 进 verify。
 - **Context Card 路线 A（S-CARD-1..4）**：`context-card.js` 存储层 + 扩展注入；UserCard/ProjectCard merge；capability-catalog 降噪；规则指纹草案 + `/profile` 人控；verify/integration/ARCHITECTURE 收口。
 - **Slash UX / Tool-First**：`capability-catalog` 短目录注入；`slash-ux` 白名单+`/aiia`；`memory_search`/`memory_list`/`list_additional_dirs`；推荐 `enableSkillCommands=false`（`docs/pi-settings-recommended.json` + install 补缺）。
