@@ -371,7 +371,7 @@ export function parseProfileArgs(args = "") {
 
   const action = trimmed.split(/\s+/)[0].toLowerCase();
   if (action === "status") return { action: "show" };
-  if (["show", "refresh", "apply", "on", "off"].includes(action)) {
+  if (["show", "refresh", "apply", "on", "off", "optimize"].includes(action)) {
     return { action };
   }
 

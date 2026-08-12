@@ -15,6 +15,7 @@ import {
   saveUserCard,
   writeProjectDraft,
 } from "../src/context-card.js";
+import { buildLLMDraft } from "../src/metaprompt-optimizer.js";
 import { registerAiiaHandler } from "../src/command-registry.js";
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
@@ -29,6 +30,7 @@ export default function contextCardExtension(pi) {
           "Usage:",
           "  /profile                         show merged card + stale/draft status",
           "  /profile refresh                 build rule-based draft (not auto-applied)",
+          "  /profile optimize                build LLM profile from trajectories (not auto-applied)",
           "  /profile apply                   apply draft to project-card.json",
           "  /profile set intent <text>       set project intent",
           "  /profile set stack a,b           set project stack",
@@ -66,6 +68,18 @@ export default function contextCardExtension(pi) {
       const draft = buildRuleBasedDraft(cwd);
       writeProjectDraft(cwd, draft);
       ctx?.ui?.notify?.("draft ready; /profile apply", "info");
+      return;
+    }
+
+    if (parsed.action === "optimize") {
+      ctx?.ui?.notify?.("Generating LLM profile from trajectories...", "info");
+      try {
+        const draft = await buildLLMDraft(cwd, ctx);
+        writeProjectDraft(cwd, draft);
+        ctx?.ui?.notify?.("LLM draft ready; /profile apply", "info");
+      } catch(err) {
+        ctx?.ui?.notify?.("Optimize failed: " + err.message, "warning");
+      }
       return;
     }
 
