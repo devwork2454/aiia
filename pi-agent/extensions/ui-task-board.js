@@ -14,24 +14,26 @@ export default function uiTaskBoardExtension(pi) {
 
     const root = new VStack();
     
-    // 渲染标题区
-    root.addChild(new Text(theme.fg("customMessageLabel", "\x1b[1m🚀 [极客看板] AIIA 动态任务流\x1b[22m"), 0, 0));
+    // 渲染标题区 (简约风格)
+    root.addChild(new Text(theme.fg("dim", "┌── Task Pipeline"), 0, 0));
     
     // 渲染任务列表区
     for (const t of tasks) {
       const row = new HStack();
       if (t.status === 'done') {
-        row.addChild(new Text(theme.fg("success", "  [✓] "), 0, 0));
-        row.addChild(new Text(theme.fg("success", t.task), 0, 0));
+        row.addChild(new Text(theme.fg("dim", "│ ✓ "), 0, 0));
+        row.addChild(new Text(theme.fg("dim", t.task), 0, 0));
       } else if (t.status === 'doing') {
-        row.addChild(new Text(theme.fg("warning", "  [⚙] "), 0, 0)); // 假装是个 spinner
-        row.addChild(new Text(theme.fg("warning", "\x1b[1m" + t.task + "\x1b[22m"), 0, 0));
+        row.addChild(new Text("│ ⟳ ", 0, 0));
+        row.addChild(new Text("\x1b[1m" + t.task + "\x1b[22m", 0, 0));
       } else {
-        row.addChild(new Text(theme.fg("dim", "  [ ] "), 0, 0));
+        row.addChild(new Text(theme.fg("dim", "│ · "), 0, 0));
         row.addChild(new Text(theme.fg("dim", t.task), 0, 0));
       }
       root.addChild(row);
     }
+
+    root.addChild(new Text(theme.fg("dim", "└──"), 0, 0));
 
     return root;
   });
