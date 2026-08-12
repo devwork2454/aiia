@@ -111,6 +111,7 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 （无）
 
 ## 已完成
+- **修复 `/demo-board` 看板回退为 `[checklist]` 原文**：根因是 `theme.fg("primary"/"secondary")` 非 dark 主题合法色键，渲染抛错被 Pi 静默吞掉；已改为 `accent`/`muted`，`display: true`；`test/ui-task-board.test.js` 进 verify。
 - **Context Card 路线 A（S-CARD-1..4）**：`context-card.js` 存储层 + 扩展注入；UserCard/ProjectCard merge；capability-catalog 降噪；规则指纹草案 + `/profile` 人控；verify/integration/ARCHITECTURE 收口。
 - **Slash UX / Tool-First**：`capability-catalog` 短目录注入；`slash-ux` 白名单+`/aiia`；`memory_search`/`memory_list`/`list_additional_dirs`；推荐 `enableSkillCommands=false`（`docs/pi-settings-recommended.json` + install 补缺）。
 - **Pi /reply**：全局回复语言/风格（`~/.config/aiia/reply-prefs.json`）；`/reply lang|style|on|off|reset`；before_agent_start 注入。

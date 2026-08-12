@@ -12,28 +12,32 @@ export default function uiTaskBoardExtension(pi) {
       return undefined;
     }
 
+    // theme.fg 仅接受 dark/light 主题已定义的色键（无 primary/secondary）
+    const frame = (s) => theme.fg("muted", s);
+    const active = (s) => theme.fg("accent", s);
+
     const root = new VStack();
-    
+
     // 渲染标题区 (独立对比色，不与普通文本混淆)
-    root.addChild(new Text(theme.fg("secondary", "┌── Task Pipeline"), 0, 0));
-    
+    root.addChild(new Text(frame("┌── Task Pipeline"), 0, 0));
+
     // 渲染任务列表区
     for (const t of tasks) {
       const row = new HStack();
       if (t.status === 'done') {
-        row.addChild(new Text(theme.fg("secondary", "│ ") + theme.fg("success", "✓ "), 0, 0));
+        row.addChild(new Text(frame("│ ") + theme.fg("success", "✓ "), 0, 0));
         row.addChild(new Text(theme.fg("dim", t.task), 0, 0));
       } else if (t.status === 'doing') {
-        row.addChild(new Text(theme.fg("secondary", "│ ") + theme.fg("primary", "⟳ "), 0, 0));
-        row.addChild(new Text(theme.fg("primary", "\x1b[1m" + t.task + "\x1b[22m"), 0, 0));
+        row.addChild(new Text(frame("│ ") + active("⟳ "), 0, 0));
+        row.addChild(new Text(active("\x1b[1m" + t.task + "\x1b[22m"), 0, 0));
       } else {
-        row.addChild(new Text(theme.fg("secondary", "│ ") + theme.fg("dim", "· "), 0, 0));
+        row.addChild(new Text(frame("│ ") + theme.fg("dim", "· "), 0, 0));
         row.addChild(new Text(theme.fg("dim", t.task), 0, 0));
       }
       root.addChild(row);
     }
 
-    root.addChild(new Text(theme.fg("secondary", "└──"), 0, 0));
+    root.addChild(new Text(frame("└──"), 0, 0));
 
     return root;
   });
@@ -54,7 +58,7 @@ export default function uiTaskBoardExtension(pi) {
       pi.sendMessage({
         customType: 'checklist',
         content: JSON.stringify(stages),
-        display: "show",
+        display: true,
       });
     }
   });
