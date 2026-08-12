@@ -50,38 +50,79 @@ function findSafeCutoffIndex(messages, targetIndex) {
 }
 
 async function summarizeWithLLM(messagesToSummarize, ctx) {
-  // Try to use the active model's base URL and provider to summarize.
-  const baseUrl = ctx?.model?.baseUrl || 'http://127.0.0.1:4000/v1';
   const modelId = ctx?.model?.id || 'high';
+  const apiKey = ctx?.model?.apiKey || ctx?.model?.key || process.env.OPENAI_API_KEY;
+  const baseUrl = ctx?.model?.baseUrl || 'http://127.0.0.1:4000/v1';
   
-  // Create a payload for the LLM
-  const payload = {
-    model: modelId,
-    messages: [
-      { 
-        role: 'system', 
-        content: `You are an AI Context GC module. Summarize the following execution process, tool calls, and results into a condensed state update. \nCRITICAL RULE (Lossless Entity Extraction): You MUST extract and retain all absolute file paths, configuration keys, environment variables, git commits, and precise error codes/messages. \nDo NOT output markdown formatting like JSON blocks, just pure text, but ensure technical entities are preserved perfectly.`
-      },
-      { role: 'user', content: JSON.stringify(messagesToSummarize) }
-    ],
-    max_tokens: 800,
-    temperature: 0.1
-  };
+  const systemPrompt = `You are an AI Context GC module. Summarize the following execution process, tool calls, and results into a condensed state update. \nCRITICAL RULE (Lossless Entity Extraction): You MUST extract and retain all absolute file paths, configuration keys, environment variables, git commits, and precise error codes/messages. \nDo NOT output markdown formatting like JSON blocks, just pure text, but ensure technical entities are preserved perfectly.`;
+  const userText = JSON.stringify(messagesToSummarize);
 
   try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ctx?.model?.apiKey || ctx?.model?.key || process.env.OPENAI_API_KEY || 'dummy'}`
-      },
-      body: JSON.stringify(payload)
-    });
-    
-    if (res.ok) {
-      const data = await res.json();
-      return data?.choices?.[0]?.message?.content || '[GC Summarization empty]';
-    } else {
+    let res;
+    // 1. Google Gemini (Native)
+    if (baseUrl.includes('generativelanguage.googleapis.com') || ctx?.model?.provider === 'google' || (apiKey && apiKey.startsWith('AIza'))) {
+      const geminiModel = modelId.replace('models/', '');
+      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: 'user', parts: [{ text: userText }] }],
+          generationConfig: { maxOutputTokens: 800, temperature: 0.1 }
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data?.candidates?.[0]?.content?.parts?.[0]?.text || '[GC Summarization empty]';
+      }
+    } 
+    // 2. Anthropic Claude (Native)
+    else if (baseUrl.includes('api.anthropic.com') || ctx?.model?.provider === 'anthropic' || (apiKey && apiKey.startsWith('sk-ant-'))) {
+      res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: modelId,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userText }],
+          max_tokens: 800,
+          temperature: 0.1
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data?.content?.[0]?.text || '[GC Summarization empty]';
+      }
+    }
+    // 3. OpenAI / Charon Proxy / LiteLLM (Fallback)
+    else {
+      res = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey || 'dummy'}`
+        },
+        body: JSON.stringify({
+          model: modelId,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userText }
+          ],
+          max_tokens: 800,
+          temperature: 0.1
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data?.choices?.[0]?.message?.content || '[GC Summarization empty]';
+      }
+    }
+
+    if (!res.ok) {
       const errMessage = `status ${res.status}`;
       console.debug(`[AIIA Context GC] Summarization API skipped (${errMessage}). Using fallback heuristic.`);
       logError(ctx?.cwd, '[AIIA Context GC]', `Summarization API skipped - ${errMessage}`);
