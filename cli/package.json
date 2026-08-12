@@ -1,0 +1,13 @@
+{
+  "name": "aiia-cli",
+  "version": "1.0.0",
+  "description": "AIIA Frontend CLI wrapper for Pi AgentSession",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.7.0"
+  }
+}
