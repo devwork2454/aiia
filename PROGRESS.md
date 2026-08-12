@@ -111,6 +111,7 @@ legacy/                  # 已归档：旧 mock host / adapter / 飞书 / system
 （无）
 
 ## 已完成
+- **Context 卫生：压住 flash 规划独白刷屏**：cliproxy 会话实测模型把 ~10k「Let me batch/grep」规划写成 assistant **text**（非 thinking）后 aborted；`sanitizeMessages` 折叠历史 monologue、截断旧 thinking；推荐 settings 默认 `hideThinkingBlock=true` + `defaultThinkingLevel=low`（install 仅补缺）。
 - **Context GC 静默 + 401 熔断修复**：根因是 `ctx.model` 不含 apiKey，GC 用 dummy 反复 401 刷屏；现经 `modelRegistry.getApiKeyAndHeaders` 取钥、5 分钟熔断、仅异常限流 `console.error`、启发式摘要保留路径/错误、Survivor 折入 system；顺带去掉 trajectory/remote-config/metaprompt 成功路径 console.log；`test/context-gc.test.js` 进 verify。
 - **修复 `/demo-board` 看板回退为 `[checklist]` 原文**：根因是 `theme.fg("primary"/"secondary")` 非 dark 主题合法色键，渲染抛错被 Pi 静默吞掉；已改为 `accent`/`muted`，`display: true`；`test/ui-task-board.test.js` 进 verify。
 - **Context Card 路线 A（S-CARD-1..4）**：`context-card.js` 存储层 + 扩展注入；UserCard/ProjectCard merge；capability-catalog 降噪；规则指纹草案 + `/profile` 人控；verify/integration/ARCHITECTURE 收口。

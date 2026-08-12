@@ -1,4 +1,6 @@
 {
   "enableSkillCommands": false,
-  "_comment": "AIIA recommendation: keep skills discoverable for the agent, but hide /skill:* from the slash autocomplete menu. Merge into ~/.pi/agent/settings.json (do not delete other keys)."
+  "hideThinkingBlock": true,
+  "defaultThinkingLevel": "low",
+  "_comment": "AIIA recommendations (install merges only missing keys): hide skill slash noise; hide thinking blocks in TUI (toggle still available); prefer low thinking to cut flash-model monologue loops."
 }

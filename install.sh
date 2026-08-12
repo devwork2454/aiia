@@ -174,9 +174,12 @@ const settingsPath=process.argv[1];
 const recPath=process.argv[2];
 const s=JSON.parse(fs.readFileSync(settingsPath,"utf8")||"{}");
 const r=JSON.parse(fs.readFileSync(recPath,"utf8"));
-if (s.enableSkillCommands === undefined) s.enableSkillCommands = r.enableSkillCommands;
+for (const k of Object.keys(r)) {
+  if (k.startsWith("_")) continue;
+  if (s[k] === undefined) s[k] = r[k];
+}
 fs.writeFileSync(settingsPath, JSON.stringify(s,null,2)+"\n");
-' "$SETTINGS_JSON" "$REC" && success "已写入推荐 Pi settings（enableSkillCommands=false，仅补缺）" \
+' "$SETTINGS_JSON" "$REC" && success "已写入推荐 Pi settings（仅补缺 missing keys）" \
       || info "跳过 settings 合并（可手动参考 docs/pi-settings-recommended.json）"
   fi
 fi

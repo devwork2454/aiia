@@ -11,6 +11,13 @@ const GC_KEEP_RECENT = 10; // Number of recent messages to keep in Eden
 const GC_FAIL_COOLDOWN_MS = 5 * 60 * 1000; // Skip LLM summarize after repeated failures
 const GC_ERROR_LOG_INTERVAL_MS = 60 * 1000; // At most one console/file error per minute
 
+/** Keep full thinking only for the most recent N assistant turns that have thinking. */
+const KEEP_FULL_THINKING = 2;
+/** Older thinking blocks are stubbed to this many characters (DeepSeek still needs the field). */
+const THINKING_STUB_CHARS = 240;
+/** Collapse assistant text monologues longer than this when they look like planning loops. */
+const MONOLOGUE_TEXT_CHARS = 1800;
+
 import fs from "node:fs";
 import path from "node:path";
 
@@ -317,12 +324,105 @@ function getRequestPayload(event) {
   return null;
 }
 
+function isPlanningMonologue(text) {
+  if (!text || text.length < MONOLOGUE_TEXT_CHARS) return false;
+  const letMe = (text.match(/\bLet me\b/gi) || []).length;
+  const planish =
+    (text.match(/\b(batch|grep|read|check|look at|also check)\b/gi) || []).length;
+  // Real cliproxyapi incident: ~10k chars of "Let me batch/grep/read" with 0 tool calls.
+  return letMe >= 6 || (letMe >= 3 && planish >= 8);
+}
+
+/**
+ * Shrink historical thinking + collapse planning monologues so flash/reasoning
+ * models do not keep amplifying "Let me plan forever" text into the next turn.
+ * Always runs (even when GC compaction is disabled).
+ *
+ * @param {any[]} messages
+ * @returns {{ thinkingStubbed: number, monologueCollapsed: number }}
+ */
+function sanitizeMessages(messages) {
+  let thinkingStubbed = 0;
+  let monologueCollapsed = 0;
+  if (!Array.isArray(messages)) return { thinkingStubbed, monologueCollapsed };
+
+  // Walk newest → oldest for thinking budget.
+  let fullThinkingLeft = KEEP_FULL_THINKING;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (!msg || msg.role !== "assistant") continue;
+
+    if (Array.isArray(msg.content)) {
+      const hasToolCall = msg.content.some(
+        (p) =>
+          p?.type === "toolCall" ||
+          p?.type === "tool_use" ||
+          p?.type === "functionCall",
+      );
+      let changed = false;
+      const next = msg.content.map((part) => {
+        if (!part || typeof part !== "object") return part;
+
+        if (part.type === "thinking" && typeof part.thinking === "string") {
+          if (fullThinkingLeft > 0) {
+            fullThinkingLeft -= 1;
+            return part;
+          }
+          if (part.thinking.length > THINKING_STUB_CHARS) {
+            thinkingStubbed += 1;
+            changed = true;
+            return {
+              ...part,
+              thinking: `${part.thinking.slice(0, THINKING_STUB_CHARS)}\n…[thinking truncated]`,
+            };
+          }
+          return part;
+        }
+
+        if (
+          part.type === "text" &&
+          typeof part.text === "string" &&
+          !hasToolCall &&
+          isPlanningMonologue(part.text)
+        ) {
+          monologueCollapsed += 1;
+          changed = true;
+          return {
+            ...part,
+            text:
+              "[AIIA] Prior planning monologue collapsed (no tool calls). " +
+              "Continue by calling tools; do not re-narrate investigation plans.",
+          };
+        }
+        return part;
+      });
+      if (changed) msg.content = next;
+    } else if (
+      typeof msg.content === "string" &&
+      !msg.tool_calls?.length &&
+      isPlanningMonologue(msg.content)
+    ) {
+      monologueCollapsed += 1;
+      msg.content =
+        "[AIIA] Prior planning monologue collapsed (no tool calls). " +
+        "Continue by calling tools; do not re-narrate investigation plans.";
+    }
+  }
+
+  return { thinkingStubbed, monologueCollapsed };
+}
+
 export default function contextGCExtension(pi) {
   pi.on("before_provider_request", async (event, ctx) => {
     const req = getRequestPayload(event);
     if (!req || !req.messages || !Array.isArray(req.messages)) return;
 
-    if (process.env.AIIA_DISABLE_GC === "1") return;
+    // Hygiene always on: cut thinking bloat + planning monologues (UI noise + loop fuel).
+    if (process.env.AIIA_DISABLE_CONTEXT_HYGIENE !== "1") {
+      sanitizeMessages(req.messages);
+    }
+
+    if (process.env.AIIA_DISABLE_GC === "1") return req;
 
     const currentTokens = estimateTokens(req.messages);
 
@@ -368,6 +468,8 @@ export const _test = {
   findSafeCutoffIndex,
   buildHeuristicSummary,
   resolveSummarizeAuth,
+  sanitizeMessages,
+  isPlanningMonologue,
   openCircuit,
   clearCircuit,
   getCircuit: () => llmCircuitOpen,
@@ -376,4 +478,7 @@ export const _test = {
   },
   GC_FAIL_COOLDOWN_MS,
   GC_TOKEN_THRESHOLD,
+  MONOLOGUE_TEXT_CHARS,
+  KEEP_FULL_THINKING,
+  THINKING_STUB_CHARS,
 };

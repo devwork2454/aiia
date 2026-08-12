@@ -157,4 +157,65 @@ describe("Context GC", () => {
     assert.equal(/console\.debug/.test(src), false);
     assert.equal(/console\.log\(/.test(src), false);
   });
+
+  test("sanitizeMessages stubs old thinking and collapses planning monologues", () => {
+    const monologue = Array.from({ length: 40 }, (_, i) =>
+      `Let me batch greps and also check read path ${i} and look at providerFactory.`,
+    ).join(" ");
+    assert.ok(_test.isPlanningMonologue(monologue));
+
+    const messages = [
+      { role: "system", content: "sys" },
+      {
+        role: "assistant",
+        content: [
+          { type: "thinking", thinking: "OLD_THINKING_" + "x".repeat(800) },
+          { type: "text", text: "ok" },
+        ],
+      },
+      {
+        role: "assistant",
+        content: [
+          { type: "thinking", thinking: "MID_THINKING_" + "y".repeat(800) },
+          { type: "toolCall", id: "1", name: "bash", arguments: {} },
+        ],
+      },
+      {
+        role: "assistant",
+        content: [
+          { type: "thinking", thinking: "NEW_THINKING_" + "z".repeat(100) },
+          { type: "text", text: monologue },
+        ],
+      },
+    ];
+
+    const stats = _test.sanitizeMessages(messages);
+    assert.ok(stats.thinkingStubbed >= 1);
+    assert.ok(stats.monologueCollapsed >= 1);
+    // Oldest thinking truncated
+    assert.match(messages[1].content[0].thinking, /truncated/);
+    // Newest thinking kept full
+    assert.equal(messages[3].content[0].thinking.startsWith("NEW_THINKING_"), true);
+    // Monologue collapsed
+    assert.match(messages[3].content[1].text, /planning monologue collapsed/i);
+  });
+
+  test("hygiene runs even when AIIA_DISABLE_GC=1", async () => {
+    process.env.AIIA_DISABLE_GC = "1";
+    const hookFn = loadHook();
+    const monologue = Array.from({ length: 40 }, (_, i) =>
+      `Let me batch greps and also check read path ${i} and look at manager.`,
+    ).join(" ");
+    const req = {
+      messages: [
+        { role: "system", content: "s" },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: monologue }],
+        },
+      ],
+    };
+    await hookFn({ payload: req }, { model: { id: "x" } });
+    assert.match(req.messages[1].content[0].text, /planning monologue collapsed/i);
+  });
 });
