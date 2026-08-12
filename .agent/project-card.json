@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "intent": "Context Card 路线 A 最小闭环（S-CARD-1..4）。",
+  "stack": [
+    "python"
+  ],
+  "user_tags": [
+    "pi"
+  ],
+  "prefer_tools": [],
+  "avoid_tools": [],
+  "noise_deny": [],
+  "confidence": 0.4,
+  "updated_at": "2026-08-12T11:30:42.873Z",
+  "fingerprint": "e656150e94dc8d92"
+}

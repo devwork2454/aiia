@@ -1,6 +1,14 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, appendFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { buildRuleBasedDraft } from "./context-card.js";
+
+function logError(cwd, prefix, errMessage) {
+  try {
+    const logPath = join(resolve(cwd || process.cwd()), '.agent', 'error.log');
+    const time = new Date().toISOString();
+    appendFileSync(logPath, `[${time}] ${prefix}: ${errMessage}\n`);
+  } catch (e) {}
+}
 
 /**
  * Reads the last N bytes of the trajectories.jsonl file to prevent context overflow.
@@ -58,7 +66,7 @@ Do not use markdown blocks. Output pure JSON.`;
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY || "dummy"}`
+        "Authorization": `Bearer ${ctx?.model?.apiKey || ctx?.model?.key || process.env.OPENAI_API_KEY || "dummy"}`
       },
       body: JSON.stringify(payload)
     });
@@ -78,7 +86,8 @@ Do not use markdown blocks. Output pure JSON.`;
       throw new Error(`LLM API returned status ${res.status}`);
     }
   } catch (err) {
-    console.error("[Metaprompt Optimizer] Failed to build LLM draft:", err);
+    console.debug(`[Metaprompt Optimizer] LLM draft skipped (${err.message}). Using rule-based fallback.`);
+    logError(cwd, '[Metaprompt Optimizer]', `LLM draft failed - ${err.message}`);
     return ruleBased;
   }
 }

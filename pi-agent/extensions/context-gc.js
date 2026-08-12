@@ -6,6 +6,17 @@
 const GC_TOKEN_THRESHOLD = 8000; // Trigger GC if approximate tokens exceed this
 const GC_KEEP_RECENT = 10; // Number of recent messages to keep in Eden
 
+import fs from 'node:fs';
+import path from 'node:path';
+
+function logError(cwd, prefix, errMessage) {
+  try {
+    const logPath = path.join(cwd || process.cwd(), '.agent', 'error.log');
+    const time = new Date().toISOString();
+    fs.appendFileSync(logPath, `[${time}] ${prefix}: ${errMessage}\n`);
+  } catch (e) {}
+}
+
 function estimateTokens(messages) {
   let totalLength = 0;
   for (const msg of messages) {
@@ -62,7 +73,7 @@ async function summarizeWithLLM(messagesToSummarize, ctx) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY || 'dummy'}`
+        'Authorization': `Bearer ${ctx?.model?.apiKey || ctx?.model?.key || process.env.OPENAI_API_KEY || 'dummy'}`
       },
       body: JSON.stringify(payload)
     });
@@ -71,11 +82,14 @@ async function summarizeWithLLM(messagesToSummarize, ctx) {
       const data = await res.json();
       return data?.choices?.[0]?.message?.content || '[GC Summarization empty]';
     } else {
-      console.error('[AIIA Context GC] Summarization API failed with status:', res.status);
+      const errMessage = `status ${res.status}`;
+      console.debug(`[AIIA Context GC] Summarization API skipped (${errMessage}). Using fallback heuristic.`);
+      logError(ctx?.cwd, '[AIIA Context GC]', `Summarization API skipped - ${errMessage}`);
       return null;
     }
   } catch (err) {
-    console.error('[AIIA Context GC] Summarization fetch failed:', err.message);
+    console.debug(`[AIIA Context GC] Summarization fetch skipped (${err.message}). Using fallback heuristic.`);
+    logError(ctx?.cwd, '[AIIA Context GC]', `Summarization fetch failed - ${err.message}`);
     return null;
   }
 }

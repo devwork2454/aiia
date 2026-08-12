@@ -46,10 +46,12 @@ export class SemanticStore {
     `);
   }
 
-  async getEmbedding(text) {
+  async getEmbedding(text, ctx) {
+    const dynamicKey = ctx?.model?.apiKey || ctx?.model?.key;
     // 1. Try Gemini
-    if (process.env.GEMINI_API_KEY) {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${process.env.GEMINI_API_KEY}`, {
+    if (dynamicKey || process.env.GEMINI_API_KEY) {
+      const geminiKey = dynamicKey || process.env.GEMINI_API_KEY;
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${geminiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -64,13 +66,14 @@ export class SemanticStore {
     }
     
     // 2. Try OpenAI
-    if (process.env.OPENAI_API_KEY) {
-      const baseUrl = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
+    if (dynamicKey || process.env.OPENAI_API_KEY) {
+      const baseUrl = ctx?.model?.baseUrl || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
+      const openAiKey = dynamicKey || process.env.OPENAI_API_KEY;
       const res = await fetch(`${baseUrl}/embeddings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+          'Authorization': `Bearer ${openAiKey}`
         },
         body: JSON.stringify({
           model: 'text-embedding-3-small',
@@ -105,8 +108,8 @@ export class SemanticStore {
     return Array.from({ length: 768 }, () => Math.random() - 0.5);
   }
 
-  async indexCodeNode(filePath, astType, content) {
-    const vector = await this.getEmbedding(content);
+  async indexCodeNode(filePath, astType, content, ctx) {
+    const vector = await this.getEmbedding(content, ctx);
     const stmt = this.db.prepare(`
       INSERT INTO semantic_nodes (file_path, ast_type, content, vector_json)
       VALUES (?, ?, ?, ?)
@@ -114,8 +117,8 @@ export class SemanticStore {
     stmt.run(filePath, astType, content, JSON.stringify(vector));
   }
 
-  async search(queryText, topK = 5) {
-    const queryVector = await this.getEmbedding(queryText);
+  async search(queryText, topK = 5, ctx) {
+    const queryVector = await this.getEmbedding(queryText, ctx);
     const rows = this.db.prepare(`SELECT * FROM semantic_nodes`).all();
     
     // JS 内存暴力计算余弦相似度（对于几十万行级别的代码库，Node.js 处理速度在 100ms 级别，体验完全可接受）

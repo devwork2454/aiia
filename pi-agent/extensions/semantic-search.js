@@ -33,7 +33,7 @@ export default function semanticSearchExtension(pi) {
           
           let indexed = 0;
           
-          function walk(dir) {
+          async function walk(dir) {
             if (indexed >= maxFiles) return;
             let entries = [];
             try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
@@ -42,7 +42,7 @@ export default function semanticSearchExtension(pi) {
               if (ent.name.startsWith('.') || ent.name === 'node_modules' || ent.name === 'venv') continue;
               const fullPath = path.join(dir, ent.name);
               if (ent.isDirectory()) {
-                walk(fullPath);
+                await walk(fullPath);
               } else if (ent.isFile() && /\.(js|ts|py|md|txt)$/i.test(ent.name)) {
                 try {
                   const content = fs.readFileSync(fullPath, 'utf8');
@@ -52,7 +52,7 @@ export default function semanticSearchExtension(pi) {
                   const chunkSize = 100;
                   for (let i = 0; i < lines.length; i += chunkSize) {
                     const chunk = lines.slice(i, i + chunkSize).join('\n');
-                    store.indexCodeNode(fullPath, 'text_chunk', chunk);
+                    await store.indexCodeNode(fullPath, 'text_chunk', chunk, ctx);
                   }
                   indexed++;
                 } catch (e) {
@@ -62,7 +62,7 @@ export default function semanticSearchExtension(pi) {
             }
           }
           
-          walk(cwd);
+          await walk(cwd);
           return {
             text: `Indexed ${indexed} files into semantic database.`
           };
@@ -81,7 +81,7 @@ export default function semanticSearchExtension(pi) {
         execute: async (args, ctx) => {
           const cwd = ctx.cwd || process.cwd();
           const store = getStore(cwd);
-          const results = await store.search(args.query, args.topK || 5);
+          const results = await store.search(args.query, args.topK || 5, ctx);
           
           if (!results || results.length === 0) {
             return { text: "No semantic matches found." };
