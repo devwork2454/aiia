@@ -69,6 +69,11 @@ fi
 # ─── Step 2: 安装 pi CLI ──────────────────────────────────────────────────────
 step "Step 2/8  安装 Pi CLI"
 
+if [ "${AIIA_MIRROR:-}" = "gitee" ]; then
+  info "启用 Gitee 镜像模式，设置 NPM 淘宝源加速..."
+  npm config set registry https://registry.npmmirror.com
+fi
+
 if command -v pi &>/dev/null; then
   PI_VER=$(pi --version 2>/dev/null || echo "未知")
   success "Pi CLI 已安装 ($PI_VER)"
@@ -91,10 +96,14 @@ else
   if [ -n "$AIIA_REPO" ]; then
     info "正在从 $AIIA_REPO 克隆..."
     mkdir -p "$(dirname "$AIIA_DIR")"
-    if command -v gh &>/dev/null && gh auth status &>/dev/null; then
-      gh repo clone "$AIIA_REPO" "$AIIA_DIR" || git clone "https://github.com/$AIIA_REPO.git" "$AIIA_DIR"
+    if [ "${AIIA_MIRROR:-}" = "gitee" ]; then
+      git clone "https://gitee.com/$AIIA_REPO.git" "$AIIA_DIR"
     else
-      git clone "https://github.com/$AIIA_REPO.git" "$AIIA_DIR" || git clone "$AIIA_REPO" "$AIIA_DIR"
+      if command -v gh &>/dev/null && gh auth status &>/dev/null; then
+        gh repo clone "$AIIA_REPO" "$AIIA_DIR" || git clone "https://github.com/$AIIA_REPO.git" "$AIIA_DIR"
+      else
+        git clone "https://github.com/$AIIA_REPO.git" "$AIIA_DIR" || git clone "$AIIA_REPO" "$AIIA_DIR"
+      fi
     fi
     success "项目克隆完成"
   else
