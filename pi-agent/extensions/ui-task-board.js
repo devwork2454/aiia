@@ -49,7 +49,7 @@ export default function uiTaskBoardExtension(pi) {
       ];
 
       // 主动推送自定义 UI 组件到终端
-      ctx.session.sendMessage({
+      pi.sendMessage({
         customType: 'checklist',
         content: JSON.stringify(stages),
         display: "show",
