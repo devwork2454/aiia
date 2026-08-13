@@ -1,6 +1,23 @@
 # 项目进度
 
 ## GOAL
+分析当前项目功能架构设计与代码实现，给出质量评估报告。
+### 验收标准
+- 报告覆盖：分层架构（文档 vs 实码）、扩展清单与钩子冲突、核心模块实现质量、静态门/单测实测、P0–P2 风险与建议
+- 落盘 `artifacts/eval/ARCHITECTURE-QUALITY-2026-08-13.md`
+- 独立终审核对关键结论（至少抽核：cron 无 tick、secret-gate 字段、execute 签名、LSP 未 registerTool、quality-check 空 catch）
+### 状态
+执行中（2026-08-13）：报告已写；verify 全量未跑（quality-check 因 `src/metaprompt-optimizer.js` 空 catch 已红）
+### 代定决策
+- 本任务只评估、不修功能（避免分析做成半吊子重构）
+- 不改 `.harness/verify.sh`
+- 评分按「真 Pi 会话能否兑现文档」，不按单测绿条
+### 关键结论
+- 综合 **5.8/10**：A 路线对；核心库（policy/memory/card/qg/gc）明显好于 Phase 2 工具壳
+- P0：`execute(params, ctx)` 与 Pi `execute(id, params, …)` 不一致；cron 无调度循环；secret-gate 打 `event.result` 而非 `content`；LSP/semantic 未 `registerTool`；quality-check 红
+- 文档漂移：ARCHITECTURE/SPEC 仍写已砍的 L2 宿主；trajectory 关机自动 `applyProjectDraft` 违背人审约定
+
+## GOAL（已完成）
 Context Card 路线 A 最小闭环（S-CARD-1..4）。
 ### 验收标准
 - UserCard + ProjectCard schema/merge + 短摘要注入（≤900 字符）
