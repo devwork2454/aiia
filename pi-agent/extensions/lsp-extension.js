@@ -5,7 +5,10 @@ import fs from 'node:fs';
 const clients = new Map();
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function lspExtension(pi) {
+  if (!isExtensionEnabled("lsp-extension")) return;
   pi.registerTool({
     name: 'lsp_start',
     description: "Starts a language server (e.g. 'npx', ['pyright-langserver', '--stdio']) for the given project root.",

@@ -35,7 +35,10 @@ function isPidAlive(pid) {
 }
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function subagentWorktreeExtension(pi) {
+  if (!isExtensionEnabled("subagent-worktree")) return;
   // 1. spawn_worktree_subagent
   pi.registerTool({
     name: 'spawn_worktree_subagent',

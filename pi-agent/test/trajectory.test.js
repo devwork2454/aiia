@@ -1,4 +1,5 @@
-import { test, describe } from 'node:test';
+import { test, describe, before } from 'node:test';
+import { enableAllExtensions } from './with-all-extensions.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -136,6 +137,10 @@ describe('S2 Trajectory store', () => {
 });
 
 describe('S2 Trajectory extension', () => {
+  before(() => {
+    enableAllExtensions();
+  });
+
   test('registers agent_end and session_shutdown hooks that write JSONL', async () => {
     const hooks = {};
     trajectoryExtension({

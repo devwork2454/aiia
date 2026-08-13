@@ -15,7 +15,10 @@ function dbPath() {
 }
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function kbSearchExtension(pi) {
+  if (!isExtensionEnabled("kb-search")) return;
   let store = null;
   try {
     store = new MemoryStore(dbPath());

@@ -1,4 +1,5 @@
 import { test, describe, before, after } from 'node:test';
+import { enableAllExtensions } from './with-all-extensions.js';
 import assert from 'node:assert/strict';
 import fs from 'fs';
 import path from 'path';
@@ -9,12 +10,15 @@ import taskRunnerExtension from '../extensions/task-runner.js';
 
 describe('Phase 2 P5: Task DAG Runner Core & Extension Tests', () => {
   let tmpDir;
+  let restoreExt;
 
   before(() => {
+    restoreExt = enableAllExtensions();
     tmpDir = mkdtempSync(path.join(tmpdir(), 'dag-test-'));
   });
 
   after(() => {
+    restoreExt?.();
     rmSync(tmpDir, { recursive: true, force: true });
   });
 

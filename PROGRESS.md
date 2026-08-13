@@ -1,6 +1,22 @@
 # 项目进度
 
 ## GOAL
+默认少加载扩展（评估「减面」）：核心常开，其余 opt-in。
+### 验收标准
+- 默认只启用核心：safety / sandbox-policy / secret-gate / memory / context-card / capability-catalog / quality-gate / context-gc / router / slash-ux / goal / imp / reply-prefs / config / add-dir / vault / steer
+- 其余扩展工厂在默认环境下直接 return，不注册工具/钩子
+- `AIIA_EXTENSIONS=all` 全开；`AIIA_EXTRA_EXTENSIONS=a,b` 在核心上追加
+- capability-catalog 只列出当前启用扩展对应的工具
+- 单测 `test/extension-profile.test.js` 进 verify；可选扩展单测自行 `AIIA_EXTENSIONS=all`
+- `.harness/verify.sh` 退出 0
+### 状态
+通过（2026-08-13）：默认减面已落地；`.harness/verify.sh` 退出 0（195 unit）
+### 代定决策
+- 核心比评估原文的 7 个多：加上 sandbox/secret（安全）和 slash 控制面（`/goal` `/imp` 等），避免日常命令消失
+- 不把文件移出 `extensions/`（`pi install` 仍扫目录）；用工厂入口开关
+- 不改 Pi 源码
+
+## GOAL（已完成）
 按评估报告收口 P2 文档漂移：ARCHITECTURE/SPEC 对齐 A 路线实码。
 ### 验收标准
 - `ARCHITECTURE.md` 不再把自研 HTTP `host/` 写成活 L2；L2 = 本机 `pi` CLI

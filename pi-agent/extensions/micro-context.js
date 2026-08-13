@@ -3,7 +3,10 @@
  * 定义并拦截 `send_message` 工具，强制 Subagent 返回结构化的 Diff/Summary/JSON，杜绝上下文污染。
  */
 
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function microContextExtension(pi) {
+  if (!isExtensionEnabled("micro-context")) return;
   // 1. 注册微上下文通信工具（供 Subagent 调用以回传精简结果）
   pi.registerTool({
     name: 'send_message',

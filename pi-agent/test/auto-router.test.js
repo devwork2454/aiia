@@ -1,8 +1,13 @@
-import { test, describe } from 'node:test';
+import { test, describe, before } from 'node:test';
 import assert from 'node:assert/strict';
+import { enableAllExtensions } from './with-all-extensions.js';
 import autoRouterExtension from '../extensions/auto-router.js';
 
 describe('Phase 3 P2: Auto-Router Architecture Tests', () => {
+  before(() => {
+    enableAllExtensions();
+  });
+
   test('Auto-Router injects directive into system prompt without destroying existing context', async () => {
     let hookFn;
     const mockPi = {

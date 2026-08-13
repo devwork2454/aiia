@@ -62,6 +62,8 @@
 
 活入口是用户本机的 **`pi`**（`pi install <repo>/pi-agent` 加载扩展）。`package.json` 写明 *no self-hosted HTTP*。
 
+**默认减面**：只启用核心（safety / sandbox / secret-gate / memory / card / catalog / quality-gate / GC / router + slash 控制面）。其余工厂直接 return。`AIIA_EXTENSIONS=all` 全开；`AIIA_EXTRA_EXTENSIONS=cron-scheduler,web-search-proxy` 追加。
+
 旧 mock HTTP 宿主（`host/src/server.js`、`scripts/aiia-host.sh`、systemd unit）已进 **`legacy/`**，不是当前路径。
 
 ### 3.1 后台与脱退

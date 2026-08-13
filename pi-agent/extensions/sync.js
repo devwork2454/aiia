@@ -283,7 +283,10 @@ async function pullFromGist(token, gistId) {
 
 // ─── Pi 命令注册 ──────────────────────────────────────────────────────────────
 
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function (pi) {
+  if (!isExtensionEnabled("sync")) return;
   const syncHandler = async (args, ctx) => {
       const action = (args || '').trim().split(/\s+/)[0] || 'help';
 

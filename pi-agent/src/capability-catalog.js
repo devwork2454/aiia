@@ -2,6 +2,7 @@
  * Short capability catalog for system-prompt injection.
  * Goal: teach the model which tools to use — not dump skill bodies.
  */
+import { isCatalogToolEnabled } from "./extension-profile.js";
 
 export const MAX_CATALOG_CHARS = 2048;
 
@@ -35,6 +36,8 @@ export function buildCapabilityCatalog({
   maxChars = MAX_CATALOG_CHARS,
 } = {}) {
   if (isCatalogDisabled(env)) return "";
+
+  tools = tools.filter((t) => isCatalogToolEnabled(t?.name, env));
 
   if (card) {
     tools = filterCatalogEntries(tools, card);

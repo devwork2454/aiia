@@ -1,6 +1,9 @@
 import { VStack, HStack, Text } from '@earendil-works/pi-tui';
 
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function uiTaskBoardExtension(pi) {
+  if (!isExtensionEnabled("ui-task-board")) return;
   // 注册名为 "checklist" 的自定义 UI 组件渲染器
   pi.registerMessageRenderer('checklist', (msg, options, theme) => {
     let tasks = [];

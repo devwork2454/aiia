@@ -5,6 +5,8 @@ import { startAgyBridgeServer } from '../src/agy-bridge.js';
 import webSearchProxyExtension from '../extensions/web-search-proxy.js';
 import assert from 'node:assert/strict';
 
+process.env.AIIA_EXTENSIONS = process.env.AIIA_EXTENSIONS || 'all';
+
 console.log('[E2E Test] 1. Starting AGY Bridge Server on port 8790...');
 const server = startAgyBridgeServer(8790);
 

@@ -10,7 +10,10 @@ import { buildLLMDraft } from '../src/metaprompt-optimizer.js';
 import { writeProjectDraft } from '../src/context-card.js';
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function trajectoryExtension(pi) {
+  if (!isExtensionEnabled("trajectory")) return;
   pi.on('agent_end', async (event, ctx) => {
     const cwd = ctx?.cwd || process.cwd();
     try {

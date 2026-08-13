@@ -17,7 +17,10 @@ import {
 /**
  * @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi
  */
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function compactProgressExtension(pi) {
+  if (!isExtensionEnabled("compact-progress")) return;
   /** @type {ReturnType<typeof setInterval> | null} */
   let timer = null;
   let pct = 0;

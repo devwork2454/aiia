@@ -1,5 +1,6 @@
 import { test, describe, before } from 'node:test';
 import assert from 'node:assert/strict';
+import { enableAllExtensions } from './with-all-extensions.js';
 import ephemeralJobExtension from '../extensions/ephemeral-job.js';
 
 describe('Phase 2 P8: Ephemeral Job Tests', () => {
@@ -7,6 +8,7 @@ describe('Phase 2 P8: Ephemeral Job Tests', () => {
   const mockContext = { cwd: process.cwd() };
 
   before(() => {
+    enableAllExtensions();
     const mockPi = {
       registerTool: (tool) => {
         tools[tool.name] = tool;

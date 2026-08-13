@@ -23,12 +23,15 @@ describe("capability catalog", () => {
     const text = buildCapabilityCatalog({ env: {} });
     assert.ok(text.length > 0);
     assert.ok(text.length <= MAX_CATALOG_CHARS);
-    assert.match(text, /kb_search/);
     assert.match(text, /remember/);
-    assert.match(text, /create_dag_task/);
-    assert.match(text, /run_dag_task/);
-    assert.doesNotMatch(text, /create_task_dag/);
     assert.match(text, /memory_search/);
+    assert.doesNotMatch(text, /kb_search/);
+    assert.doesNotMatch(text, /create_dag_task/);
+    const full = buildCapabilityCatalog({ env: { AIIA_EXTENSIONS: "all" } });
+    assert.match(full, /kb_search/);
+    assert.match(full, /create_dag_task/);
+    assert.match(full, /run_dag_task/);
+    assert.doesNotMatch(full, /create_task_dag/);
   });
 
   test("truncates oversized catalogs", () => {
@@ -65,7 +68,7 @@ describe("capability catalog", () => {
 
   test("buildCapabilityCatalog respects card avoid list", () => {
     const card = normalizeCard({ avoid_tools: ["remember"] });
-    const text = buildCapabilityCatalog({ card });
+    const text = buildCapabilityCatalog({ card, env: { AIIA_EXTENSIONS: "all" } });
     assert.ok(!text.includes("- remember:"));
     assert.ok(text.includes("kb_search"));
   });
@@ -85,7 +88,7 @@ describe("capability catalog", () => {
     try {
       const res = await hooks.before_agent_start();
       assert.match(res.appendSystemPrompt, /capability catalog/);
-      assert.match(res.appendSystemPrompt, /kb_search/);
+      assert.match(res.appendSystemPrompt, /remember/);
       assert.ok(res.appendSystemPrompt.length <= MAX_CATALOG_CHARS + 80);
 
       process.env.AIIA_CAPABILITY_CATALOG_DISABLED = "1";

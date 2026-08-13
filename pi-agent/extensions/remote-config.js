@@ -25,7 +25,10 @@ function fetchModels(baseUrl) {
 }
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function remoteConfigExtension(pi) {
+  if (!isExtensionEnabled("remote-config")) return;
   pi.on('before_agent_start', async (event, ctx) => {
     if (!ctx || !ctx.model) return;
     

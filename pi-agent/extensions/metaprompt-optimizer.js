@@ -7,7 +7,10 @@ import path from 'node:path';
  * 
  * @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi 
  */
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function metapromptOptimizer(pi) {
+  if (!isExtensionEnabled("metaprompt-optimizer")) return;
   pi.on('before_agent_start', async (ctx) => {
     // Register the /optimize command to manually trigger reflection
     if (ctx.registerCommand) {

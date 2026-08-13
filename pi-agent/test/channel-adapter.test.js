@@ -1,4 +1,5 @@
-import { test, describe } from "node:test";
+import { test, describe, before } from "node:test";
+import { enableAllExtensions } from "./with-all-extensions.js";
 import assert from "node:assert/strict";
 import {
   listChannels,
@@ -8,6 +9,10 @@ import {
 import channelAdapterExtension from "../extensions/channel-adapter.js";
 
 describe("S5 channel adapter", () => {
+  before(() => {
+    enableAllExtensions();
+  });
+
   test("listChannels marks cli ready, feishu archived, web deferred", () => {
     const ch = listChannels({});
     assert.equal(ch.cli.state, "ready");

@@ -1,4 +1,5 @@
-import { test, describe } from "node:test";
+import { test, describe, before } from "node:test";
+import { enableAllExtensions } from "./with-all-extensions.js";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -24,6 +25,10 @@ function tmpDir(prefix = "aiia-kb-") {
 }
 
 describe("S3 Hybrid KB search", () => {
+  before(() => {
+    enableAllExtensions();
+  });
+
   test("tokenize and scoreText rank title hits higher", () => {
     assert.deepEqual(tokenize("Hybrid RAG kb"), ["hybrid", "rag", "kb"]);
     const a = scoreText("hybrid rag", "something about hybrid rag retrieval", "Notes");

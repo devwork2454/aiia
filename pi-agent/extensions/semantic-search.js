@@ -56,7 +56,10 @@ async function walkAndIndex(cwd, store, maxFiles, ctx) {
 }
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function semanticSearchExtension(pi) {
+  if (!isExtensionEnabled("semantic-search")) return;
   pi.registerTool({
     name: 'semantic_index_workspace',
     description: 'Indexes the current workspace into the local semantic vector database.',

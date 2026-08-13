@@ -1,9 +1,14 @@
-import { test, describe } from 'node:test';
+import { test, describe, before } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import { enableAllExtensions } from './with-all-extensions.js';
 import remoteConfigExtension from '../extensions/remote-config.js';
 
 describe('Option C: Remote Config Extension', () => {
+  before(() => {
+    enableAllExtensions();
+  });
+
   test('fetches /v1/models and overrides ctx.model contextWindow', async () => {
     // 1. Setup mock server
     const server = http.createServer((req, res) => {

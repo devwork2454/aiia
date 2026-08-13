@@ -1,4 +1,5 @@
 import { test, describe, before, after } from 'node:test';
+import { enableAllExtensions } from './with-all-extensions.js';
 import assert from 'node:assert/strict';
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -16,7 +17,9 @@ describe('Phase 2 P2: Subagent Worktree Orchestration Tests', { concurrency: fal
   let repoRoot;
   let mockContext;
 
+  let restoreExt;
   before(() => {
+    restoreExt = enableAllExtensions();
     repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aiia-worktree-test-'));
     run('git init -b main', repoRoot);
     run('git config user.email "test@example.com"', repoRoot);
@@ -36,6 +39,7 @@ describe('Phase 2 P2: Subagent Worktree Orchestration Tests', { concurrency: fal
   });
 
   after(() => {
+    restoreExt?.();
     try {
       run(`git worktree prune`, repoRoot);
     } catch {}

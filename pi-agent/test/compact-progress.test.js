@@ -1,4 +1,5 @@
-import { describe, it } from "node:test";
+import { describe, it, before } from "node:test";
+import { enableAllExtensions } from "./with-all-extensions.js";
 import assert from "node:assert/strict";
 import {
   advancePct,
@@ -41,6 +42,10 @@ describe("compact-progress helpers", () => {
 });
 
 describe("compact-progress extension", () => {
+  before(() => {
+    enableAllExtensions();
+  });
+
   it("starts bar on session_before_compact and clears on session_compact", async () => {
     /** @type {Record<string, Function[]>} */
     const handlers = {};

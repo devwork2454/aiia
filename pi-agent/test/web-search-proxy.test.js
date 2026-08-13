@@ -1,4 +1,5 @@
-import { test, describe, afterEach } from 'node:test';
+import { test, describe, afterEach, before } from 'node:test';
+import { enableAllExtensions } from './with-all-extensions.js';
 import assert from 'node:assert/strict';
 import { startAgyBridgeServer } from '../src/agy-bridge.js';
 import webSearchProxyExtension, {
@@ -9,6 +10,9 @@ import webSearchProxyExtension, {
 } from '../extensions/web-search-proxy.js';
 
 describe('Phase 2 P1: Web Search Proxy & AGY Bridge Tests', () => {
+  before(() => {
+    enableAllExtensions();
+  });
   let server;
 
   afterEach(() => {

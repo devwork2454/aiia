@@ -13,7 +13,10 @@ function toolResult(payload, isError = false) {
 }
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function channelAdapterExtension(pi) {
+  if (!isExtensionEnabled("channel-adapter")) return;
   pi.registerTool({
     name: "list_channels",
     description:

@@ -1,8 +1,10 @@
 import test from "node:test";
 import assert from "node:assert";
+import { enableAllExtensions } from "./with-all-extensions.js";
 import dockerExecProxyExtension from "../extensions/docker-exec-proxy.js";
 
 test("Docker Exec Proxy Extension Tests", async (t) => {
+  enableAllExtensions();
   // 模拟 Pi API 拦截注册
   const handlers = {};
   const piMock = {

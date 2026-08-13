@@ -8,7 +8,10 @@ import os from 'os';
  * Implements K8s Job-like stateless subagents with model escalation strategy.
  * @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi
  */
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function ephemeralJobExtension(pi) {
+  if (!isExtensionEnabled("ephemeral-job")) return;
   pi.registerTool({
     name: 'run_ephemeral_job',
     description: '分配一个无状态的短时临时子任务（不修改当前目录代码，在临时隔离环境执行）。常用于数据清洗、格式化、隔离查询、总结等“杂活”。失败时自动按梯队 (low->medium->high) 升级模型重试。任务执行完毕只返回核心成果。',

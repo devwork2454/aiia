@@ -10,7 +10,10 @@ import path from 'path';
 import { CronScheduler, isCronDisabled, startCronTicker } from '../src/cron-scheduler.js';
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function cronSchedulerExtension(pi) {
+  if (!isExtensionEnabled("cron-scheduler")) return;
   let ticker = null;
 
   function ensureTicker(cwd) {

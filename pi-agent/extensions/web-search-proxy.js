@@ -95,7 +95,10 @@ export function shouldRewriteSearchModel(req = {}, ctx = {}, env = process.env) 
   return false;
 }
 
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function webSearchProxyExtension(pi) {
+  if (!isExtensionEnabled("web-search-proxy")) return;
   // 自动启动后台 AGY Bridge（端口占用时静默跳过，不拖垮 Pi / 测试）
   if (!bridgeServer && process.env.AIIA_SKIP_AGY_BRIDGE !== '1') {
     try {

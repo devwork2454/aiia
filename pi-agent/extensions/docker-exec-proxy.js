@@ -5,7 +5,10 @@
  */
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function dockerExecProxyExtension(pi) {
+  if (!isExtensionEnabled("docker-exec-proxy")) return;
   pi.on("tool_call", (event, ctx) => {
     const targetContainer = process.env.SWE_DOCKER_CONTAINER;
     if (!targetContainer) {

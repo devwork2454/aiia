@@ -10,7 +10,10 @@ import path from 'path';
 import { TaskDAGRunner } from '../src/task-runner.js';
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function taskRunnerExtension(pi) {
+  if (!isExtensionEnabled("task-runner")) return;
   // 1. create_dag_task
   pi.registerTool({
     name: 'create_dag_task',

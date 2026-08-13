@@ -1,4 +1,5 @@
 import { test, describe, before, after } from 'node:test';
+import { enableAllExtensions } from './with-all-extensions.js';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
@@ -8,12 +9,15 @@ import cronSchedulerExtension from '../extensions/cron-scheduler.js';
 
 describe('Phase 2 P6: Cron Scheduler Tests', () => {
   let tmpDir;
+  let restoreExt;
 
   before(() => {
+    restoreExt = enableAllExtensions();
     tmpDir = mkdtempSync(path.join(tmpdir(), 'cron-test-'));
   });
 
   after(() => {
+    restoreExt?.();
     rmSync(tmpDir, { recursive: true, force: true });
   });
 

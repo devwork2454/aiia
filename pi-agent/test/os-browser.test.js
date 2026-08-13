@@ -1,4 +1,5 @@
-import { test, describe } from "node:test";
+import { test, describe, before } from "node:test";
+import { enableAllExtensions } from "./with-all-extensions.js";
 import assert from "node:assert/strict";
 import {
   isOsEnabled,
@@ -13,6 +14,10 @@ import {
 import osBrowserExtension from "../extensions/os-browser.js";
 
 describe("S4 L7.6 OS/browser gate", () => {
+  before(() => {
+    enableAllExtensions();
+  });
+
   test("defaults: OS/browser disabled, dry-run true", () => {
     const env = {};
     assert.equal(isOsEnabled(env), false);

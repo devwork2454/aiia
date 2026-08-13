@@ -4,7 +4,10 @@
  * for complex tasks, effectively transforming it into an autonomous dispatcher.
  */
 
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function autoRouterExtension(pi) {
+  if (!isExtensionEnabled("auto-router")) return;
   pi.on('context', async (event) => {
     const messages = event?.messages ?? [];
     if (!messages.length) return;

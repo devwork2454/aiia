@@ -8,6 +8,7 @@ import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
 import { describe, it, before } from "node:test";
+import { enableAllExtensions } from "./with-all-extensions.js";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -40,6 +41,7 @@ describe("ui-task-board", () => {
   let factory;
 
   before(async () => {
+    enableAllExtensions();
     const extPath = path.resolve(__dirname, "../extensions/ui-task-board.js");
     factory = (await import(pathToFileURL(extPath).href)).default;
   });

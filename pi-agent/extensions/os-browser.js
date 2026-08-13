@@ -38,7 +38,10 @@ function registerGated(pi, name, description, properties, required = []) {
 }
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
+import { isExtensionEnabled } from "../src/extension-profile.js";
+
 export default function osBrowserExtension(pi) {
+  if (!isExtensionEnabled("os-browser")) return;
   pi.on("tool_call", async (event) => {
     const verdict = evaluateOsBrowserToolCall(event);
     if (verdict.block) {
