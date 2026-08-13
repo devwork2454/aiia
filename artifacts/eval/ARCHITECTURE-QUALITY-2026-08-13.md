@@ -56,7 +56,7 @@ L4  控制面 hooks（同一进程，按文件名字母序加载）
 
 1. **能力面远超单人可维护宽度。** 37 个扩展默认全开，每轮同时往 system prompt 塞 memory + catalog + profile + reply + secret 名单 + auto-router 长指令。与「system prompt 极小」原则冲突。
 2. **无扩展分层/档位。** 评测原型（docker-exec-proxy）、桌面闸门、LSP、语义检索、cron、DAG 与 safety 同级加载。
-3. **钩子顺序靠文件名。** Pi 按字母序加载；`before_provider_request` 实际顺序是 context-gc → router → web-search-proxy。没有清单或测试锁住这个顺序。
+3. **钩子顺序靠文件系统枚举。** `readdirSync` 无显式 `sort()`，常见实现接近字母序但不是契约。`before_provider_request` 在本机常见顺序是 context-gc → router → web-search-proxy。没有清单或测试锁住这个顺序。
 4. **两套安全策略并行**（`policy.js` + `sandbox-policy.js`），工具名、正则、HITL 都不一致。
 5. **L2 宿主文档未删。** A 路线已砍 HTTP 宿主，但 `ARCHITECTURE.md` §3、`SPEC.md`、`deploy/aiia-host.service` 仍指向不存在的 `host/src/server.js`。
 
@@ -104,7 +104,7 @@ auto-router → memory。两者都 `return { messages }`。后跑的 memory 若�
 
 ### `before_provider_request`
 
-context-gc → router → web-search-proxy。官方：return 非 undefined 则替换后续 payload。搜意图 + 本地反代时，router 的档位可能再被改成 `*-search`（有意叠加，但未文档化）。
+本机常见顺序 context-gc → router → web-search-proxy（文件系统枚举，非官方保证）。官方：return 非 undefined 则替换后续 payload。搜意图 + 本地反代时，router 的档位可能再被改成 `*-search`（有意叠加，但未文档化）。
 
 ### `tool_call`
 
@@ -204,8 +204,8 @@ pi-agent/src/metaprompt-optimizer.js:6-10  catch (e) {}
 
 - capability-catalog 写 `create_task_dag` / `run_task_dag`，注册名是 `create_dag_task` / `run_dag_task`。
 - slash 白名单实为 `goal, steer, config, vault, aiia`；ARCHITECTURE 写 `/goal /reply /profile /add-dir /vault /aiia`。
-- `agy-bridge.js` 硬编码 `AGY_BIN=/home/zakza/.local/bin/agy`。
-- `sync.js` 硬编码 GitHub OAuth Client ID。
+- `agy-bridge.js` 默认二进制路径写死为本机 `/home/zakza/.local/bin/agy`（可用 `AGY_BIN_PATH` 覆盖）。
+- `sync.js` 默认写死 GitHub OAuth Client ID（可用 `AIIA_GITHUB_CLIENT_ID` 覆盖）。
 - semantic `getEmbedding` 失败返回 **随机 768 维向量**，索引不可复现。
 - memory / auto-router 每轮改写 system，指令可能叠层。
 - 环境变量 30+ 个开关，无总表。
