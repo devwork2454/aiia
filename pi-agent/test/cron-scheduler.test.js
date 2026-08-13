@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
-import { CronScheduler, isCronMatching } from '../src/cron-scheduler.js';
+import { CronScheduler, isCronMatching, isCronDisabled, runDueCommands, startCronTicker } from '../src/cron-scheduler.js';
 import cronSchedulerExtension from '../extensions/cron-scheduler.js';
 
 describe('Phase 2 P6: Cron Scheduler Tests', () => {
@@ -45,23 +45,59 @@ describe('Phase 2 P6: Cron Scheduler Tests', () => {
 
   test('Cron extension tools register and execute correctly', async () => {
     const tools = {};
-    const mockPi = { registerTool: (t) => { tools[t.name] = t; } };
+    const mockPi = { registerTool: (t) => { tools[t.name] = t; }, on: () => {} };
     cronSchedulerExtension(mockPi);
 
     const ctx = { cwd: tmpDir };
-    const regRes = await tools.register_cron_task.execute({
+    const regRes = await tools.register_cron_task.execute('t1', {
       id: 'ext_cron',
       cronExpr: '*/5 * * * *',
       command: 'echo "test"'
-    }, ctx);
+    }, undefined, undefined, ctx);
 
     assert.equal(regRes.status, 'success');
 
-    const listRes = await tools.list_cron_tasks.execute({}, ctx);
+    const listRes = await tools.list_cron_tasks.execute('t2', {}, undefined, undefined, ctx);
     assert.equal(listRes.status, 'success');
     assert.equal(listRes.count, 1);
 
-    const rmRes = await tools.remove_cron_task.execute({ id: 'ext_cron' }, ctx);
+    const rmRes = await tools.remove_cron_task.execute('t3', { id: 'ext_cron' }, undefined, undefined, ctx);
     assert.equal(rmRes.status, 'success');
+  });
+
+  test('runDueCommands executes due task command', () => {
+    const dir = path.join(tmpDir, 'due');
+    const scheduler = new CronScheduler({ storageDir: dir });
+    scheduler.register({ id: 'echo1', cronExpr: '* * * * *', command: 'echo hi' });
+    const ran = [];
+    const results = runDueCommands(scheduler, new Date(), {
+      exec: (cmd) => { ran.push(cmd); return 'ok'; },
+    });
+    assert.equal(results.length, 1);
+    assert.equal(results[0].ok, true);
+    assert.deepEqual(ran, ['echo hi']);
+  });
+
+  test('startCronTicker tick runs evaluate via injected clock', () => {
+    const dir = path.join(tmpDir, 'tick');
+    const scheduler = new CronScheduler({ storageDir: dir });
+    scheduler.register({ id: 'tick1', cronExpr: '* * * * *', command: 'true' });
+    let ticks = 0;
+    const handle = startCronTicker({
+      storageDir: dir,
+      intervalMs: 60_000,
+      exec: () => { ticks += 1; return ''; },
+      setIntervalFn: () => 1,
+      clearIntervalFn: () => {},
+    });
+    const results = handle.tick();
+    assert.equal(results.length, 1);
+    assert.equal(ticks, 1);
+    handle.stop();
+  });
+
+  test('isCronDisabled honors CRON_DISABLED', () => {
+    assert.equal(isCronDisabled({}), false);
+    assert.equal(isCronDisabled({ CRON_DISABLED: '1' }), true);
   });
 });

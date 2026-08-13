@@ -46,7 +46,7 @@ export default function sandboxPolicyExtension(pi) {
       },
       required: ['mode']
     },
-    async execute(params, ctx) {
+    async execute(_id, params) {
       currentPolicy = new SandboxPolicy({
         mode: params.mode,
         allowedTools: params.allowedTools || []
@@ -70,7 +70,7 @@ export default function sandboxPolicyExtension(pi) {
       type: 'object',
       properties: {}
     },
-    async execute(params, ctx) {
+    async execute() {
       return {
         status: 'success',
         policy: {

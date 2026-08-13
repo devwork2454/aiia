@@ -31,7 +31,7 @@ function registerGated(pi, name, description, properties, required = []) {
       properties,
       required,
     },
-    async execute(params) {
+    async execute(_id, params) {
       return toolResult(executeGatedTool(name, params || {}));
     },
   });

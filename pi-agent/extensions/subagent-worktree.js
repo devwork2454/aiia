@@ -48,9 +48,10 @@ export default function subagentWorktreeExtension(pi) {
       },
       required: ['task', 'branchName']
     },
-    async execute(params, ctx) {
+    async execute(_id, params, _signal, _onUpdate, ctx) {
+      const cwd = ctx?.cwd || process.cwd();
       const branch = params.branchName.replace(/[^a-zA-Z0-9_-]/g, '_');
-      const baseWorktreeDir = path.join(ctx.cwd, '.agent', 'worktrees');
+      const baseWorktreeDir = path.join(cwd, '.agent', 'worktrees');
       const worktreeDir = path.join(baseWorktreeDir, branch);
 
       try {
@@ -61,10 +62,10 @@ export default function subagentWorktreeExtension(pi) {
         let isNewWorktree = false;
         if (!fs.existsSync(worktreeDir)) {
           try {
-            runGit(`git worktree add -b "${branch}" "${worktreeDir}"`, ctx.cwd);
+            runGit(`git worktree add -b "${branch}" "${worktreeDir}"`, cwd);
           } catch {
             try {
-              runGit(`git worktree add "${worktreeDir}" "${branch}"`, ctx.cwd);
+              runGit(`git worktree add "${worktreeDir}" "${branch}"`, cwd);
             } catch (innerE) {
               if (innerE.message.includes('already checked out')) {
                 throw new Error(`分支 '${branch}' 已在其他工作区检出，请先清理或更换分支名称。`);
@@ -80,7 +81,7 @@ export default function subagentWorktreeExtension(pi) {
 
         // 拉起后台子进程
         const outFd = fs.openSync(logFile, 'a');
-        const subagent = spawn('pi', ['--mode', 'rpc', '--task', params.task], {
+        const subagent = spawn('pi', ['-p', String(params.task || '')], {
           cwd: worktreeDir,
           detached: true,
           stdio: ['ignore', outFd, outFd]
@@ -126,8 +127,9 @@ export default function subagentWorktreeExtension(pi) {
       type: 'object',
       properties: {}
     },
-    async execute(params, ctx) {
-      const baseWorktreeDir = path.join(ctx.cwd, '.agent', 'worktrees');
+    async execute(_id, params, _signal, _onUpdate, ctx) {
+      const cwd = ctx?.cwd || process.cwd();
+      const baseWorktreeDir = path.join(cwd, '.agent', 'worktrees');
       if (!fs.existsSync(baseWorktreeDir)) {
         return { status: 'success', worktrees: [], count: 0 };
       }
@@ -209,9 +211,10 @@ export default function subagentWorktreeExtension(pi) {
       },
       required: ['branchName']
     },
-    async execute(params, ctx) {
+    async execute(_id, params, _signal, _onUpdate, ctx) {
+      const cwd = ctx?.cwd || process.cwd();
       const branch = params.branchName.replace(/[^a-zA-Z0-9_-]/g, '_');
-      const worktreeDir = path.join(ctx.cwd, '.agent', 'worktrees', branch);
+      const worktreeDir = path.join(cwd, '.agent', 'worktrees', branch);
       const shouldDelete = params.deleteAfterMerge !== false;
 
       try {
@@ -227,11 +230,11 @@ export default function subagentWorktreeExtension(pi) {
         }
 
         // 2. 在主工作区获取当前分支
-        const currentBranch = runGit('git rev-parse --abbrev-ref HEAD', ctx.cwd);
+        const currentBranch = runGit('git rev-parse --abbrev-ref HEAD', cwd);
 
         // 3. 预检是否存在冲突
         try {
-          runGit(`git merge-tree $(git merge-base HEAD "${branch}") HEAD "${branch}"`, ctx.cwd);
+          runGit(`git merge-tree $(git merge-base HEAD "${branch}") HEAD "${branch}"`, cwd);
         } catch {
           // 如果 merge-tree 失败或检测到冲突提示
         }
@@ -239,11 +242,11 @@ export default function subagentWorktreeExtension(pi) {
         // 执行合并
         let mergeResult = '';
         try {
-          mergeResult = runGit(`git merge "${branch}" --no-ff -m "merge(subagent): merge worktree branch ${branch} into ${currentBranch}"`, ctx.cwd);
+          mergeResult = runGit(`git merge "${branch}" --no-ff -m "merge(subagent): merge worktree branch ${branch} into ${currentBranch}"`, cwd);
         } catch (mergeErr) {
           // 如果合并冲突退回；无 MERGE_HEAD 时 abort 会失败，忽略即可
           try {
-            runGit('git merge --abort', ctx.cwd);
+            runGit('git merge --abort', cwd);
           } catch {}
           return {
             status: 'conflict',
@@ -280,8 +283,8 @@ export default function subagentWorktreeExtension(pi) {
         // 6. 若请求清理则回收资源
         if (shouldDelete) {
           try {
-            runGit(`git worktree remove --force "${worktreeDir}"`, ctx.cwd);
-            runGit(`git branch -D "${branch}"`, ctx.cwd);
+            runGit(`git worktree remove --force "${worktreeDir}"`, cwd);
+            runGit(`git branch -D "${branch}"`, cwd);
           } catch {}
         }
 
@@ -315,19 +318,20 @@ export default function subagentWorktreeExtension(pi) {
       },
       required: ['branchName']
     },
-    async execute(params, ctx) {
+    async execute(_id, params, _signal, _onUpdate, ctx) {
+      const cwd = ctx?.cwd || process.cwd();
       const branch = params.branchName.replace(/[^a-zA-Z0-9_-]/g, '_');
-      const worktreeDir = path.join(ctx.cwd, '.agent', 'worktrees', branch);
+      const worktreeDir = path.join(cwd, '.agent', 'worktrees', branch);
 
       try {
         if (fs.existsSync(worktreeDir)) {
-          runGit(`git worktree remove --force "${worktreeDir}"`, ctx.cwd);
+          runGit(`git worktree remove --force "${worktreeDir}"`, cwd);
         } else {
-          runGit('git worktree prune', ctx.cwd);
+          runGit('git worktree prune', cwd);
         }
 
         try {
-          runGit(`git branch -D "${branch}"`, ctx.cwd);
+          runGit(`git branch -D "${branch}"`, cwd);
         } catch {}
 
         return {

@@ -36,9 +36,10 @@ export default function taskRunnerExtension(pi) {
       },
       required: ['dagId', 'nodes']
     },
-    async execute(params, ctx) {
+    async execute(_id, params, _signal, _onUpdate, ctx) {
       try {
-        const runner = new TaskDAGRunner({ dagId: params.dagId, storageDir: path.join(ctx.cwd, '.agent', 'dag_runner') });
+        const cwd = ctx?.cwd || process.cwd();
+        const runner = new TaskDAGRunner({ dagId: params.dagId, storageDir: path.join(cwd, '.agent', 'dag_runner') });
         for (const n of params.nodes) {
           runner.addNode(n);
         }
@@ -68,9 +69,10 @@ export default function taskRunnerExtension(pi) {
       },
       required: ['dagId']
     },
-    async execute(params, ctx) {
+    async execute(_id, params, _signal, _onUpdate, ctx) {
       try {
-        const runner = new TaskDAGRunner({ dagId: params.dagId, storageDir: path.join(ctx.cwd, '.agent', 'dag_runner') });
+        const cwd = ctx?.cwd || process.cwd();
+        const runner = new TaskDAGRunner({ dagId: params.dagId, storageDir: path.join(cwd, '.agent', 'dag_runner') });
         if (!runner.loadCheckpoint()) {
           const _res = { status: 'error', message: `未找到 DAG 图 #${params.dagId} 的检查点文件，请先通过 create_dag_task 创建` };
         return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
@@ -103,9 +105,10 @@ export default function taskRunnerExtension(pi) {
       },
       required: ['dagId']
     },
-    async execute(params, ctx) {
+    async execute(_id, params, _signal, _onUpdate, ctx) {
       try {
-        const runner = new TaskDAGRunner({ dagId: params.dagId, storageDir: path.join(ctx.cwd, '.agent', 'dag_runner') });
+        const cwd = ctx?.cwd || process.cwd();
+        const runner = new TaskDAGRunner({ dagId: params.dagId, storageDir: path.join(cwd, '.agent', 'dag_runner') });
         if (!runner.loadCheckpoint()) {
           const _res = { status: 'error', message: `未找到 DAG 图 #${params.dagId} 的信息` };
         return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };

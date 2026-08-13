@@ -1,8 +1,6 @@
 import Database from 'better-sqlite3';
 import path from 'node:path';
 import fs from 'node:fs';
-// We use web-tree-sitter as our pure-JS AST parser (Zero native C++ bindings!)
-import Parser from 'web-tree-sitter';
 
 /**
  * 纯 JS 实现的余弦相似度计算
@@ -137,8 +135,8 @@ export class SemanticStore {
  * 启动 Wasm AST 解析引擎 (安全无污染)
  */
 export async function initASTParser() {
+  const mod = await import('web-tree-sitter');
+  const Parser = mod.Parser || mod.default;
   await Parser.init();
-  const parser = new Parser();
-  // 真实使用时需配合 tree-sitter-javascript.wasm 等语言包
-  return parser;
+  return new Parser();
 }

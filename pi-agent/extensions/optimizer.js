@@ -6,7 +6,7 @@ export default function optimizerExtension(pi) {
     name: 'trigger_batch_optimization',
     description: 'Trigger the L7 offline batch optimizer to reflect on trajectories and update project rules',
     parameters: { type: 'object', properties: {} },
-    async execute(params, ctx) {
+    async execute(_id, params, _signal, _onUpdate, ctx) {
       return runBatchOptimization({ cwd: ctx?.cwd });
     }
   });

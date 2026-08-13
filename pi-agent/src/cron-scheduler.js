@@ -4,6 +4,7 @@
  */
 import fs from 'fs';
 import path from 'path';
+import { spawnSync } from 'node:child_process';
 
 /**
  * 5 段式 Cron 表达式单字段匹配
@@ -126,4 +127,66 @@ export class CronScheduler {
     if (dueTasks.length > 0) this.save();
     return dueTasks;
   }
+}
+
+export function isCronDisabled(env = process.env) {
+  const v = env.CRON_DISABLED;
+  return v === '1' || v === 'true';
+}
+
+function defaultExec(command) {
+  const r = spawnSync('sh', ['-c', String(command || '')], {
+    encoding: 'utf8',
+    timeout: 30000,
+  });
+  if (r.error) throw r.error;
+  if (r.status !== 0) {
+    throw new Error((r.stderr || r.stdout || `exit ${r.status}`).trim());
+  }
+  return (r.stdout || '').trim();
+}
+
+/**
+ * Run commands for tasks that are due. Returns per-task results.
+ */
+export function runDueCommands(scheduler, now = new Date(), { exec } = {}) {
+  const due = scheduler.evaluate(now);
+  const execFn = exec || defaultExec;
+  const results = [];
+  for (const task of due) {
+    try {
+      const output = execFn(task.command);
+      results.push({ id: task.id, ok: true, output });
+    } catch (err) {
+      results.push({ id: task.id, ok: false, error: err?.message || String(err) });
+    }
+  }
+  return results;
+}
+
+/**
+ * Poll due cron tasks. Caller must stop() on session_shutdown.
+ */
+export function startCronTicker({
+  storageDir,
+  intervalMs = 30000,
+  exec,
+  now,
+  setIntervalFn = setInterval,
+  clearIntervalFn = clearInterval,
+} = {}) {
+  const tick = () => {
+    const scheduler = new CronScheduler({ storageDir });
+    const at = typeof now === 'function' ? now() : (now || new Date());
+    return runDueCommands(scheduler, at, { exec });
+  };
+  const timer = setIntervalFn(tick, intervalMs);
+  if (timer && typeof timer.unref === 'function') timer.unref();
+  return {
+    timer,
+    tick,
+    stop() {
+      clearIntervalFn(timer);
+    },
+  };
 }

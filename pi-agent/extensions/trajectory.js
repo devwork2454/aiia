@@ -7,7 +7,7 @@ import {
   recordSessionShutdown,
 } from '../src/trajectory-store.js';
 import { buildLLMDraft } from '../src/metaprompt-optimizer.js';
-import { writeProjectDraft, applyProjectDraft } from '../src/context-card.js';
+import { writeProjectDraft } from '../src/context-card.js';
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
 export default function trajectoryExtension(pi) {
@@ -30,7 +30,6 @@ export default function trajectoryExtension(pi) {
       if (process.env.AIIA_DISABLE_AUTO_PROFILE !== '1') {
         const draft = await buildLLMDraft(cwd, ctx);
         writeProjectDraft(cwd, draft);
-        applyProjectDraft(cwd);
       }
     } catch (err) {
       console.error('[AIIA trajectory] session_shutdown write or profile optimization failed:', err?.message || err);

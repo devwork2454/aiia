@@ -36,7 +36,7 @@ export default function kbSearchExtension(pi) {
       },
       required: ["query"],
     },
-    async execute(params, ctx) {
+    async execute(_id, params, _signal, _onUpdate, ctx) {
       const cwd = ctx?.cwd || process.cwd();
       const limit = Math.min(50, Math.max(1, Number(params?.limit) || 8));
       const payload = kbSearch(String(params?.query || ""), {

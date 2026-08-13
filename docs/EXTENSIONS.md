@@ -19,6 +19,10 @@ Inject a short tool capability catalog each turn (tool-first UX). Kill switch: A
 
 AIIA channel adapter extension (S5 minimum slice). Exposes channel status + inbound normalization. No Feishu runtime.
 
+## `compact-progress.js`
+
+AIIA Compact Progress Bar Shows an animated progress bar while /compact (or auto-compaction) runs. Pi already shows a spinner ("Compacting context…"); this adds a visible percentage bar via footer status + above-editor widget.
+
 ## `config.js`
 
 AIIA /config command — unified configuration hub. Merges the UI of /profile and /reply.
@@ -29,7 +33,7 @@ Inject merged UserCard/ProjectCard summary each turn. Commands: /profile show|re
 
 ## `context-gc.js`
 
-AIIA Context GC Extension (JVM Generational GC inspired) Dynamically folds old process context into summarized Survivor memories.
+AIIA Context GC Extension (JVM Generational GC inspired) Dynamically folds old process context into summarized Survivor memories. Quiet by default: no console noise on happy path. Real failures are rate-limited to console.error + .agent/error.log.
 
 ## `cron-scheduler.js`
 
@@ -57,7 +61,7 @@ AIIA Hybrid KB search extension (S3 minimum slice). Registers `kb_search` — le
 
 ## `lsp-extension.js`
 
-No description available.
+
 
 ## `memory.js`
 
@@ -105,11 +109,11 @@ AIIA MCP & Skill Sandbox Policy Extension (Phase 2 P7) 1. 监听 tool_call 钩�
 
 ## `secret-gate.js`
 
-AIIA Secret Gate & Redaction Extension (Item B) 1. 在 before_agent_start 钩子中仅向 System Prompt 注入可用的 Secret Key 名称清单（零知识注入）。 2. 在 tool_result 钩子中对大模型获取到的工具输出进行全局敏感词打码脱敏 (***REDACTED:KEY_NAME***)。
+AIIA Secret Gate & Redaction Extension (Item B) 1. 在 before_agent_start 钩子中仅向 System Prompt 注入可用的 Secret Key 名称清单（零知识注入）。 2. 在 tool_result 钩子中对工具输出脱敏（Pi 字段是 content）。
 
 ## `semantic-search.js`
 
-No description available.
+
 
 ## `slash-ux.js`
 
@@ -134,6 +138,10 @@ AIIA Task DAG Runner Extension (Phase 2 P5) 注册工具: - create_dag_task: 创
 ## `trajectory.js`
 
 AIIA Trajectory Logger extension (S2 / L7 collection only) Writes JSONL on agent_end and session_shutdown. Optimizer is deferred.
+
+## `ui-task-board.js`
+
+No description available.
 
 ## `vault.js`
 

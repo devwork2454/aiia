@@ -38,7 +38,7 @@ export default function channelAdapterExtension(pi) {
       },
       required: ["text"],
     },
-    async execute(params) {
+    async execute(_id, params) {
       const res = normalizeInbound({
         channel: params?.channel || "cli",
         text: params?.text,

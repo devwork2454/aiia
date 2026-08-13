@@ -16,7 +16,7 @@ export const DEFAULT_CATALOG_ENTRIES = Object.freeze([
   { name: "list_additional_dirs", when: "List extra workspace dirs added via /add-dir." },
   { name: "list_channels", when: "Inspect inbound channel adapter status (cli/feishu/web)." },
   { name: "get_os_browser_status", when: "Check L7.6 OS/browser gate (default off; do not assume desktop control)." },
-  { name: "register_cron_task", when: "Schedule a recurring 5-field cron shell task." },
+  { name: "register_cron_task", when: "Schedule a recurring 5-field cron shell task (ticks only while this Pi session is alive)." },
   { name: "list_cron_tasks", when: "List registered cron tasks." },
   { name: "create_task_dag", when: "Create a dependent task DAG for multi-step shell workflows." },
   { name: "run_task_dag", when: "Run/resume a task DAG by id." },

@@ -102,7 +102,7 @@ describe("S4 L7.6 OS/browser gate", () => {
     // with env enabled, execute dry-runs
     process.env.AIIA_OS_ENABLED = "1";
     process.env.AIIA_OS_BROWSER_DRY_RUN = "1";
-    const res = await tools.os_screenshot.execute({});
+    const res = await tools.os_screenshot.execute('t1', {});
     assert.equal(res.details.simulated, true);
     delete process.env.AIIA_OS_ENABLED;
     delete process.env.AIIA_OS_BROWSER_DRY_RUN;

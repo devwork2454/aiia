@@ -7,7 +7,9 @@ function logError(cwd, prefix, errMessage) {
     const logPath = join(resolve(cwd || process.cwd()), '.agent', 'error.log');
     const time = new Date().toISOString();
     appendFileSync(logPath, `[${time}] ${prefix}: ${errMessage}\n`);
-  } catch (e) {}
+  } catch (e) {
+    console.error(`${prefix}: failed to append error.log:`, e?.message || e);
+  }
 }
 
 /**

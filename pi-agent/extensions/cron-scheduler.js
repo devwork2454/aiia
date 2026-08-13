@@ -7,10 +7,27 @@
  */
 
 import path from 'path';
-import { CronScheduler } from '../src/cron-scheduler.js';
+import { CronScheduler, isCronDisabled, startCronTicker } from '../src/cron-scheduler.js';
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
 export default function cronSchedulerExtension(pi) {
+  let ticker = null;
+
+  function ensureTicker(cwd) {
+    if (ticker || isCronDisabled()) return;
+    ticker = startCronTicker({
+      storageDir: path.join(cwd || process.cwd(), '.agent', 'cron_scheduler'),
+    });
+  }
+
+  pi.on?.('before_agent_start', (_event, ctx) => {
+    ensureTicker(ctx?.cwd || process.cwd());
+  });
+  pi.on?.('session_shutdown', () => {
+    ticker?.stop();
+    ticker = null;
+  });
+
   // 1. register_cron_task
   pi.registerTool({
     name: 'register_cron_task',
@@ -25,9 +42,11 @@ export default function cronSchedulerExtension(pi) {
       },
       required: ['id', 'cronExpr', 'command']
     },
-    async execute(params, ctx) {
+    async execute(_id, params, _signal, _onUpdate, ctx) {
       try {
-        const scheduler = new CronScheduler({ storageDir: path.join(ctx.cwd, '.agent', 'cron_scheduler') });
+        const cwd = ctx?.cwd || process.cwd();
+        ensureTicker(cwd);
+        const scheduler = new CronScheduler({ storageDir: path.join(cwd, '.agent', 'cron_scheduler') });
         const task = scheduler.register(params);
         const _res = {
           status: 'success',
@@ -54,9 +73,10 @@ export default function cronSchedulerExtension(pi) {
       type: 'object',
       properties: {}
     },
-    async execute(params, ctx) {
+    async execute(_id, params, _signal, _onUpdate, ctx) {
       try {
-        const scheduler = new CronScheduler({ storageDir: path.join(ctx.cwd, '.agent', 'cron_scheduler') });
+        const cwd = ctx?.cwd || process.cwd();
+        const scheduler = new CronScheduler({ storageDir: path.join(cwd, '.agent', 'cron_scheduler') });
         const tasks = scheduler.list();
         const _res = {
           status: 'success',
@@ -85,9 +105,10 @@ export default function cronSchedulerExtension(pi) {
       },
       required: ['id']
     },
-    async execute(params, ctx) {
+    async execute(_id, params, _signal, _onUpdate, ctx) {
       try {
-        const scheduler = new CronScheduler({ storageDir: path.join(ctx.cwd, '.agent', 'cron_scheduler') });
+        const cwd = ctx?.cwd || process.cwd();
+        const scheduler = new CronScheduler({ storageDir: path.join(cwd, '.agent', 'cron_scheduler') });
         const ok = scheduler.unregister(params.id);
         const _res = {
           status: ok ? 'success' : 'not_found',

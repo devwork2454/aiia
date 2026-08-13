@@ -18,7 +18,7 @@ export default function microContextExtension(pi) {
       },
       required: ['message']
     },
-    async execute(params, ctx) {
+    async execute(_id, params, _signal, _onUpdate, ctx) {
       const msg = params.message;
       // 在独立的 worktree 子进程中，我们将消息写入共享的回调文件，供主 Agent 扫描读取
       const fs = await import('fs');

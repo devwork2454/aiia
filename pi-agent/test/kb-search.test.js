@@ -149,7 +149,10 @@ describe("S3 Hybrid KB search", () => {
     store.close();
 
     const res = await tools.kb_search.execute(
+      "t1",
       { query: "Trajectory JSONL", limit: 5 },
+      undefined,
+      undefined,
       { cwd: dir },
     );
     assert.ok(res.content?.[0]?.text);

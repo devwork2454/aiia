@@ -34,10 +34,10 @@ describe('Phase 2 P7: MCP & Skill Sandbox Policy Tests', () => {
     const blockedRes = await hookFn({ tool: 'bash', input: { command: 'rm -rf /' } });
     assert.equal(blockedRes?.block, true);
 
-    const setRes = await tools.set_sandbox_policy.execute({ mode: 'strict', allowedTools: ['safe_tool'] }, {});
+    const setRes = await tools.set_sandbox_policy.execute('t1', { mode: 'strict', allowedTools: ['safe_tool'] });
     assert.equal(setRes.status, 'success');
 
-    const statusRes = await tools.get_sandbox_policy_status.execute({}, {});
+    const statusRes = await tools.get_sandbox_policy_status.execute();
     assert.equal(statusRes.policy.mode, 'strict');
   });
 });

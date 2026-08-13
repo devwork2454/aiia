@@ -150,8 +150,10 @@ describe('S2 Trajectory extension', () => {
     const file = path.join(dir, 'ext.jsonl');
     const prev = process.env.TRAJECTORY_PATH;
     const prevDis = process.env.TRAJECTORY_DISABLED;
+    const prevAuto = process.env.AIIA_DISABLE_AUTO_PROFILE;
     process.env.TRAJECTORY_PATH = file;
     delete process.env.TRAJECTORY_DISABLED;
+    process.env.AIIA_DISABLE_AUTO_PROFILE = '1';
     try {
       await hooks.agent_end(
         {
@@ -166,11 +168,35 @@ describe('S2 Trajectory extension', () => {
       else process.env.TRAJECTORY_PATH = prev;
       if (prevDis === undefined) delete process.env.TRAJECTORY_DISABLED;
       else process.env.TRAJECTORY_DISABLED = prevDis;
+      if (prevAuto === undefined) delete process.env.AIIA_DISABLE_AUTO_PROFILE;
+      else process.env.AIIA_DISABLE_AUTO_PROFILE = prevAuto;
     }
 
     const lines = fs.readFileSync(file, 'utf8').trim().split('\n');
     assert.equal(lines.length, 2);
     assert.equal(JSON.parse(lines[0]).kind, 'agent_end');
     assert.equal(JSON.parse(lines[1]).kind, 'session_shutdown');
+  });
+
+  test('session_shutdown writes project-card draft only (no apply)', async () => {
+    const hooks = {};
+    trajectoryExtension({ on: (event, fn) => { hooks[event] = fn; } });
+    const dir = tmpDir();
+    const prev = process.env.AIIA_DISABLE_AUTO_PROFILE;
+    const prevTraj = process.env.TRAJECTORY_DISABLED;
+    delete process.env.AIIA_DISABLE_AUTO_PROFILE;
+    process.env.TRAJECTORY_DISABLED = '1';
+    try {
+      await hooks.session_shutdown({ type: 'session_shutdown', reason: 'quit' }, { cwd: dir, model: {} });
+    } finally {
+      if (prev === undefined) delete process.env.AIIA_DISABLE_AUTO_PROFILE;
+      else process.env.AIIA_DISABLE_AUTO_PROFILE = prev;
+      if (prevTraj === undefined) delete process.env.TRAJECTORY_DISABLED;
+      else process.env.TRAJECTORY_DISABLED = prevTraj;
+    }
+    const draft = path.join(dir, '.agent', 'project-card.draft.json');
+    const card = path.join(dir, '.agent', 'project-card.json');
+    assert.equal(fs.existsSync(draft), true);
+    assert.equal(fs.existsSync(card), false);
   });
 });

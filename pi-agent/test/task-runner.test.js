@@ -78,17 +78,17 @@ describe('Phase 2 P5: Task DAG Runner Core & Extension Tests', () => {
     assert.equal(typeof tools.get_dag_task_status?.execute, 'function');
 
     const ctx = { cwd: tmpDir };
-    const createRes = await tools.create_dag_task.execute({
+    const createRes = await tools.create_dag_task.execute('t1', {
       dagId: 'ext_dag',
       nodes: [
         { id: 'n1', command: 'echo "n1"' },
         { id: 'n2', command: 'echo "n2"', dependsOn: ['n1'] }
       ]
-    }, ctx);
+    }, undefined, undefined, ctx);
 
     assert.equal(createRes.status, 'success');
 
-    const statusRes = await tools.get_dag_task_status.execute({ dagId: 'ext_dag' }, ctx);
+    const statusRes = await tools.get_dag_task_status.execute('t2', { dagId: 'ext_dag' }, undefined, undefined, ctx);
     assert.equal(statusRes.status, 'success');
     assert.equal(statusRes.summary.stats.total, 2);
   });

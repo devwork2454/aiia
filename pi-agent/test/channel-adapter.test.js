@@ -66,12 +66,12 @@ describe("S5 channel adapter", () => {
     const list = await tools.list_channels.execute({});
     assert.equal(list.details.channels.cli.state, "ready");
     assert.equal(list.details.channels.feishu.state, "archived");
-    const norm = await tools.normalize_channel_message.execute({
+    const norm = await tools.normalize_channel_message.execute("t1", {
       channel: "cli",
       text: "ping",
     });
     assert.equal(norm.details.ok, true);
-    const bad = await tools.normalize_channel_message.execute({
+    const bad = await tools.normalize_channel_message.execute("t2", {
       channel: "feishu",
       text: "ping",
     });

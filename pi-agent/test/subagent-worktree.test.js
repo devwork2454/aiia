@@ -53,10 +53,10 @@ describe('Phase 2 P2: Subagent Worktree Orchestration Tests', { concurrency: fal
   });
 
   test('spawn_worktree_subagent creates worktree and task metadata', async () => {
-    const res = await tools.spawn_worktree_subagent.execute({
+    const res = await tools.spawn_worktree_subagent.execute('t1', {
       task: '开发单元测试示例组件',
       branchName: testBranch
-    }, mockContext);
+    }, undefined, undefined, mockContext);
 
     assert.equal(res.status, 'success');
     assert.equal(res.branch, testBranch);
@@ -64,7 +64,7 @@ describe('Phase 2 P2: Subagent Worktree Orchestration Tests', { concurrency: fal
   });
 
   test('list_worktree_subagents scans active worktrees correctly', async () => {
-    const res = await tools.list_worktree_subagents.execute({}, mockContext);
+    const res = await tools.list_worktree_subagents.execute('t2', {}, undefined, undefined, mockContext);
     assert.equal(res.status, 'success');
     assert.equal(res.count >= 1, true);
 
@@ -80,19 +80,19 @@ describe('Phase 2 P2: Subagent Worktree Orchestration Tests', { concurrency: fal
 
     fs.writeFileSync(dummyInWorktree, 'subagent worktree output content');
 
-    const mergeRes = await tools.merge_worktree_subagent.execute({
+    const mergeRes = await tools.merge_worktree_subagent.execute('t3', {
       branchName: testBranch,
       deleteAfterMerge: true
-    }, mockContext);
+    }, undefined, undefined, mockContext);
 
     assert.equal(mergeRes.status, 'success', mergeRes.message || '');
     assert.equal(fs.existsSync(dummyInGitRoot), true);
   });
 
   test('cleanup_worktree_subagent cleans up remaining worktree artifacts', async () => {
-    const cleanupRes = await tools.cleanup_worktree_subagent.execute({
+    const cleanupRes = await tools.cleanup_worktree_subagent.execute('t4', {
       branchName: testBranch
-    }, mockContext);
+    }, undefined, undefined, mockContext);
 
     assert.equal(cleanupRes.status, 'success');
   });
@@ -100,12 +100,12 @@ describe('Phase 2 P2: Subagent Worktree Orchestration Tests', { concurrency: fal
     const branch = 's7_handoff_test';
     
     // Spawn worktree
-    await tools.spawn_worktree_subagent.execute({
+    await tools.spawn_worktree_subagent.execute('t5', {
       task: 'Test S7 Handoff',
       branchName: branch,
       handoffInput: 'Strict context input',
       handoffFiles: []
-    }, mockContext);
+    }, undefined, undefined, mockContext);
 
     const worktreePath = path.join(mockContext.cwd, '.agent', 'worktrees', branch);
     
@@ -113,15 +113,15 @@ describe('Phase 2 P2: Subagent Worktree Orchestration Tests', { concurrency: fal
     fs.writeFileSync(path.join(worktreePath, '.subagent_output.md'), 'STRICT HANDOFF OUTPUT PAYLOAD');
 
     // List should return the handoffOutput
-    const listRes = await tools.list_worktree_subagents.execute({}, mockContext);
+    const listRes = await tools.list_worktree_subagents.execute('t6', {}, undefined, undefined, mockContext);
     const listed = listRes.worktrees.find(w => w.branch === branch);
     assert.equal(listed.handoffOutput, 'STRICT HANDOFF OUTPUT PAYLOAD');
 
     // Merge should return the handoffOutput
-    const mergeRes = await tools.merge_worktree_subagent.execute({
+    const mergeRes = await tools.merge_worktree_subagent.execute('t7', {
       branchName: branch,
       deleteAfterMerge: true
-    }, mockContext);
+    }, undefined, undefined, mockContext);
     assert.equal(mergeRes.status, 'success');
     assert.equal(mergeRes.handoffOutput, 'STRICT HANDOFF OUTPUT PAYLOAD');
   });

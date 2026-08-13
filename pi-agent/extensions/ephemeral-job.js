@@ -20,7 +20,7 @@ export default function ephemeralJobExtension(pi) {
       },
       required: ['task']
     },
-    async execute(params, ctx) {
+    async execute(_id, params, _signal, _onUpdate, ctx) {
       const envTiers = process.env.JOB_ESCALATION_TIERS || 'low,medium,high';
       const tiers = envTiers.split(',').map(s => s.trim()).filter(Boolean);
       let startIndex = tiers.indexOf(params.initialTier || 'low');
@@ -34,31 +34,30 @@ export default function ephemeralJobExtension(pi) {
         for (let i = startIndex; i < tiers.length; i++) {
           const tier = tiers[i];
           const outPath = path.join(workingDir, '.subagent_output.md');
-          
+
+          if (process.env.TEST_MODE === '1') {
+            if (tier === 'low' && process.env.SHOULD_FAIL_LOW === '1') {
+              escalationHistory.push({ tier, success: false, code: 1 });
+              if (i === tiers.length - 1) {
+                fs.rmSync(workingDir, { recursive: true, force: true });
+                const _res = {
+                  status: 'error',
+                  message: `❌ 所有梯队重试完毕仍失败。最终阻断在梯队 [${tier}]。`,
+                  escalationHistory
+                };
+                return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+              }
+              continue;
+            }
+            const output = `Mock Job Success on tier ${tier}`;
+            fs.rmSync(workingDir, { recursive: true, force: true });
+            const _res = { status: 'success', tier, output, escalationHistory: [...escalationHistory, { tier, success: true }] };
+            return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+          }
+
           const jobResult = await new Promise((resolve) => {
-            const proc = spawn('node', [
-              '--experimental-permission',
-              '--allow-fs-read=*',
-              `--allow-fs-write=${workingDir}`,
-              '--allow-child-process',
-              '-e',
-              `// 模拟 Pi 引擎的伪执行 (测试用/生产依赖 @earendil-works/pi-coding-agent)
-              const fs = require("fs");
-              if (process.env.ROUTER_FORCE_MODEL === "low" && process.env.SHOULD_FAIL_LOW === "1") {
-                console.error("Low tier failed for test");
-                process.exit(1);
-              }
-              if (process.env.TEST_MODE === "1") {
-                fs.writeFileSync("${outPath}", "Mock Job Success on tier " + process.env.ROUTER_FORCE_MODEL);
-                process.exit(0);
-              }
-              // 真实环境下，这里其实是调用系统的 pi 命令
-              // 由于隔离环境中可能没有全局 pi 命令，为了健壮性在此暂用桩代码占位，或者实际调用 npm exec pi
-              const cp = require("child_process");
-              const child = cp.spawn("npx", ["pi", "--task", ${JSON.stringify(params.task + '\\n\\n(执行完毕请将最终结论写入文件: ' + outPath + ')') }], { stdio: "inherit", cwd: "${workingDir}" });
-              child.on("close", code => process.exit(code));
-              `
-            ], {
+            const prompt = `${params.task}\n\n(执行完毕请将最终结论写入文件: ${outPath})`;
+            const proc = spawn('pi', ['-p', prompt], {
               cwd: workingDir,
               env: {
                 ...process.env,

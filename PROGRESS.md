@@ -1,6 +1,27 @@
 # 项目进度
 
 ## GOAL
+按评估报告收口 P0 契约与假交付（评估建议项 1）。
+### 验收标准
+- 自定义工具 `execute` 对齐 Pi：`(toolCallId, params, signal, onUpdate, ctx)`；单测按此 arity 调用
+- cron：会话内有 tick 调 `evaluate()` 并执行到期 command；`CRON_DISABLED=1` 可关；catalog 文案不谎称守护进程
+- secret-gate 脱敏 `event.content`（兼容 `event.result`）；测试 import 生产函数
+- lsp / semantic 用 `pi.registerTool`，不再 `return { tools }`
+- `src/metaprompt-optimizer.js` 无空 catch；`quality-check` 绿
+- trajectory `session_shutdown` 只写 draft，不 `applyProjectDraft`
+- worktree 子进程改为 `pi -p`（去掉不存在的 `--task`）
+- `.harness/verify.sh` 退出 0；新增/改写的单测进 verify
+### 状态
+执行中（2026-08-13）
+### 代定决策
+- cron 不做独立守护：只在 Pi 会话存活时 `setInterval` 轮询（个人单机会话即宿主）
+- 不合并 safety/sandbox、不加 S8 timeout（P1，本刀不做）
+- verify 只增强：把 secret-gate 真函数测、cron tick 测、lsp/semantic 注册测挂进现有 node --test 清单
+### 边界
+- 不改 ARCHITECTURE/SPEC 大文档（P2）
+- 不减默认扩展面（P2）
+
+## GOAL（已完成）
 分析当前项目功能架构设计与代码实现，给出质量评估报告。
 ### 验收标准
 - 报告覆盖：分层架构（文档 vs 实码）、扩展清单与钩子冲突、核心模块实现质量、静态门/单测实测、P0–P2 风险与建议
