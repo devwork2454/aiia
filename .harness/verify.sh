@@ -29,6 +29,9 @@ echo "$OUT" | grep -q '^SMOKE_OK' || { echo "[verify] smoke FAILED:" >&2; cat /t
 echo "[verify] link-pi-skills: idempotent symlink into ~/.pi/agent/skills"
 bash "$ROOT/scripts/link-pi-skills.test.sh"
 
+echo "[verify] clean-stray-pi-extensions: drop half-symlinks in ~/.pi/agent/extensions"
+bash "$ROOT/scripts/clean-stray-pi-extensions.test.sh"
+
 echo "[verify] real hook: safety.js loaded by Pi actually BLOCKS dangerous cmd (no model, cannot skip)"
 node --test test/safety-hook.test.mjs
 

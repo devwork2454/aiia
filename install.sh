@@ -146,6 +146,11 @@ if [[ -L "$AIIA_DIR/.pi/extensions" ]]; then
   rm -f "$AIIA_DIR/.pi/extensions"
   rmdir "$AIIA_DIR/.pi" 2>/dev/null || true
 fi
+# ~/.pi/agent/extensions/<file> -> pi-agent/extensions 的半截软链同样会炸：
+# jiti 把 ../src 解析成 ~/.pi/agent/src（不存在）。
+if [[ -f "$AIIA_DIR/scripts/clean-stray-pi-extensions.sh" ]]; then
+  AIIA_DIR="$AIIA_DIR" bash "$AIIA_DIR/scripts/clean-stray-pi-extensions.sh" || true
+fi
 
 # ─── Step 6: 链接默认 Pi Skills（新机即用）───────────────────────────────────
 step "Step 6/8  链接默认 Pi Skills（auto-harness、goal、imp 等）"

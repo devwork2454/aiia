@@ -1,6 +1,20 @@
 # 项目进度
 
 ## GOAL
+修复 Pi 启动失败：清掉 `~/.pi/agent/extensions` 里指向仓库的半截软链。
+### 验收标准
+- 复现路径：`remote-config.js -> pi-agent/extensions/...` 会导致 `Cannot find module '../src/extension-profile.js'`
+- 本机已删除该软链；`pi list` 无 Failed to load；`pi -p` 可启动
+- `scripts/clean-stray-pi-extensions.sh` 只删指向 `$AIIA_DIR/pi-agent/extensions` 的软链，保留用户自有扩展
+- 单测脚本进 verify；`install.sh` Step 5 调用清理
+- `.harness/verify.sh` 退出 0
+### 状态
+通过（2026-08-13）：半截软链已删，pi -p 可启动；清理脚本进 verify
+### 代定决策
+- 不改扩展 import 路径（正确加载仍是 `pi install pi-agent`）
+- 顺手从 settings 去掉已不存在的 worktree package（本机配置，不进仓库）
+
+## GOAL（已完成）
 Pi 界面增加常驻 To-do 进度面板（✔ / ◐ / ○）。
 ### 验收标准
 - 纯函数：`normalizeTodos` / `applyTodoUpdate` / `formatTodoWidgetLines` 产出与样本一致的标题与字形（`To-do Working on N to-dos • M done` + `✔` `◐` `○`）
