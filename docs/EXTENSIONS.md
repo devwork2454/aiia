@@ -141,7 +141,7 @@ AIIA Trajectory Logger extension (S2 / L7 collection only) Writes JSONL on agent
 
 ## `ui-task-board.js`
 
-No description available.
+Persistent To-do progress widget + checklist renderer. Agent tool `update_todos` writes the live list. TUI shows: To-do Working on N to-dos • M done ✔ completed ◐ in progress ○ pending /demo-board seeds a sample. Kill: AIIA_VISUAL_DISABLED=1
 
 ## `vault.js`
 

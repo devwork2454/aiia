@@ -11,6 +11,7 @@ export const MAX_CATALOG_CHARS = 2048;
 /** Static tool catalog (stable; avoid runtime discovery flake). */
 export const DEFAULT_CATALOG_ENTRIES = Object.freeze([
   { name: "remember", when: "Persist a durable user preference/fact to long-term memory." },
+  { name: "update_todos", when: "Show/update the on-screen To-do progress list for multi-step work." },
   { name: "memory_search", when: "Search long-term memories by keywords (prefer over asking user for /memory)." },
   { name: "memory_list", when: "List recent long-term memories." },
   { name: "kb_search", when: "Search Markdown knowledge roots + memories for docs/facts." },

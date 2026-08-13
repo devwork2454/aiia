@@ -46,6 +46,7 @@ export const CATALOG_TOOL_EXTENSION = Object.freeze({
   run_dag_task: "task-runner",
   spawn_worktree_subagent: "subagent-worktree",
   set_sandbox_policy: "sandbox-policy",
+  update_todos: "ui-task-board",
 });
 
 function splitList(raw) {

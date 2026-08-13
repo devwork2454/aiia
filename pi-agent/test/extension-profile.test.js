@@ -57,6 +57,8 @@ describe("extension profile (lean default)", () => {
     assert.doesNotMatch(lean, /register_cron_task/);
     assert.doesNotMatch(lean, /spawn_worktree_subagent/);
     assert.equal(isCatalogToolEnabled("remember", {}), true);
+    assert.equal(isCatalogToolEnabled("update_todos", {}), true);
+    assert.equal(isCatalogToolEnabled("update_todos", { AIIA_VISUAL_DISABLED: "1" }), false);
     assert.equal(isCatalogToolEnabled("register_cron_task", {}), false);
   });
 

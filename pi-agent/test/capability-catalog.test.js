@@ -25,6 +25,7 @@ describe("capability catalog", () => {
     assert.ok(text.length <= MAX_CATALOG_CHARS);
     assert.match(text, /remember/);
     assert.match(text, /memory_search/);
+    assert.match(text, /update_todos/);
     assert.doesNotMatch(text, /kb_search/);
     assert.doesNotMatch(text, /create_dag_task/);
     const full = buildCapabilityCatalog({ env: { AIIA_EXTENSIONS: "all" } });
@@ -32,6 +33,8 @@ describe("capability catalog", () => {
     assert.match(full, /create_dag_task/);
     assert.match(full, /run_dag_task/);
     assert.doesNotMatch(full, /create_task_dag/);
+    const noVisual = buildCapabilityCatalog({ env: { AIIA_VISUAL_DISABLED: "1" } });
+    assert.doesNotMatch(noVisual, /update_todos/);
   });
 
   test("truncates oversized catalogs", () => {

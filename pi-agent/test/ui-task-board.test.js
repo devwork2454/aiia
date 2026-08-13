@@ -47,14 +47,22 @@ describe("ui-task-board", () => {
 
   function loadExtension() {
     let renderer;
-    let command;
+    const commands = {};
+    const tools = {};
+    const hooks = {};
     let lastMessage;
     const pi = {
+      on(event, fn) {
+        hooks[event] = fn;
+      },
       registerMessageRenderer(type, fn) {
         renderer = { type, fn };
       },
       registerCommand(name, def) {
-        command = { name, def };
+        commands[name] = def;
+      },
+      registerTool(def) {
+        tools[def.name] = def;
       },
       sendMessage(msg) {
         lastMessage = msg;
@@ -63,7 +71,10 @@ describe("ui-task-board", () => {
     factory(pi);
     return {
       renderer,
-      command,
+      command: { name: "demo-board", def: commands["demo-board"] },
+      commands,
+      tools,
+      hooks,
       getLastMessage: () => lastMessage,
     };
   }
@@ -79,12 +90,13 @@ describe("ui-task-board", () => {
     };
   }
 
-  it("registers checklist renderer and demo-board command", () => {
-    const { renderer, command } = loadExtension();
+  it("registers checklist renderer, demo-board, and update_todos", () => {
+    const { renderer, command, tools } = loadExtension();
     assert.equal(renderer.type, "checklist");
     assert.equal(command.name, "demo-board");
     assert.equal(typeof renderer.fn, "function");
     assert.equal(typeof command.def.handler, "function");
+    assert.equal(typeof tools.update_todos.execute, "function");
   });
 
   it("renders task pipeline without throwing on dark theme colors", () => {
@@ -118,8 +130,39 @@ describe("ui-task-board", () => {
     assert.equal(msg.display, true);
     assert.equal(typeof msg.display, "boolean");
     const stages = JSON.parse(msg.content);
-    assert.equal(stages.length, 4);
-    assert.equal(stages[2].status, "doing");
+    assert.equal(stages.length, 9);
+    assert.equal(stages[2].status, "in_progress");
+  });
+
+  it("update_todos paints the above-editor widget", async () => {
+    const { tools } = loadExtension();
+    const widgets = new Map();
+    const ctx = {
+      ui: {
+        setWidget(key, content) {
+          if (content === undefined) widgets.delete(key);
+          else widgets.set(key, content);
+        },
+      },
+    };
+    const result = await tools.update_todos.execute(
+      "tc1",
+      {
+        todos: [
+          { content: "SDD 工作区 / worktree / ledger", status: "completed" },
+          { content: "Task 2: watermark 单调合并", status: "in_progress" },
+          { content: "Task 3: 0 行不 REPLACE", status: "pending" },
+        ],
+      },
+      undefined,
+      undefined,
+      ctx,
+    );
+    const lines = widgets.get("todo-progress");
+    assert.equal(lines[0], "To-do Working on 3 to-dos • 1 done");
+    assert.match(result.content[0].text, /◐ Task 2/);
+    await tools.update_todos.execute("tc2", { clear: true }, undefined, undefined, ctx);
+    assert.equal(widgets.has("todo-progress"), false);
   });
 
   it("source does not use primary/secondary theme keys", () => {

@@ -1,6 +1,23 @@
 # 项目进度
 
 ## GOAL
+Pi 界面增加常驻 To-do 进度面板（✔ / ◐ / ○）。
+### 验收标准
+- 纯函数：`normalizeTodos` / `applyTodoUpdate` / `formatTodoWidgetLines` 产出与样本一致的标题与字形（`To-do Working on N to-dos • M done` + `✔` `◐` `○`）
+- 扩展注册 `update_todos` 工具；调用后 `ctx.ui.setWidget` 写入 `todo-progress`（空列表清除）
+- `/demo-board` 用样本 9 项（2 完成 / 1 进行中）并同时推 checklist + widget
+- 视觉件默认开；`AIIA_VISUAL_DISABLED=1` 不注册工具/渲染器
+- capability-catalog 默认列出 `update_todos`；视觉关则隐藏
+- 单测 `test/todo-progress.test.js` 进 verify；`.harness/verify.sh` 退出 0
+### 状态
+通过（2026-08-13）：常驻 To-do 面板已落地；`.harness/verify.sh` 退出 0（204 unit）
+### 代定决策
+- 挂在现有 `ui-task-board`（已是默认视觉件），不新开扩展文件、不改 Pi 源码
+- 工具名 `update_todos`（replace 默认；`merge:true` 按 id 合并）
+- 主展示是编辑器上方 widget，不是再做一套 Ink
+- 不把看板接到 `/goal` 自动拆任务（模型自己调工具）
+
+## GOAL（已完成）
 默认打开现成视觉件：看板 + `/compact` 进度条。
 ### 验收标准
 - 空环境下 `ui-task-board`、`compact-progress` 视为启用（无需 `AIIA_EXTRA_EXTENSIONS`）
