@@ -12,7 +12,7 @@
 - worktree 子进程改为 `pi -p`（去掉不存在的 `--task`）
 - `.harness/verify.sh` 退出 0；新增/改写的单测进 verify
 ### 状态
-执行中（2026-08-13）
+通过（2026-08-13）：P0 契约/假交付已收口；`.harness/verify.sh` 退出 0（184 unit + quality + smoke + e2e）
 ### 代定决策
 - cron 不做独立守护：只在 Pi 会话存活时 `setInterval` 轮询（个人单机会话即宿主）
 - 不合并 safety/sandbox、不加 S8 timeout（P1，本刀不做）
