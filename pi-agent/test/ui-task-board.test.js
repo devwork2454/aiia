@@ -8,7 +8,6 @@ import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
 import { describe, it, before } from "node:test";
-import { enableAllExtensions } from "./with-all-extensions.js";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -41,7 +40,7 @@ describe("ui-task-board", () => {
   let factory;
 
   before(async () => {
-    enableAllExtensions();
+    delete process.env.AIIA_VISUAL_DISABLED;
     const extPath = path.resolve(__dirname, "../extensions/ui-task-board.js");
     factory = (await import(pathToFileURL(extPath).href)).default;
   });
@@ -127,5 +126,23 @@ describe("ui-task-board", () => {
     const src = fs.readFileSync(path.resolve(__dirname, "../extensions/ui-task-board.js"), "utf8");
     assert.equal(/theme\.fg\(\s*["'](primary|secondary)["']/.test(src), false);
     assert.equal(/display:\s*["']show["']/.test(src), false);
+  });
+
+  it("factory is a no-op when AIIA_VISUAL_DISABLED=1", () => {
+    const prev = process.env.AIIA_VISUAL_DISABLED;
+    process.env.AIIA_VISUAL_DISABLED = "1";
+    try {
+      let renderer;
+      factory({
+        registerMessageRenderer(type, fn) {
+          renderer = { type, fn };
+        },
+        registerCommand() {},
+      });
+      assert.equal(renderer, undefined);
+    } finally {
+      if (prev === undefined) delete process.env.AIIA_VISUAL_DISABLED;
+      else process.env.AIIA_VISUAL_DISABLED = prev;
+    }
   });
 });

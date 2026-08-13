@@ -1,6 +1,22 @@
 # 项目进度
 
 ## GOAL
+默认打开现成视觉件：看板 + `/compact` 进度条。
+### 验收标准
+- 空环境下 `ui-task-board`、`compact-progress` 视为启用（无需 `AIIA_EXTRA_EXTENSIONS`）
+- 不把它们并进 `CORE_EXTENSIONS`；cron / 搜索 / worktree 等仍默认关
+- `AIIA_VISUAL_DISABLED=1` 时两扩展工厂直接 return（不注册 renderer / compact 钩子）
+- 单测：profile 默认开视觉件、杀手关、看板与进度条在空 env 下能注册；进 verify
+- `.harness/verify.sh` 退出 0
+### 状态
+通过（2026-08-13）：默认打开看板+压缩条；`.harness/verify.sh` 退出 0（199 unit）
+### 代定决策
+- 代码默认开，不靠本机环境变量（避免每开一个 shell 忘 export）
+- 不进 CORE：视觉不是安全/记忆，单独杀手 `AIIA_VISUAL_DISABLED=1`
+- 不把 `/demo-board` 塞进 slash 白名单（它不在 managed 列表，加载后本来就出现）
+- 不改 Pi 源码、不重做 TUI、不把看板接到 `/goal` 真进度
+
+## GOAL（已完成）
 默认少加载扩展（评估「减面」）：核心常开，其余 opt-in。
 ### 验收标准
 - 默认只启用核心：safety / sandbox-policy / secret-gate / memory / context-card / capability-catalog / quality-gate / context-gc / router / slash-ux / goal / imp / reply-prefs / config / add-dir / vault / steer

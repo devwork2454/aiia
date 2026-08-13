@@ -2,6 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
   CORE_EXTENSIONS,
+  VISUAL_EXTENSIONS,
   isExtensionEnabled,
   isCatalogToolEnabled,
 } from "../src/extension-profile.js";
@@ -18,6 +19,23 @@ describe("extension profile (lean default)", () => {
     assert.equal(isExtensionEnabled("cron-scheduler", env), false);
     assert.equal(isExtensionEnabled("web-search-proxy", env), false);
     assert.equal(isExtensionEnabled("auto-router", env), false);
+  });
+
+  test("visual extras are enabled with empty env", () => {
+    const env = {};
+    for (const id of VISUAL_EXTENSIONS) {
+      assert.equal(isExtensionEnabled(id, env), true, id);
+    }
+    assert.equal(CORE_EXTENSIONS.includes("ui-task-board"), false);
+    assert.equal(CORE_EXTENSIONS.includes("compact-progress"), false);
+  });
+
+  test("AIIA_VISUAL_DISABLED turns off visual extras only", () => {
+    const env = { AIIA_VISUAL_DISABLED: "1" };
+    assert.equal(isExtensionEnabled("ui-task-board", env), false);
+    assert.equal(isExtensionEnabled("compact-progress", env), false);
+    assert.equal(isExtensionEnabled("safety", env), true);
+    assert.equal(isExtensionEnabled("cron-scheduler", env), false);
   });
 
   test("AIIA_EXTENSIONS=all enables optional", () => {

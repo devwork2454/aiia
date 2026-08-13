@@ -1,6 +1,7 @@
 /**
- * Default-on extension profile (lean).
- * Optional extensions no-op unless AIIA_EXTENSIONS=all or listed in AIIA_EXTRA_EXTENSIONS.
+ * Default-on extension profile (lean + visual).
+ * CORE always on. VISUAL (board / compact bar) on unless AIIA_VISUAL_DISABLED=1.
+ * Other optionals no-op unless AIIA_EXTENSIONS=all or listed in AIIA_EXTRA_EXTENSIONS.
  */
 
 /** Always loaded. Security + memory + quality + routing + human slash. */
@@ -22,6 +23,12 @@ export const CORE_EXTENSIONS = Object.freeze([
   "add-dir",
   "vault",
   "steer",
+]);
+
+/** Default-on TUI extras. Not CORE. Kill: AIIA_VISUAL_DISABLED=1 */
+export const VISUAL_EXTENSIONS = Object.freeze([
+  "ui-task-board",
+  "compact-progress",
 ]);
 
 /** Catalog tool name → extension id (file basename without .js). */
@@ -48,11 +55,17 @@ function splitList(raw) {
     .filter(Boolean);
 }
 
+export function isVisualDisabled(env = process.env) {
+  const v = env.AIIA_VISUAL_DISABLED;
+  return v === "1" || v === "true";
+}
+
 export function isExtensionEnabled(name, env = process.env) {
   const id = String(name || "").replace(/\.js$/i, "");
   if (!id) return false;
   if (env.AIIA_EXTENSIONS === "all" || env.AIIA_EXTENSIONS === "*") return true;
   if (CORE_EXTENSIONS.includes(id)) return true;
+  if (VISUAL_EXTENSIONS.includes(id) && !isVisualDisabled(env)) return true;
   const extra = splitList(env.AIIA_EXTRA_EXTENSIONS);
   return extra.includes(id);
 }

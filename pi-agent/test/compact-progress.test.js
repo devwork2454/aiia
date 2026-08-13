@@ -1,5 +1,4 @@
 import { describe, it, before } from "node:test";
-import { enableAllExtensions } from "./with-all-extensions.js";
 import assert from "node:assert/strict";
 import {
   advancePct,
@@ -43,7 +42,7 @@ describe("compact-progress helpers", () => {
 
 describe("compact-progress extension", () => {
   before(() => {
-    enableAllExtensions();
+    delete process.env.AIIA_VISUAL_DISABLED;
   });
 
   it("starts bar on session_before_compact and clears on session_compact", async () => {
@@ -126,5 +125,22 @@ describe("compact-progress extension", () => {
     assert.ok(statuses.has("compact-progress"));
     ac.abort();
     assert.equal(statuses.has("compact-progress"), false);
+  });
+
+  it("factory is a no-op when AIIA_VISUAL_DISABLED=1", () => {
+    const prev = process.env.AIIA_VISUAL_DISABLED;
+    process.env.AIIA_VISUAL_DISABLED = "1";
+    try {
+      const handlers = {};
+      compactProgressExtension({
+        on(event, fn) {
+          handlers[event] = fn;
+        },
+      });
+      assert.equal(Object.keys(handlers).length, 0);
+    } finally {
+      if (prev === undefined) delete process.env.AIIA_VISUAL_DISABLED;
+      else process.env.AIIA_VISUAL_DISABLED = prev;
+    }
   });
 });
