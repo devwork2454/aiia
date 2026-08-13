@@ -1,6 +1,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { SandboxPolicy } from '../src/sandbox-policy.js';
+import os from 'node:os';
+import path from 'node:path';
+import { SandboxPolicy, normalizeSandboxMode } from '../src/sandbox-policy.js';
 import sandboxPolicyExtension from '../extensions/sandbox-policy.js';
 
 describe('Phase 2 P7: MCP & Skill Sandbox Policy Tests', () => {
@@ -8,9 +10,11 @@ describe('Phase 2 P7: MCP & Skill Sandbox Policy Tests', () => {
     const policy = new SandboxPolicy({ mode: 'sandbox' });
 
     assert.equal(policy.evaluate('read_file', { path: '/etc/passwd' }).allowed, false);
+    assert.equal(policy.evaluate('write', { path: path.join(os.homedir(), '.ssh', 'id_rsa') }).allowed, false);
     assert.equal(policy.evaluate('bash', { command: 'rm -rf /' }).allowed, false);
     assert.equal(policy.evaluate('bash', { command: 'sudo apt update' }).allowed, false);
     assert.equal(policy.evaluate('bash', { command: 'ls -la' }).allowed, true);
+    assert.equal(policy.evaluate('bash', { command: 'echo notes about /etc/passwd' }).allowed, true);
   });
 
   test('SandboxPolicy strict mode respects allowedTools whitelist', () => {
@@ -39,5 +43,14 @@ describe('Phase 2 P7: MCP & Skill Sandbox Policy Tests', () => {
 
     const statusRes = await tools.get_sandbox_policy_status.execute();
     assert.equal(statusRes.policy.mode, 'strict');
+
+    const denied = await tools.set_sandbox_policy.execute('t2', { mode: 'permissive' });
+    assert.equal(denied.status, 'error');
+    assert.match(denied.message, /SANDBOX_ALLOW_PERMISSIVE/);
+  });
+
+  test('normalizeSandboxMode rejects permissive without env', () => {
+    assert.throws(() => normalizeSandboxMode('permissive', {}), /SANDBOX_ALLOW_PERMISSIVE/);
+    assert.equal(normalizeSandboxMode('permissive', { SANDBOX_ALLOW_PERMISSIVE: '1' }), 'permissive');
   });
 });

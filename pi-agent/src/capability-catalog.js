@@ -18,10 +18,10 @@ export const DEFAULT_CATALOG_ENTRIES = Object.freeze([
   { name: "get_os_browser_status", when: "Check L7.6 OS/browser gate (default off; do not assume desktop control)." },
   { name: "register_cron_task", when: "Schedule a recurring 5-field cron shell task (ticks only while this Pi session is alive)." },
   { name: "list_cron_tasks", when: "List registered cron tasks." },
-  { name: "create_task_dag", when: "Create a dependent task DAG for multi-step shell workflows." },
-  { name: "run_task_dag", when: "Run/resume a task DAG by id." },
+  { name: "create_dag_task", when: "Create a dependent task DAG for multi-step shell workflows." },
+  { name: "run_dag_task", when: "Run/resume a task DAG by id." },
   { name: "spawn_worktree_subagent", when: "Isolate a branch refactor/feature in a git worktree subagent." },
-  { name: "set_sandbox_policy", when: "Tighten/loosen MCP/skill sandbox mode when needed." },
+  { name: "set_sandbox_policy", when: "Tighten sandbox to sandbox/strict (permissive requires SANDBOX_ALLOW_PERMISSIVE=1)." },
 ]);
 
 /**

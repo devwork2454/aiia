@@ -1,55 +1,93 @@
 /**
  * AIIA MCP / Skill Security Sandbox Policy Engine (Phase 2 P7)
- * 为 MCP 工具、Skill 及宿主 Shell 执行提供细粒度权限控制与沙箱隔离。
+ * Shell rules delegate to policy.js; path checks use real path fields (not JSON substring).
  */
+import os from 'node:os';
+import path from 'node:path';
+import { evaluateToolCallEvent } from './policy.js';
 
-const HIGH_RISK_TOOLS = ['bash', 'execute_code', 'write_to_file'];
-const DENIED_PATHS = ['/etc/passwd', '/etc/shadow', '/root/.ssh', '~/.ssh/id_rsa'];
+const SHELL_TOOLS = new Set(['bash', 'shell', 'run_shell_command']);
+const PATH_TOOLS = new Set(['write', 'edit', 'read', 'read_file', 'write_to_file']);
+const DENIED_PATHS = ['/etc/passwd', '/etc/shadow', '/root/.ssh', path.join(os.homedir(), '.ssh')];
+
+export function isPermissiveAllowed(env = process.env) {
+  return env.SANDBOX_ALLOW_PERMISSIVE === '1' || env.SANDBOX_ALLOW_PERMISSIVE === 'true';
+}
+
+export function normalizeSandboxMode(mode, env = process.env) {
+  const m = String(mode || 'sandbox');
+  if (m === 'permissive' && !isPermissiveAllowed(env)) {
+    throw new Error('permissive sandbox mode is disabled; set SANDBOX_ALLOW_PERMISSIVE=1 to allow');
+  }
+  if (!['sandbox', 'strict', 'permissive'].includes(m)) {
+    throw new Error(`Invalid sandbox mode '${m}'. Allowed: sandbox | strict`);
+  }
+  return m;
+}
+
+function expandHome(p) {
+  const s = String(p || '');
+  if (s === '~') return os.homedir();
+  if (s.startsWith('~/')) return path.join(os.homedir(), s.slice(2));
+  return s;
+}
+
+export function extractInputPaths(input = {}) {
+  const raw = [input.path, input.file, input.filename, input.target].filter(
+    (v) => typeof v === 'string' && v.trim(),
+  );
+  return raw.map((v) => expandHome(v.trim()));
+}
+
+export function pathIsDenied(candidate, blockedPaths) {
+  const resolved = path.resolve(expandHome(candidate));
+  for (const b of blockedPaths) {
+    const br = path.resolve(expandHome(b));
+    if (resolved === br || resolved.startsWith(`${br}${path.sep}`)) return b;
+  }
+  return null;
+}
 
 export class SandboxPolicy {
   /**
-   * @param {{ mode?: 'strict' | 'permissive' | 'sandbox', allowedTools?: string[], blockedPaths?: string[] }} opts
+   * @param {{ mode?: 'strict' | 'permissive' | 'sandbox', allowedTools?: string[], blockedPaths?: string[], env?: NodeJS.ProcessEnv }} opts
    */
-  constructor({ mode = 'sandbox', allowedTools = [], blockedPaths = [] } = {}) {
-    this.mode = mode;
+  constructor({ mode = 'sandbox', allowedTools = [], blockedPaths = [], env = process.env } = {}) {
+    this.mode = normalizeSandboxMode(mode, env);
     this.allowedTools = new Set(allowedTools);
     this.blockedPaths = [...DENIED_PATHS, ...blockedPaths];
   }
 
   /**
-   * 评估工具调用的安全性
    * @param {string} toolName
    * @param {object} input
-   * @returns {{ allowed: boolean, reason?: string }}
+   * @returns {{ allowed: boolean, reason?: string, family?: 'shell' | 'path' | 'strict' }}
    */
   evaluate(toolName, input = {}) {
     if (this.mode === 'permissive') {
       return { allowed: true };
     }
 
+    const name = String(toolName || '');
+
     if (this.mode === 'strict' && this.allowedTools.size > 0) {
-      if (!this.allowedTools.has(toolName)) {
-        return { allowed: false, reason: `Tool '${toolName}' is not in strict whitelist.` };
+      if (!this.allowedTools.has(name)) {
+        return { allowed: false, family: 'strict', reason: `Tool '${name}' is not in strict whitelist.` };
       }
     }
 
-    // 路径越权与高危敏感路径检测
-    const inputStr = JSON.stringify(input);
-    for (const p of this.blockedPaths) {
-      if (inputStr.includes(p)) {
-        return { allowed: false, reason: `Access to restricted path '${p}' blocked by Sandbox Policy.` };
+    if (SHELL_TOOLS.has(name.toLowerCase())) {
+      const verdict = evaluateToolCallEvent({ toolName: name, input });
+      if (verdict.block) {
+        return { allowed: false, family: 'shell', reason: verdict.reason };
       }
     }
 
-    // 高危命令/可执行代码的二重语法过滤
-    if (HIGH_RISK_TOOLS.includes(toolName)) {
-      const command = input.command || input.CodeContent || input.code || '';
-      if (typeof command === 'string') {
-        if (/rm\s+-rf\s+(\/|~|\/\*)/i.test(command)) {
-          return { allowed: false, reason: 'Destructive command rm -rf blocked by Sandbox.' };
-        }
-        if (/sudo\s+/i.test(command)) {
-          return { allowed: false, reason: 'Privilege escalation sudo blocked by Sandbox.' };
+    if (PATH_TOOLS.has(name.toLowerCase()) || extractInputPaths(input).length > 0) {
+      for (const p of extractInputPaths(input)) {
+        const hit = pathIsDenied(p, this.blockedPaths);
+        if (hit) {
+          return { allowed: false, family: 'path', reason: `Access to restricted path '${hit}' blocked by Sandbox Policy.` };
         }
       }
     }

@@ -25,6 +25,9 @@ describe("capability catalog", () => {
     assert.ok(text.length <= MAX_CATALOG_CHARS);
     assert.match(text, /kb_search/);
     assert.match(text, /remember/);
+    assert.match(text, /create_dag_task/);
+    assert.match(text, /run_dag_task/);
+    assert.doesNotMatch(text, /create_task_dag/);
     assert.match(text, /memory_search/);
   });
 

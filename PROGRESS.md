@@ -1,6 +1,24 @@
 # 项目进度
 
 ## GOAL
+按评估报告收口 P1 安全与质量门（合并 safety/sandbox + S8 超时/可选回滚）。
+### 验收标准
+- `SandboxPolicy` 用 `policy.js` 判 shell；工具名含 `bash|shell|run_shell_command` 与 `write|edit`
+- `set_sandbox_policy({mode:'permissive'})` 默认拒绝；仅 `SANDBOX_ALLOW_PERMISSIVE=1` 可开
+- sandbox `tool_call` 对 shell **不再二次 HITL**（交给 safety）
+- 路径拦截看 `path/file/filename` 并展开 `~`，不再 `JSON.stringify.includes`
+- quality-gate S8：`spawnSync` 有 timeout（`QUALITY_GATE_CHILD_TIMEOUT_MS`，默认 60s）；`QUALITY_GATE_ROLLBACK=1` 才 `git checkout`
+- `src/optimizer.js` 用 `pi -p`，去掉 `--task`
+- catalog 工具名改为 `create_dag_task` / `run_dag_task`
+- 单测覆盖上述行为；`.harness/verify.sh` 退出 0
+### 状态
+通过（2026-08-13）：P1 安全/质量门已收口；`.harness/verify.sh` 退出 0（190 unit + quality + smoke + e2e）
+### 代定决策
+- 不删 sandbox 扩展，只把策略引擎对齐 safety（少一次双 confirm）
+- 回滚默认关：避免未提交合法编辑被 checkout 丢掉
+- 不改 ARCHITECTURE/SPEC 大文档
+
+## GOAL（已完成）
 按评估报告收口 P0 契约与假交付（评估建议项 1）。
 ### 验收标准
 - 自定义工具 `execute` 对齐 Pi：`(toolCallId, params, signal, onUpdate, ctx)`；单测按此 arity 调用

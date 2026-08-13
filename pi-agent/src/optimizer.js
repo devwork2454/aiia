@@ -24,11 +24,11 @@ Modify .agent/project-card.json to append these insights into a "learned_rules" 
 After successfully updating the project-card.json, clear the contents of ${trajFile}.
 Do not explain, just execute the file modifications.`;
 
-  // spawn Pi to do the reflection autonomously
-  const res = spawnFn('npx', ['pi', '--mode', 'rpc', '--task', task], {
+  const res = spawnFn('pi', ['-p', task], {
     cwd,
     encoding: 'utf8',
-    stdio: 'ignore'
+    stdio: 'ignore',
+    timeout: 60000,
   });
 
   return { 

@@ -4,13 +4,15 @@
  * S8: If fails, spawns a child agent to fix it locally before returning to main loop.
  */
 import {
-  evaluateToolResultQuality,
   extractTargetPath,
   resolveTargetPath,
   evaluateFileQuality,
   formatQualityFeedback,
   buildQualityGatePatch,
-  isMutatingFileTool
+  isMutatingFileTool,
+  qualityGateMaxRetries,
+  isQualityGateRollbackEnabled,
+  spawnQualityGateFixer,
 } from '../src/quality-gate.js';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
@@ -20,7 +22,8 @@ import fs from 'node:fs';
 export default function qualityGateExtension(pi) {
   pi.on('tool_result', async (event, ctx) => {
     const cwd = ctx?.cwd || process.cwd();
-    
+    const env = process.env;
+
     if (!event || event.isError) return null;
     if (!isMutatingFileTool(event.toolName)) return null;
 
@@ -28,62 +31,52 @@ export default function qualityGateExtension(pi) {
     const abs = resolveTargetPath(rel, cwd);
     if (!abs) return null;
 
-    let report = evaluateFileQuality(abs, { cwd });
+    let report = evaluateFileQuality(abs, { cwd, env });
     if (!report || report.passed) return null;
 
-    // S8: Local auto-retry loop
-    const MAX_RETRIES = process.env.QUALITY_GATE_MAX_RETRIES ? parseInt(process.env.QUALITY_GATE_MAX_RETRIES, 10) : 3;
+    const MAX_RETRIES = qualityGateMaxRetries(env);
     let attempt = 0;
-    
+
     while (!report.passed && attempt < MAX_RETRIES) {
       attempt++;
       const feedback = formatQualityFeedback(report);
-      
       const fixTask = `[AIIA Quality Gate] File ${rel} failed verification:\n${feedback}\nPlease fix these errors immediately using edit tool. DO NOT output conversational text, just fix the file.`;
-      
-      const args = ['--mode', 'rpc', '-p', fixTask];
-      
-      // We log the subagent's output to a file for debugging, instead of ignore
+
       const logFile = path.join(cwd, '.agent', 'quality-gate.log');
       fs.mkdirSync(path.dirname(logFile), { recursive: true });
       fs.appendFileSync(logFile, `\n\n--- Quality Gate Retry Attempt ${attempt}/${MAX_RETRIES} for ${rel} ---\n`);
-      
+
       try {
-        // Run child pi process synchronously to block the tool_result hook
-        const child = spawnSync('npx', ['pi', ...args], {
-          cwd,
-          encoding: 'utf8',
-          stdio: 'pipe'
-        });
-        
+        const child = spawnQualityGateFixer({ cwd, task: fixTask, env });
         fs.appendFileSync(logFile, `Child Exit Code: ${child.status}\nStdout:\n${child.stdout}\nStderr:\n${child.stderr}\n`);
       } catch (err) {
         fs.appendFileSync(logFile, `Execution Error: ${err.message}\n`);
       }
-      
-      report = evaluateFileQuality(abs, { cwd });
+
+      report = evaluateFileQuality(abs, { cwd, env });
     }
-    
-    // If still failing after retries, we must not throw this to the user as a chat loop.
-    // We will rollback the file to prevent broken code from polluting the context, 
-    // and return a clear instruction to the main loop to try a different architectural approach.
+
     if (!report.passed) {
-      spawnSync('git', ['checkout', '--', rel], { cwd, encoding: 'utf8' });
-      
-      // Inject a structured block message to the main loop, telling it that local micro-fixes failed.
+      let rolledBack = false;
+      if (isQualityGateRollbackEnabled(env)) {
+        spawnSync('git', ['checkout', '--', rel], { cwd, encoding: 'utf8', timeout: 15000 });
+        rolledBack = true;
+      }
+
+      const rollbackNote = rolledBack
+        ? 'The file has been rolled back to its previous state.'
+        : 'The file was left as-is (set QUALITY_GATE_ROLLBACK=1 to auto-checkout).';
+      const patch = buildQualityGatePatch(event, report);
+      const extra = `\n[AIIA Quality Gate] CRITICAL: File ${rel} failed verification and auto-retry exhausted (${MAX_RETRIES} attempts). ${rollbackNote}\nDo not try the exact same small edit again. You must rethink your approach or use a different library/method.\n`;
       return {
         content: [
-          ...(Array.isArray(event?.content) ? event.content : []),
-          { 
-            type: 'text', 
-            text: `\n[AIIA Quality Gate] CRITICAL: File ${rel} failed verification and auto-retry exhausted (${MAX_RETRIES} attempts). The file has been rolled back to its previous state.\nDo not try the exact same small edit again. You must rethink your approach or use a different library/method.\nOriginal Error:\n${formatQualityFeedback(report)}\n` 
-          }
+          ...(patch?.content || []),
+          { type: 'text', text: extra },
         ],
-        isError: true
+        isError: true,
       };
     }
-    
-    // If fixed, return null to let the main loop continue as if it was correct the first time!
+
     return null;
   });
 }

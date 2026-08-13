@@ -279,3 +279,37 @@ export function evaluateToolResultQuality(event, opts = {}) {
   if (!report || report.passed) return null;
   return buildQualityGatePatch(event, report);
 }
+
+export function qualityGateChildTimeoutMs(env = process.env) {
+  const n = Number(env.QUALITY_GATE_CHILD_TIMEOUT_MS || 60000);
+  return Number.isFinite(n) && n > 0 ? n : 60000;
+}
+
+export function isQualityGateRollbackEnabled(env = process.env) {
+  return env.QUALITY_GATE_ROLLBACK === '1' || env.QUALITY_GATE_ROLLBACK === 'true';
+}
+
+export function qualityGateMaxRetries(env = process.env) {
+  if (env.QUALITY_GATE_MAX_RETRIES == null || env.QUALITY_GATE_MAX_RETRIES === '') return 3;
+  const n = parseInt(env.QUALITY_GATE_MAX_RETRIES, 10);
+  return Number.isFinite(n) && n >= 0 ? n : 3;
+}
+
+/**
+ * Spawn the S8 fixer. Injectable spawn for tests.
+ */
+export function spawnQualityGateFixer({
+  cwd,
+  task,
+  env = process.env,
+  spawn = spawnSync,
+} = {}) {
+  const timeout = qualityGateChildTimeoutMs(env);
+  return spawn('pi', ['-p', task], {
+    cwd,
+    encoding: 'utf8',
+    stdio: 'pipe',
+    timeout,
+    env,
+  });
+}

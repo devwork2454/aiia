@@ -44,14 +44,9 @@ describe('S9 L7 Optimizer Core', () => {
     
     assert.equal(result.status, 'success');
     assert.equal(result.exitCode, 0);
-    assert.equal(spawnedCmd, 'npx');
-    assert.equal(spawnedArgs[0], 'pi');
-    assert.equal(spawnedArgs[1], '--mode');
-    assert.equal(spawnedArgs[2], 'rpc');
-    assert.equal(spawnedArgs[3], '--task');
-    
-    // Check if the prompt contains key directives
-    const taskPrompt = spawnedArgs[4];
+    assert.equal(spawnedCmd, 'pi');
+    assert.equal(spawnedArgs[0], '-p');
+    const taskPrompt = spawnedArgs[1];
     assert.match(taskPrompt, /\[L7 Optimizer\]/);
     assert.match(taskPrompt, /trajectories\.jsonl/);
     assert.match(taskPrompt, /project-card\.json/);

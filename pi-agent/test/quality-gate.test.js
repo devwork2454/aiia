@@ -12,6 +12,9 @@ import {
   buildQualityGatePatch,
   defaultPickRunners,
   resolveLocalBin,
+  qualityGateChildTimeoutMs,
+  isQualityGateRollbackEnabled,
+  spawnQualityGateFixer,
 } from '../src/quality-gate.js';
 import qualityGateExtension from '../extensions/quality-gate.js';
 
@@ -131,6 +134,29 @@ describe('S1 Quality Gate core', () => {
     const runners = defaultPickRunners('/tmp/sample.js', { QUALITY_GATE_SKIP_BIOME: '1' });
     assert.equal(runners.some((r) => r.name === 'biome lint'), false);
     assert.ok(runners.some((r) => r.name === 'node --check'));
+  });
+
+  test('S8 timeout and rollback flags', () => {
+    assert.equal(qualityGateChildTimeoutMs({}), 60000);
+    assert.equal(qualityGateChildTimeoutMs({ QUALITY_GATE_CHILD_TIMEOUT_MS: '12000' }), 12000);
+    assert.equal(isQualityGateRollbackEnabled({}), false);
+    assert.equal(isQualityGateRollbackEnabled({ QUALITY_GATE_ROLLBACK: '1' }), true);
+  });
+
+  test('spawnQualityGateFixer uses pi -p with timeout', () => {
+    let seen;
+    spawnQualityGateFixer({
+      cwd: '/tmp',
+      task: 'fix it',
+      env: { QUALITY_GATE_CHILD_TIMEOUT_MS: '5000' },
+      spawn: (cmd, args, opts) => {
+        seen = { cmd, args, opts };
+        return { status: 0, stdout: '', stderr: '' };
+      },
+    });
+    assert.equal(seen.cmd, 'pi');
+    assert.deepEqual(seen.args, ['-p', 'fix it']);
+    assert.equal(seen.opts.timeout, 5000);
   });
 });
 

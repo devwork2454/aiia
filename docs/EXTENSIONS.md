@@ -105,7 +105,7 @@ AIIA safety extension — real tool_call interception. Loaded by Pi via DefaultR
 
 ## `sandbox-policy.js`
 
-AIIA MCP & Skill Sandbox Policy Extension (Phase 2 P7) 1. 监听 tool_call 钩子，对所有工具/MCP 调用执行沙箱安全审计。 2. 注册工具 set_sandbox_policy 与 get_sandbox_policy_status。
+AIIA MCP & Skill Sandbox Policy Extension (Phase 2 P7) 1. 监听 tool_call 钩子，对所有工具/MCP 调用执行沙箱安全审计。 2. 注册工具 set_sandbox_policy 与 get_sandbox_policy_status。 Shell HITL 交给 safety.js；此处只硬拦截，避免双确认。
 
 ## `secret-gate.js`
 
