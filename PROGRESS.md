@@ -1,6 +1,25 @@
 # 项目进度
 
 ## GOAL
+按评估报告收口 P2 文档漂移：ARCHITECTURE/SPEC 对齐 A 路线实码。
+### 验收标准
+- `ARCHITECTURE.md` 不再把自研 HTTP `host/` 写成活 L2；L2 = 本机 `pi` CLI
+- 路由钩子写成 `before_provider_request`（无活 `model_select`）
+- 记忆实现指向 `pi-agent/src/memory-store.js`（非 `adapter/memory.py`）
+- slash 默认白名单与代码一致：`goal` / `steer` / `config` / `vault` / `aiia`
+- LSP/semantic 与 L7 按现状描述（已注册工具；关机只写 draft）
+- `SPEC.md` 改为一页 A 路线入口，不画飞书+host 栈
+- `deploy/aiia-host.service` 移入 `legacy/`，不再指向活入口
+- `scripts/quality-docs-check.sh` 拦截活文档里未标注归档的 `host/src/server.js` / `adapter/memory.py`
+- `.harness/verify.sh` 退出 0
+### 状态
+通过（2026-08-13）：P2 文档对齐完成；`.harness/verify.sh` 退出 0
+### 代定决策
+- 不删评估报告里的历史描述（那是当时快照）
+- `docs/AIIA_CLI_SPEC.md` 只加归档横幅，不重写整份设计稿
+- 不减默认扩展面
+
+## GOAL（已完成）
 按评估报告收口 P1 安全与质量门（合并 safety/sandbox + S8 超时/可选回滚）。
 ### 验收标准
 - `SandboxPolicy` 用 `policy.js` 判 shell；工具名含 `bash|shell|run_shell_command` 与 `write|edit`

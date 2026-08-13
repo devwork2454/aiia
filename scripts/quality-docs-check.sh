@@ -17,5 +17,17 @@ if ! git diff --exit-code "$ROOT/docs/EXTENSIONS.md" >/dev/null 2>&1; then
   exit 1
 fi
 
+echo "[docs-check] live docs must not claim archived HTTP host as current"
+stale="$(grep -nE 'host/src/server\.js|adapter/memory\.py' "$ROOT/ARCHITECTURE.md" "$ROOT/SPEC.md" | grep -viE 'legacy|归档|archived' || true)"
+if [[ -n "$stale" ]]; then
+  echo "[docs-check] ERROR: live docs still present archived host/memory as current:" >&2
+  echo "$stale" >&2
+  exit 1
+fi
+if [[ -f "$ROOT/deploy/aiia-host.service" ]]; then
+  echo "[docs-check] ERROR: deploy/aiia-host.service must live under legacy/" >&2
+  exit 1
+fi
+
 echo "[docs-check] OK: Documentation is perfectly synced with code."
 exit 0
