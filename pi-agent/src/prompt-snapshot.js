@@ -5,6 +5,7 @@
 import { createHash } from "node:crypto";
 
 export const SNAPSHOT_START = "[AIIA context snapshot]";
+export const SNAPSHOT_CUSTOM_TYPE = "aiia-snapshot";
 export const MAX_SNAPSHOT_CHARS = 4096;
 
 /** @type {Map<string, (ctx: {cwd?: string, env?: NodeJS.ProcessEnv}) => string>} */
@@ -47,6 +48,8 @@ export function messageText(msg) {
 }
 
 export function isSnapshotMessage(msg) {
+  if (!msg) return false;
+  if (msg.role === "custom" && msg.customType === SNAPSHOT_CUSTOM_TYPE) return true;
   return messageText(msg).includes(SNAPSHOT_START);
 }
 
@@ -73,8 +76,11 @@ export function makeSnapshotMessage(body) {
   const text = String(body || "").trim();
   const hash = hashSnapshot(text);
   return {
-    role: "system",
+    role: "custom",
+    customType: SNAPSHOT_CUSTOM_TYPE,
     content: `${SNAPSHOT_START}\nhash:${hash}\n${text}`,
+    display: false,
+    timestamp: 0,
   };
 }
 

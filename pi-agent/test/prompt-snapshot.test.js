@@ -14,6 +14,7 @@ import {
   registerSnapshotSection,
   upsertSnapshotMessages,
 } from "../src/prompt-snapshot.js";
+import { convertToLlm } from "@earendil-works/pi-coding-agent";
 import promptSnapshotExtension from "../extensions/prompt-snapshot.js";
 import capabilityCatalogExtension from "../extensions/capability-catalog.js";
 
@@ -47,7 +48,8 @@ describe("prompt-snapshot helpers", () => {
 
   it("upserts after the first system message and replaces in place", () => {
     const first = upsertSnapshotMessages([{ role: "user", content: "hi" }], "facts");
-    assert.equal(first[0].role, "system");
+    assert.equal(first[0].role, "custom");
+    assert.equal(first[0].customType, "aiia-snapshot");
     assert.match(first[0].content, /AIIA context snapshot/);
     assert.match(first[0].content, /facts/);
 
@@ -103,9 +105,17 @@ describe("prompt-snapshot extension", () => {
     capabilityCatalogExtension({ on() {} });
     assert.equal(typeof hooks.context, "function");
 
-    const first = await hooks.context({ messages: [{ role: "user", content: "hi" }] }, {});
+    const first = await hooks.context(
+      { messages: [{ role: "user", content: "hi", timestamp: 1 }] },
+      {},
+    );
     assert.ok(first.messages.some(isSnapshotMessage));
     assert.match(JSON.stringify(first.messages), /capability catalog/);
+    const llm = convertToLlm(
+      first.messages.map((m) => ({ ...m, timestamp: m.timestamp || 1 })),
+    );
+    assert.match(JSON.stringify(llm), /AIIA context snapshot/);
+    assert.match(JSON.stringify(llm), /capability catalog/);
 
     const second = await hooks.context({ messages: first.messages }, {});
     assert.equal(second, null);
