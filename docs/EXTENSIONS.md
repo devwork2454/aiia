@@ -163,6 +163,10 @@ AIIA Turn Status Footer line for live turn elapsed time, running tool, and last 
 
 AIIA Output Beautifier Introduces rounded borders (card layout) and Markdown syntax highlighting for assistant messages.
 
+## `ui-subagent-board.js`
+
+AIIA Subagent Concurrent Board Displays a real-time TUI panel for background Git Worktree Subagents.
+
 ## `ui-task-board.js`
 
 Persistent To-do progress widget + checklist renderer. Agent tool `update_todos` writes the live list. TUI shows: To-do Working on N to-dos • M done ✔ completed ◐ in progress ○ pending /demo-board seeds a sample. Kill: AIIA_VISUAL_DISABLED=1

@@ -35,6 +35,7 @@ export const VISUAL_EXTENSIONS = Object.freeze([
   "compact-progress",
   "turn-status",
   "ui-beautify",
+  "ui-subagent-board",
 ]);
 
 /** Catalog tool name → extension id (file basename without .js). */
