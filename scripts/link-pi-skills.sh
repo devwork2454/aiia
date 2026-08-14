@@ -38,8 +38,18 @@ link_skill() {
   fi
 
   if [[ -e "$dst" ]]; then
-    echo "[link-pi-skills] CONFLICT: $dst exists and is not a symlink" >&2
-    return 1
+    # Existing non-symlink (e.g. a skill that ships with Pi or the user's own).
+    # Default: keep it and don't fail the install. AIIA_LINK_FORCE=1 replaces it.
+    if [[ "${AIIA_LINK_FORCE:-}" = "1" ]]; then
+      local bak="$dst.bak"
+      rm -rf "$bak"
+      mv "$dst" "$bak"
+      ln -s "$src" "$dst"
+      echo "[link-pi-skills] REPLACED $dst -> $src (old kept at $bak)" >&2
+      return 0
+    fi
+    echo "[link-pi-skills] CONFLICT: $dst exists and is not a symlink; keeping existing. Set AIIA_LINK_FORCE=1 to replace." >&2
+    return 0
   fi
 
   ln -s "$src" "$dst"

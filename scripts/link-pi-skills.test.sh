@@ -50,12 +50,24 @@ bash "$SCRIPT" auto-harness
   exit 1
 }
 
-# 4) 非 symlink 冲突应失败
+# 4) 非 symlink 冲突:默认保留已有目录,不失败(安装不因单个 skill 冲突中断)
 rm -f "$link"
 mkdir -p "$link"
-if bash "$SCRIPT" auto-harness 2>/dev/null; then
-  echo "FAIL: expected conflict failure"
+echo "user content" > "$link/keep.txt"
+bash "$SCRIPT" auto-harness || { echo "FAIL: conflict should not fail the script"; exit 1; }
+[[ -d "$link" && ! -L "$link" ]] || { echo "FAIL: conflict should keep existing dir"; exit 1; }
+[[ -f "$link/keep.txt" ]] || { echo "FAIL: conflict should preserve existing files"; exit 1; }
+
+# 5) AIIA_LINK_FORCE=1:备份旧目录并链接
+rm -rf "$link" "$HOME/.pi/agent/skills/auto-harness.bak"
+mkdir -p "$link"
+echo "old" > "$link/old.txt"
+AIIA_LINK_FORCE=1 bash "$SCRIPT" auto-harness
+[[ -L "$link" ]] || { echo "FAIL: force should link"; exit 1; }
+[[ -d "$HOME/.pi/agent/skills/auto-harness.bak" ]] || { echo "FAIL: force should keep a backup"; exit 1; }
+[[ "$(readlink "$link")" == "$ROOT/.agents/skills/auto-harness" ]] || {
+  echo "FAIL: force wrong target $(readlink "$link")"
   exit 1
-fi
+}
 
 echo "link-pi-skills.test.sh OK"
