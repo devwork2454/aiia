@@ -110,6 +110,10 @@ describe("turn-status helpers", () => {
     );
     assert.equal(formatTotalTokens({ input: 12_000 }), "Σ12k");
     assert.equal(formatTotalTokens({ input: 1_200_000 }), "Σ1.2M");
+    assert.equal(formatTotalTokens({ input: 9999 }), "Σ10k");
+    assert.equal(formatTotalTokens({ input: 999_999 }), "Σ1.0M");
+    assert.equal(formatTotalTokens({ input: 100_000_000 }), "Σ100M");
+    assert.equal(formatTotalTokens({ input: 9_999_999_999 }), "Σ10G");
   });
 
   it("addUsageTotals accumulates across buckets and ignores null", () => {

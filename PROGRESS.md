@@ -6,6 +6,7 @@ turn-status 状态栏加会话累计总 token（`Σ5.6k`）。
 - 需求：Pi 内置 footer 第 2 行只显示分项（`↑↓RW`），无总量；第 2 行是 Pi 内置（不改 Pi 源码），Σ 走 turn-status 扩展状态行
 - `src/turn-status.js`：`state.totals` 跨 turn 累计（`message_end` 累加、`turn_start` 保留、`session_start` 重置）；`formatTotalTokens` 输出 `Σ500`/`Σ5.6k`/`Σ12k`/`Σ1.2M`；`formatTurnStatusLine` 末尾恒加 ` · Σ…`
 - 单测：新增 `addUsageTotals`/`formatTotalTokens`/带 totals 格式/累计-保留-重置 4 条，更新 1 条带 usage 的既有断言；`.harness/verify.sh` 退出 0
+- 单位进位优化：`compactTokens` 四舍五入后 ≥1000 自动进位 k→M→G，避免 `Σ1000k`/`Σ10000M`；边界 `9999→Σ10k`、`999999→Σ1.0M`、`9.9e9→Σ10G`
 ### 状态
 通过（2026-08-14）：`.harness/verify.sh` 退出 0
 ### 代定决策

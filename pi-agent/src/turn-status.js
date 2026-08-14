@@ -33,7 +33,18 @@ export function addUsageTotals(prev, usage) {
   };
 }
 
-/** `Σ5.6k` / `Σ12k` / `Σ1.2M` — compact total-token label, or null when empty. */
+/** Compact label for a raw token count: <10 → 1 decimal, else integer; auto-carries k→M→G. */
+function compactTokens(n, base, suffix) {
+  const v = n / base;
+  if (v < 9.95) return `${v.toFixed(1)}${suffix}`;
+  const rounded = Math.round(v);
+  return rounded >= 1000 ? null : `${rounded}${suffix}`;
+}
+
+/**
+ * `Σ5.6k` / `Σ12k` / `Σ1.0M` / `Σ100M` / `Σ10G` — compact total-token label,
+ * or null when empty. k→M→G auto-carry avoids ugly `Σ1000k` / `Σ10000M`.
+ */
 export function formatTotalTokens(totals) {
   const n =
     (Number(totals?.input) || 0) +
@@ -42,10 +53,11 @@ export function formatTotalTokens(totals) {
     (Number(totals?.cacheWrite) || 0);
   if (n <= 0) return null;
   if (n < 1000) return `Σ${n}`;
-  if (n < 10000) return `Σ${(n / 1000).toFixed(1)}k`;
-  if (n < 1_000_000) return `Σ${Math.round(n / 1000)}k`;
-  if (n < 10_000_000) return `Σ${(n / 1_000_000).toFixed(1)}M`;
-  return `Σ${Math.round(n / 1_000_000)}M`;
+  const label =
+    compactTokens(n, 1_000, "k") ||
+    compactTokens(n, 1_000_000, "M") ||
+    compactTokens(n, 1_000_000_000, "G");
+  return `Σ${label}`;
 }
 
 export function formatDuration(ms) {
