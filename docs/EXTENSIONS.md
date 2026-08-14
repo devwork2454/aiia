@@ -139,6 +139,10 @@ GitHub Device Flow 授权 返回 access_token 字符串
 
 AIIA Task DAG Runner Extension (Phase 2 P5) 注册工具: - create_dag_task: 创建由依赖节点构成的任务 DAG 图 - run_dag_task: 调度运行或断点恢复执行 DAG 任务图 - get_dag_task_status: 查看 DAG 调度状态、进度与节点详情
 
+## `tool-result-prune.js`
+
+AIIA Tool Result Prune Model-free head+tail truncation for oversized tool_result text. Overflow is written to .agent/spill/ (0600) with a locator in the preview. Kill: AIIA_TOOL_RESULT_PRUNE_DISABLED=1
+
 ## `trajectory.js`
 
 AIIA Trajectory Logger extension (S2 / L7 collection only) Writes JSONL on agent_end and session_shutdown. Optimizer is deferred.

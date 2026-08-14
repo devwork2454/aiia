@@ -13,6 +13,7 @@ export const CORE_EXTENSIONS = Object.freeze([
   "context-card",
   "capability-catalog",
   "quality-gate",
+  "tool-result-prune",
   "context-gc",
   "router",
   "slash-ux",

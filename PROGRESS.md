@@ -1,5 +1,23 @@
 # 项目进度
 
+## GOAL
+给 `tool_result` 加无模型截断和外溢（prune + spill）。
+### 验收标准
+- 纯函数 `pi-agent/src/tool-result-prune.js`：超长文本 head+省略标记+tail；短文本 / 已带 spill 标记不改
+- 溢出全文写入 `<cwd>/.agent/spill/<name>.txt`（`0600`）；写入前走 secret 对 + 形态脱敏；预览带相对路径，模型可 `read`
+- 工厂 `extensions/tool-result-prune.js` 挂 `tool_result`，返回 `{ content }`（Pi 官方回写）；文件名 = 门禁 id
+- 进 `CORE_EXTENSIONS`；`AIIA_TOOL_RESULT_PRUNE_DISABLED=1` 不改写
+- 默认预算：触发 8192 / 头 4096 / 尾 1024；env 可覆写；不碰 `QUALITY_GATE_MAX_OUTPUT`（那是 runner 日志）
+- 保留 image 块；不调用 LLM 做摘要
+- 单测进 verify；`docs/EXTENSIONS.md` 同步；`.harness/verify.sh` 退出 0
+### 状态
+进行中（2026-08-14）
+### 代定决策
+- 新 CORE 扩展，不塞进 quality-gate：要对 bash/read 等全部工具结果生效
+- 文件名 `tool-result-prune.js` 排在 quality-gate 之后，质量回灌先落地再截断
+- 字符预算而非 token（Pi usage 不稳定）；spill 目录 gitignore
+- 不在本刀做 system 分段 / cache-safe snapshot
+
 ## GOAL（已完成）
 消除 Pi 启动的 `[Skill conflicts]` 警告：user 级与 project 级同名 skill 冲突（langfuse 案例）。
 ### 验收标准
