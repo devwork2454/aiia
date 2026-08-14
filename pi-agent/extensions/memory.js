@@ -8,6 +8,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { MemoryStore } from "../src/memory-store.js";
 import { registerAiiaHandler } from "../src/command-registry.js";
+import { applyMemoryToMessages, extractUserQuery } from "../src/memory-inject.js";
 
 function dbPath() {
   return process.env.AIIA_DB || join(homedir(), ".config", "aiia", "aiia.db");
@@ -17,24 +18,14 @@ function dbPath() {
 export default function memoryExtension(pi) {
   const store = new MemoryStore(dbPath());
 
-  // Inject top-N active memories every turn (Ebbinghaus-ranked + Context Relevance, lazy).
-  // Pi contract: `context` handler receives { messages } and returns
-  // { messages } to REPLACE the context. We append a system memory message.
+  // Inject top-N active memories every turn (Ebbinghaus-ranked + Context Relevance).
+  // Must be role=custom: Pi convertToLlm drops role=system. Keep this off the
+  // cache-safe snapshot — the block changes with the user query.
   pi.on("context", async (event) => {
     const messages = event?.messages ?? [];
-    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
-    const queryText = typeof lastUserMsg?.content === "string" ? lastUserMsg.content : "";
-
+    const queryText = extractUserQuery(messages);
     const memories = store.active({ query: queryText, threshold: 0.15, limit: 10 });
-    if (memories.length === 0) return;
-    const memoryStr = `[AIIA active memories]\n- ${memories.join("\n- ")}`;
-    const newMessages = [...messages];
-    if (newMessages.length > 0 && newMessages[0].role === "system") {
-      newMessages[0] = { ...newMessages[0], content: `${memoryStr}\n\n${newMessages[0].content}` };
-    } else {
-      newMessages.unshift({ role: "system", content: memoryStr });
-    }
-    return { messages: newMessages };
+    return applyMemoryToMessages(messages, memories);
   });
 
   async function memoryHandler(args, ctx) {

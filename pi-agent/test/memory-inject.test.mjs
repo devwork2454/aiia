@@ -16,6 +16,7 @@ import {
   ExtensionRunner,
   SessionManager,
   ModelRegistry,
+  convertToLlm,
 } from "@earendil-works/pi-coding-agent";
 import { MemoryStore } from "../src/memory-store.js";
 
@@ -65,9 +66,14 @@ describe("memory.js loaded by Pi (real context injection)", () => {
   });
 
   it("injects seeded memory into context messages", async () => {
-    const base = [{ role: "user", content: "hi" }];
+    const base = [{ role: "user", content: [{ type: "text", text: "hi" }], timestamp: 1 }];
     const out = await runner.emitContext(base);
     const joined = JSON.stringify(out);
     assert.match(joined, /SENTINEL_PREFERENCE_XYZ/, `memory not injected; got ${joined.slice(0, 300)}`);
+    assert.match(joined, /aiia-memory/);
+    const llm = convertToLlm(out.map((m) => ({ ...m, timestamp: m.timestamp || 1 })));
+    const llmJson = JSON.stringify(llm);
+    assert.match(llmJson, /AIIA active memories/);
+    assert.match(llmJson, /SENTINEL_PREFERENCE_XYZ/);
   });
 });

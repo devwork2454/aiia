@@ -88,7 +88,7 @@
 | **安全网关** | `pi.on("tool_call")` | 命中高危（`rm -rf /`、`sudo`、`git push --force`…）→ **返回 `{ block: true, reason, terminate? }`**（不是抛异常）；可选 `user_bash` 拦手动命令 |
 | **质量门** | `tool_result`（edit/write 后） | 写后确定性检查：JS=`node --check`+Biome；PY=`py_compile`+Ruff；失败回灌；S8 局域重试。全量静态见 `scripts/quality-check.sh`（Biome+Ruff F/B+ast-grep），用法见 [docs/QUALITY.md](docs/QUALITY.md) |
 | **结果截断** | `tool_result`（全部工具） | 超长输出无模型 head+tail；全文外溢 `.agent/spill/`（0600）；`AIIA_TOOL_RESULT_PRUNE_DISABLED=1` 可关 |
-| **上下文注入** | `pi.on("context")` | 记忆仍按 query 注入；catalog/profile/reply/add-dir/secret 名字合成一份 hash 快照，变了才改写（不往 system 追加） |
+| **上下文注入** | `pi.on("context")` | 记忆按 query 注入为 `custom/aiia-memory`（`convertToLlm` 可送达）；catalog/profile/reply/add-dir/secret 名字是另一份 hash 快照 |
 | **模型路由** | `pi.on("before_provider_request")` | `router.js` 仅对 local-proxy / 层级别名改写 `payload.model`；直连 Charon/DeepSeek 不改；**没有注册 `model_select`** |
 | **HITL 人审** | `tool_call` 返回 `{ block }` + Pi UI confirm | 高危 shell 由 `safety.js` 确认；sandbox 只硬拦、不再二次弹窗 |
 
