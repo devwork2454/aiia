@@ -3,6 +3,7 @@
 # AIIA 新设备一键安装脚本
 # 用法: curl -fsSL https://raw.githubusercontent.com/你的账号/aiia/main/install.sh | bash
 # 或:   bash install.sh
+# 自动识别网络环境:国内优先 Gitee 镜像,海外用 GitHub;可用 AIIA_MIRROR=gitee|github 强制指定
 # ═══════════════════════════════════════════════════════════════════════════════
 
 set -euo pipefail
@@ -17,9 +18,31 @@ warn()    { echo -e "${YELLOW}⚠️  $*${RESET}"; }
 error()   { echo -e "${RED}❌ $*${RESET}"; exit 1; }
 step()    { echo -e "\n${BOLD}${CYAN}── $* ${RESET}"; }
 
+# ─── 网络环境自动识别 ─────────────────────────────────────────────────────────
+# 未显式指定 AIIA_MIRROR 时,探测 gitee / github 连接延迟,自动选快的。
+# 国内网络 Gitee 通常显著更快;海外 GitHub 更快;离线时兜底 GitHub。
+detect_mirror() {
+  if [ -n "${AIIA_MIRROR:-}" ]; then return 0; fi
+  info "检测网络环境(gitee vs github)…"
+  local gitee_ms github_ms
+  gitee_ms=$(curl -o /dev/null -s -m 5 -I -w '%{time_connect}' https://gitee.com 2>/dev/null || true)
+  github_ms=$(curl -o /dev/null -s -m 5 -I -w '%{time_connect}' https://github.com 2>/dev/null || true)
+  case "$gitee_ms" in ''|*[!0-9.]*) gitee_ms=999;; esac
+  case "$github_ms" in ''|*[!0-9.]*) github_ms=999;; esac
+  if awk -v g="$gitee_ms" -v h="$github_ms" 'BEGIN{exit !(g<h)}' 2>/dev/null; then
+    AIIA_MIRROR=gitee
+    info "→ 检测到 Gitee 更快(gitee ${gitee_ms}s / github ${github_ms}s),启用 Gitee 镜像"
+  else
+    AIIA_MIRROR=github
+    info "→ 使用 GitHub 源(gitee ${gitee_ms}s / github ${github_ms}s)"
+  fi
+}
+
 # ─── 环境检测 ─────────────────────────────────────────────────────────────────
 AIIA_DIR="${AIIA_DIR:-$HOME/project/aiia}"
-AIIA_REPO="${AIIA_REPO:-devwork2454/aiia}"   # 默认指向 devwork2454/aiia 私有仓库
+AIIA_REPO="${AIIA_REPO:-devwork2454/aiia}"         # GitHub owner/repo
+AIIA_GITEE_OWNER="${AIIA_GITEE_OWNER:-wbff}"       # Gitee 镜像 owner(可与 GitHub 不同)
+AIIA_GITEE_REPO="${AIIA_GITEE_REPO:-${AIIA_REPO##*/}}" # Gitee repo 名,默认取 AIIA_REPO 的 repo 段
 
 
 echo -e "${BOLD}"
@@ -69,7 +92,8 @@ fi
 # ─── Step 2: 安装 pi CLI ──────────────────────────────────────────────────────
 step "Step 2/8  安装 Pi CLI"
 
-if [ "${AIIA_MIRROR:-}" = "gitee" ]; then
+detect_mirror
+if [ "$AIIA_MIRROR" = "gitee" ]; then
   info "启用 Gitee 镜像模式，设置 NPM 淘宝源加速..."
   npm config set registry https://registry.npmmirror.com
 fi
@@ -94,10 +118,12 @@ if [ -d "$AIIA_DIR/pi-agent" ]; then
   fi
 else
   if [ -n "$AIIA_REPO" ]; then
-    info "正在从 $AIIA_REPO 克隆..."
+    info "正在从 ${AIIA_MIRROR} 源克隆..."
     mkdir -p "$(dirname "$AIIA_DIR")"
-    if [ "${AIIA_MIRROR:-}" = "gitee" ]; then
-      git clone "https://gitee.com/$AIIA_REPO.git" "$AIIA_DIR"
+    if [ "$AIIA_MIRROR" = "gitee" ]; then
+      GITEE_URL="https://gitee.com/$AIIA_GITEE_OWNER/$AIIA_GITEE_REPO.git"
+      info "Gitee 源: $GITEE_URL"
+      git clone "$GITEE_URL" "$AIIA_DIR"
     else
       if command -v gh &>/dev/null && gh auth status &>/dev/null; then
         gh repo clone "$AIIA_REPO" "$AIIA_DIR" || git clone "https://github.com/$AIIA_REPO.git" "$AIIA_DIR"
