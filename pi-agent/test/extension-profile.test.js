@@ -1,5 +1,8 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   CORE_EXTENSIONS,
   VISUAL_EXTENSIONS,
@@ -90,5 +93,19 @@ describe("extension profile (lean default)", () => {
       },
     });
     assert.equal(typeof hooks.tool_call, "function");
+  });
+
+  test("every gated factory gates on its own file basename", () => {
+    // Extension identity is a hardcoded string per factory that must match the
+    // filename Pi loads. A rename without updating the gate silently enables the
+    // extension in the default profile (profile can't recognize the new id).
+    const extDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "extensions");
+    for (const file of fs.readdirSync(extDir).filter((f) => f.endsWith(".js"))) {
+      const id = file.replace(/\.js$/, "");
+      const src = fs.readFileSync(path.join(extDir, file), "utf8");
+      const m = src.match(/isExtensionEnabled\(\s*"([^"]+)"\s*\)/);
+      if (!m) continue; // core / always-on extensions have no gate
+      assert.equal(m[1], id, `extension ${file} gates on "${m[1]}" but its basename is "${id}"`);
+    }
   });
 });

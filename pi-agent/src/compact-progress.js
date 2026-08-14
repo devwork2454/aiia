@@ -50,13 +50,7 @@ export function advancePct(pct, nowMs = Date.now()) {
 export function formatCompactProgressLine(opts) {
   const pct = opts.done ? 100 : Math.max(0, Math.min(100, opts.pct || 0));
   const bar = renderBar(pct, opts.width);
-  const reason = opts.reason === "manual"
-    ? "manual"
-    : opts.reason === "overflow"
-      ? "overflow"
-      : opts.reason === "threshold"
-        ? "auto"
-        : opts.reason || "compact";
+  const reason = opts.reason === "threshold" ? "auto" : opts.reason || "compact";
   const tok =
     typeof opts.tokensBefore === "number" && opts.tokensBefore > 0
       ? ` · ${Math.round(opts.tokensBefore).toLocaleString()} tok`

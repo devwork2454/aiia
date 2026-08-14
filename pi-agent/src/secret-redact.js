@@ -37,13 +37,12 @@ export function redactText(text, secretPairs) {
   let redacted = false;
   for (const [key, val] of Object.entries(secretPairs || {})) {
     if (!val || val.length < 8) continue;
-    if (resultStr.includes(val)) {
-      resultStr = resultStr.split(val).join(`***REDACTED:${key}***`);
-      redacted = true;
-    }
-    const escapedVal = JSON.stringify(val).slice(1, -1);
-    if (escapedVal !== val && resultStr.includes(escapedVal)) {
-      resultStr = resultStr.split(escapedVal).join(`***REDACTED:${key}***`);
+    // Redact the raw value and its JSON-escaped form (a `"` or `\` inside a value
+    // appears escaped in serialized tool results).
+    const variants = new Set([val, JSON.stringify(val).slice(1, -1)]);
+    for (const v of variants) {
+      if (!v || !resultStr.includes(v)) continue;
+      resultStr = resultStr.split(v).join(`***REDACTED:${key}***`);
       redacted = true;
     }
   }

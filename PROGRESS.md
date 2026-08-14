@@ -1,5 +1,16 @@
 # 项目进度
 
+## GOAL（已完成）
+`/simplify` 质量审查：清理 feature/aiia-cli 改动代码的重复/冗余/热路径浪费。
+### 验收标准
+- 四个角度（复用/简化/效率/抽象层次）并行审查 diff（排除 lock/文档/legacy）
+- 修复 11 处：`mergeTodos` 冗余 Map、`extractInputPaths` 重复计算、reason 三元链、`ui-task-board` 字形切片、`lsp-extension` 复制粘贴抽 `runSymbolLookup`、`ephemeral-job` 抽 `rmDir`/`toolResult`、`estimateTokens`/`sanitizeMessages` 双遍遍历、`secret-redact` 变体合并、`latestTodosFromEntries` 反向短路、`ctx||activeCtx` 重复
+- 新测试锁定「扩展文件名 = 工厂门禁 id」映射，防重命名静默启用
+- 跳过：cron 异步化、provider 调用泛化、TEST_MODE 依赖注入、双层 env 开关等（超范围/改行为/设计决策）
+- `.harness/verify.sh` 退出 0（205 unit，+1 新测试）
+### 状态
+通过（2026-08-14）：`.harness/verify.sh` 退出 0（205 unit）
+
 ## GOAL
 修复 Pi 启动失败：清掉 `~/.pi/agent/extensions` 里指向仓库的半截软链。
 ### 验收标准

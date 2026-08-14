@@ -108,17 +108,8 @@ export function formatTodoWidgetLines(todos) {
 }
 
 export function mergeTodos(existing, incoming) {
-  const byId = new Map((existing || []).map((item) => [item.id, item]));
-  for (const item of incoming || []) byId.set(item.id, item);
-  const next = [];
-  const seen = new Set();
-  for (const item of incoming || []) {
-    next.push(byId.get(item.id) || item);
-    seen.add(item.id);
-  }
-  for (const item of existing || []) {
-    if (!seen.has(item.id)) next.push(item);
-  }
+  const seen = new Set((incoming || []).map((item) => item.id));
+  const next = [...(incoming || []), ...(existing || []).filter((item) => !seen.has(item.id))];
   return next.slice(0, MAX_TODOS);
 }
 
@@ -130,14 +121,16 @@ export function applyTodoUpdate(current, params = {}) {
 }
 
 export function latestTodosFromEntries(entries) {
-  let todos = [];
-  for (const entry of entries || []) {
+  const list = entries || [];
+  // Only the latest update_todos result matters; scan from the tail and short-circuit.
+  for (let i = list.length - 1; i >= 0; i--) {
+    const entry = list[i];
     if (entry?.type !== "message") continue;
     const msg = entry.message;
     if (msg?.role !== "toolResult" || msg.toolName !== "update_todos") continue;
-    if (Array.isArray(msg.details?.todos)) todos = normalizeTodos(msg.details.todos);
+    if (Array.isArray(msg.details?.todos)) return normalizeTodos(msg.details.todos);
   }
-  return todos;
+  return [];
 }
 
 export function paintTodoWidget(ui, todos) {

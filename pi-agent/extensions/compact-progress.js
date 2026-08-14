@@ -102,8 +102,8 @@ export default function compactProgressExtension(pi) {
   function finish(ctx) {
     if (!timer && pct === 0) return;
     pct = 100;
-    paint(ctx || activeCtx, true);
     const snap = ctx || activeCtx;
+    paint(snap, true);
     if (timer) {
       clearInterval(timer);
       timer = null;

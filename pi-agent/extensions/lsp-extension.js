@@ -33,6 +33,28 @@ export default function lspExtension(pi) {
     }
   });
 
+  /** Shared symbol-lookup flow: locate client → open file → run the LSP op. */
+  async function runSymbolLookup(params, ctx, op) {
+    const client = clients.get(params.languageId);
+    if (!client) {
+      return { content: [{ type: 'text', text: `Error: LSP for ${params.languageId} not started.` }], isError: true };
+    }
+    const fullPath = path.resolve(ctx?.cwd || process.cwd(), params.filePath);
+    const uri = `file://${fullPath}`;
+    try {
+      const text = fs.readFileSync(fullPath, 'utf8');
+      await client.openDocument(uri, params.languageId, text);
+    } catch (e) {
+      return { content: [{ type: 'text', text: `Error reading file: ${e.message}` }], isError: true };
+    }
+    try {
+      const res = await op(client, uri);
+      return { content: [{ type: 'text', text: JSON.stringify(res, null, 2) }] };
+    } catch (e) {
+      return { content: [{ type: 'text', text: `LSP Error: ${JSON.stringify(e)}` }], isError: true };
+    }
+  }
+
   pi.registerTool({
     name: 'lsp_goto_definition',
     description: 'Uses the active LSP to find the definition of a symbol at the given line and character (0-indexed).',
@@ -47,24 +69,9 @@ export default function lspExtension(pi) {
       required: ['languageId', 'filePath', 'line', 'character']
     },
     async execute(_id, params, _signal, _onUpdate, ctx) {
-      const client = clients.get(params.languageId);
-      if (!client) {
-        return { content: [{ type: 'text', text: `Error: LSP for ${params.languageId} not started.` }], isError: true };
-      }
-      const fullPath = path.resolve(ctx?.cwd || process.cwd(), params.filePath);
-      const uri = `file://${fullPath}`;
-      try {
-        const text = fs.readFileSync(fullPath, 'utf8');
-        await client.openDocument(uri, params.languageId, text);
-      } catch (e) {
-        return { content: [{ type: 'text', text: `Error reading file: ${e.message}` }], isError: true };
-      }
-      try {
-        const res = await client.gotoDefinition(uri, params.line, params.character);
-        return { content: [{ type: 'text', text: JSON.stringify(res, null, 2) }] };
-      } catch (e) {
-        return { content: [{ type: 'text', text: `LSP Error: ${JSON.stringify(e)}` }], isError: true };
-      }
+      return runSymbolLookup(params, ctx, (client, uri) =>
+        client.gotoDefinition(uri, params.line, params.character),
+      );
     }
   });
 
@@ -82,24 +89,9 @@ export default function lspExtension(pi) {
       required: ['languageId', 'filePath', 'line', 'character']
     },
     async execute(_id, params, _signal, _onUpdate, ctx) {
-      const client = clients.get(params.languageId);
-      if (!client) {
-        return { content: [{ type: 'text', text: `Error: LSP for ${params.languageId} not started.` }], isError: true };
-      }
-      const fullPath = path.resolve(ctx?.cwd || process.cwd(), params.filePath);
-      const uri = `file://${fullPath}`;
-      try {
-        const text = fs.readFileSync(fullPath, 'utf8');
-        await client.openDocument(uri, params.languageId, text);
-      } catch (e) {
-        return { content: [{ type: 'text', text: `Error reading file: ${e.message}` }], isError: true };
-      }
-      try {
-        const res = await client.findReferences(uri, params.line, params.character);
-        return { content: [{ type: 'text', text: JSON.stringify(res, null, 2) }] };
-      } catch (e) {
-        return { content: [{ type: 'text', text: `LSP Error: ${JSON.stringify(e)}` }], isError: true };
-      }
+      return runSymbolLookup(params, ctx, (client, uri) =>
+        client.findReferences(uri, params.line, params.character),
+      );
     }
   });
 }

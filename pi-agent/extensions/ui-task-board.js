@@ -13,9 +13,9 @@ import { VStack, Text } from "@earendil-works/pi-tui";
 import { isExtensionEnabled } from "../src/extension-profile.js";
 import {
   DEMO_TODOS,
+  STATUS_GLYPH,
   WIDGET_KEY,
   applyTodoUpdate,
-  formatTodoLine,
   formatTodoHeader,
   formatTodoWidgetLines,
   latestTodosFromEntries,
@@ -72,7 +72,7 @@ export default function uiTaskBoardExtension(pi) {
     const root = new VStack();
     root.addChild(new Text(theme.fg("muted", formatTodoHeader(summarizeTodos(items))), 0, 0));
     for (const item of items) {
-      const glyph = formatTodoLine(item).trimStart().slice(0, 1);
+      const glyph = STATUS_GLYPH[item.status] || STATUS_GLYPH.pending;
       const color =
         item.status === "completed" ? "success" : item.status === "in_progress" ? "accent" : "dim";
       root.addChild(new Text(`    ${theme.fg(color, glyph)} ${theme.fg(color, item.content)}`, 0, 0));

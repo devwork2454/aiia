@@ -79,18 +79,14 @@ function estimateTokens(messages) {
         } else if (part?.text) {
           totalLength += String(part.text).length;
         }
-      }
-    }
-    if (msg.tool_calls) {
-      totalLength += JSON.stringify(msg.tool_calls).length;
-    }
-    // OpenAI toolCall shape on assistant content parts
-    if (Array.isArray(msg.content)) {
-      for (const part of msg.content) {
+        // OpenAI toolCall shape on assistant content parts
         if (part?.type === "toolCall" || part?.type === "tool_use") {
           totalLength += JSON.stringify(part).length;
         }
       }
+    }
+    if (msg.tool_calls) {
+      totalLength += JSON.stringify(msg.tool_calls).length;
     }
   }
   return Math.ceil(totalLength / 4);
@@ -363,49 +359,52 @@ function sanitizeMessages(messages) {
     if (!msg || msg.role !== "assistant") continue;
 
     if (Array.isArray(msg.content)) {
-      const hasToolCall = msg.content.some(
+      const parts = msg.content;
+      const hasToolCall = parts.some(
         (p) =>
           p?.type === "toolCall" ||
           p?.type === "tool_use" ||
           p?.type === "functionCall",
       );
       let changed = false;
-      const next = msg.content.map((part) => {
-        if (!part || typeof part !== "object") return part;
+      let next = parts;
+      for (let k = 0; k < parts.length; k++) {
+        const part = parts[k];
+        if (!part || typeof part !== "object") continue;
+        let replacement = null;
 
         if (part.type === "thinking" && typeof part.thinking === "string") {
           if (fullThinkingLeft > 0) {
             fullThinkingLeft -= 1;
-            return part;
-          }
-          if (part.thinking.length > THINKING_STUB_CHARS) {
+          } else if (part.thinking.length > THINKING_STUB_CHARS) {
             thinkingStubbed += 1;
-            changed = true;
-            return {
+            replacement = {
               ...part,
               thinking: `${part.thinking.slice(0, THINKING_STUB_CHARS)}\n…[thinking truncated]`,
             };
           }
-          return part;
-        }
-
-        if (
+        } else if (
           part.type === "text" &&
           typeof part.text === "string" &&
           !hasToolCall &&
           isPlanningMonologue(part.text)
         ) {
           monologueCollapsed += 1;
-          changed = true;
-          return {
+          replacement = {
             ...part,
             text:
               "[AIIA] Prior planning monologue collapsed (no tool calls). " +
               "Continue by calling tools; do not re-narrate investigation plans.",
           };
         }
-        return part;
-      });
+        if (replacement) {
+          if (!changed) {
+            changed = true;
+            next = parts.slice();
+          }
+          next[k] = replacement;
+        }
+      }
       if (changed) msg.content = next;
     } else if (
       typeof msg.content === "string" &&

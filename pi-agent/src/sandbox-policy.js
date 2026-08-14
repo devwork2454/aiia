@@ -83,8 +83,9 @@ export class SandboxPolicy {
       }
     }
 
-    if (PATH_TOOLS.has(name.toLowerCase()) || extractInputPaths(input).length > 0) {
-      for (const p of extractInputPaths(input)) {
+    const inputPaths = extractInputPaths(input);
+    if (PATH_TOOLS.has(name.toLowerCase()) || inputPaths.length > 0) {
+      for (const p of inputPaths) {
         const hit = pathIsDenied(p, this.blockedPaths);
         if (hit) {
           return { allowed: false, family: 'path', reason: `Access to restricted path '${hit}' blocked by Sandbox Policy.` };

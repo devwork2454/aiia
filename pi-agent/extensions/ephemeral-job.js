@@ -31,6 +31,13 @@ export default function ephemeralJobExtension(pi) {
 
       const workingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aiia-job-'));
 
+      /** Best-effort cleanup; a leftover tmpdir is better than failing the job. */
+      const rmDir = () => {
+        try { fs.rmSync(workingDir, { recursive: true, force: true }); } catch { /* ignore */ }
+      };
+      /** Tool result carrying the payload plus its own JSON text (Pi tool_result contract). */
+      const toolResult = (res) => ({ ...res, content: [{ type: 'text', text: JSON.stringify(res, null, 2) }] });
+
       try {
         const escalationHistory = [];
 
@@ -42,20 +49,18 @@ export default function ephemeralJobExtension(pi) {
             if (tier === 'low' && process.env.SHOULD_FAIL_LOW === '1') {
               escalationHistory.push({ tier, success: false, code: 1 });
               if (i === tiers.length - 1) {
-                fs.rmSync(workingDir, { recursive: true, force: true });
-                const _res = {
+                rmDir();
+                return toolResult({
                   status: 'error',
                   message: `❌ 所有梯队重试完毕仍失败。最终阻断在梯队 [${tier}]。`,
                   escalationHistory
-                };
-                return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+                });
               }
               continue;
             }
             const output = `Mock Job Success on tier ${tier}`;
-            fs.rmSync(workingDir, { recursive: true, force: true });
-            const _res = { status: 'success', tier, output, escalationHistory: [...escalationHistory, { tier, success: true }] };
-            return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+            rmDir();
+            return toolResult({ status: 'success', tier, output, escalationHistory: [...escalationHistory, { tier, success: true }] });
           }
 
           const jobResult = await new Promise((resolve) => {
@@ -90,31 +95,28 @@ export default function ephemeralJobExtension(pi) {
           escalationHistory.push({ tier, success: jobResult.success, code: jobResult.code });
 
           if (jobResult.success) {
-            fs.rmSync(workingDir, { recursive: true, force: true });
-            const _res = { 
-              status: 'success', 
-              tier: jobResult.tier, 
+            rmDir();
+            return toolResult({
+              status: 'success',
+              tier: jobResult.tier,
               output: jobResult.output,
-              escalationHistory 
-            };
-            return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+              escalationHistory
+            });
           }
 
           if (i === tiers.length - 1) {
-            fs.rmSync(workingDir, { recursive: true, force: true });
-            const _res = { 
-              status: 'error', 
+            rmDir();
+            return toolResult({
+              status: 'error',
               message: `❌ 所有梯队重试完毕仍失败。最终阻断在梯队 [${tier}]。`,
               lastLog: jobResult.log,
               escalationHistory
-            };
-            return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+            });
           }
         }
       } catch (e) {
-        try { fs.rmSync(workingDir, { recursive: true, force: true }); } catch (err) { console.error('Cleanup failed:', err); }
-        const _res = { status: 'error', message: e.message };
-        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+        rmDir();
+        return toolResult({ status: 'error', message: e.message });
       }
     }
   });
