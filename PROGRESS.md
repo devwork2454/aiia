@@ -1,6 +1,6 @@
 # 项目进度
 
-## GOAL
+## GOAL（已完成）
 记忆注入改成 `convertToLlm` 能留下的 custom 消息（不并进快照）。
 ### 验收标准
 - 纯函数 `pi-agent/src/memory-inject.js`：抽出用户 query（支持 text 块数组）、格式化、upsert `role:custom` / `aiia-memory`
@@ -9,7 +9,7 @@
 - `convertToLlm` 后 JSON 仍含 `[AIIA active memories]` 与种子内容
 - 真实 `emitContext` 测试同步断言；单测进 verify；`.harness/verify.sh` 退出 0
 ### 状态
-进行中（2026-08-14）
+通过（2026-08-14）：`.harness/verify.sh` 退出 0（249 unit）；commit `23ed56e`
 ### 代定决策
 - 与快照同款 custom 角色，记忆仍按本轮 query 独立注入
 - 顺手修 last-user 只读 string 的 bug（Pi 真消息 content 常是 text 数组）
