@@ -127,12 +127,26 @@ export function writeManageLog(text, aiiaDir = resolveAiiDir(), { now = new Date
 export function runAiiUpdate(aiiaDir = resolveAiiDir(), { spawn = spawnSync } = {}) {
   const status = getRepoStatus(aiiaDir);
   const branch = status.branch && status.branch !== "HEAD" ? status.branch : "main";
+  const oldCommit = status.commit;
+  
   const pull = spawn("git", ["-C", aiiaDir, "pull", "--ff-only", "origin", branch], {
     encoding: "utf8",
     timeout: 120000,
   });
-  const pullOut = `${pull.stdout || ""}${pull.stderr || ""}`.trim();
+  let pullOut = `${pull.stdout || ""}${pull.stderr || ""}`.trim();
   const pullOk = pull.status === 0;
+
+  if (pullOk) {
+    const newCommitRaw = runGit(aiiaDir, ["rev-parse", "--short", "HEAD"]);
+    if (newCommitRaw && oldCommit && newCommitRaw !== oldCommit) {
+      const changelog = runGit(aiiaDir, ["log", "--oneline", `${oldCommit}..${newCommitRaw}`]);
+      if (changelog) {
+        pullOut = `更新版本: ${oldCommit} -> ${newCommitRaw}\n\n更新内容:\n${changelog}\n\n变更文件:\n${pullOut}`;
+      }
+    } else {
+      pullOut = `当前已是最新版本 (${oldCommit})`;
+    }
+  }
 
   let linkOk = false;
   let linkOut = "";
