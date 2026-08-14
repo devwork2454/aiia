@@ -63,6 +63,10 @@ AIIA Hybrid KB search extension (S3 minimum slice). Registers `kb_search` — le
 
 
 
+## `manage.js`
+
+AIIA management commands: /aiia status + /aiia update. status  — repo branch/commit, remotes, upstream, pi skill linking state. update  — git pull latest code, re-link pi skills (conflicts keep existing).
+
 ## `memory.js`
 
 AIIA memory extension — injects active memories into the real Pi context and exposes /memory + agent tools. SQLite lives in this same Node process. Env: AIIA_DB (default ~/.config/aiia/aiia.db)

@@ -4,7 +4,7 @@
  * Other optionals no-op unless AIIA_EXTENSIONS=all or listed in AIIA_EXTRA_EXTENSIONS.
  */
 
-/** Always loaded. Security + memory + quality + routing + human slash. */
+/** Always loaded. Security + memory + quality + routing + human slash + management. */
 export const CORE_EXTENSIONS = Object.freeze([
   "safety",
   "sandbox-policy",
@@ -23,6 +23,7 @@ export const CORE_EXTENSIONS = Object.freeze([
   "add-dir",
   "vault",
   "steer",
+  "manage",
 ]);
 
 /** Default-on TUI extras. Not CORE. Kill: AIIA_VISUAL_DISABLED=1 */
