@@ -1,6 +1,18 @@
 # 项目进度
 
 ## GOAL（已完成）
+turn-status 状态栏加会话累计总 token（`Σ5.6k`）。
+### 验收标准
+- 需求：Pi 内置 footer 第 2 行只显示分项（`↑↓RW`），无总量；第 2 行是 Pi 内置（不改 Pi 源码），Σ 走 turn-status 扩展状态行
+- `src/turn-status.js`：`state.totals` 跨 turn 累计（`message_end` 累加、`turn_start` 保留、`session_start` 重置）；`formatTotalTokens` 输出 `Σ500`/`Σ5.6k`/`Σ12k`/`Σ1.2M`；`formatTurnStatusLine` 末尾恒加 ` · Σ…`
+- 单测：新增 `addUsageTotals`/`formatTotalTokens`/带 totals 格式/累计-保留-重置 4 条，更新 1 条带 usage 的既有断言；`.harness/verify.sh` 退出 0
+### 状态
+通过（2026-08-14）：`.harness/verify.sh` 退出 0
+### 代定决策
+- 扩展拿不到 Pi 的 `usageTotals`，自己在 `message_end` 累加（避免 `turn_end` 对同一消息重复计）
+- 不进 Pi 内置统计行：不碰 Pi 源码
+
+## GOAL（已完成）
 记忆注入改成 `convertToLlm` 能留下的 custom 消息（不并进快照）。
 ### 验收标准
 - 纯函数 `pi-agent/src/memory-inject.js`：抽出用户 query（支持 text 块数组）、格式化、upsert `role:custom` / `aiia-memory`

@@ -1,11 +1,13 @@
 import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
 import {
+  addUsageTotals,
   applyTurnStatusEvent,
   cacheHitPct,
   createTurnStatusState,
   extractUsage,
   formatDuration,
+  formatTotalTokens,
   formatTurnStatusLine,
   formatWorkingMessage,
   summarizeTool,
@@ -95,7 +97,72 @@ describe("turn-status helpers", () => {
       5000,
     );
     state = applyTurnStatusEvent(state, { type: "turn_end" }, 5000);
-    assert.equal(formatTurnStatusLine(state), "✓ 4.0s · cache 90% · 1 tool");
+    assert.equal(formatTurnStatusLine(state), "✓ 4.0s · cache 90% · 1 tool · Σ102");
+  });
+
+  it("formatTotalTokens renders compact Σ label and null when empty", () => {
+    assert.equal(formatTotalTokens(null), null);
+    assert.equal(formatTotalTokens({}), null);
+    assert.equal(formatTotalTokens({ input: 500 }), "Σ500");
+    assert.equal(
+      formatTotalTokens({ input: 2000, output: 3000, cacheRead: 400, cacheWrite: 200 }),
+      "Σ5.6k",
+    );
+    assert.equal(formatTotalTokens({ input: 12_000 }), "Σ12k");
+    assert.equal(formatTotalTokens({ input: 1_200_000 }), "Σ1.2M");
+  });
+
+  it("addUsageTotals accumulates across buckets and ignores null", () => {
+    const u = { input: 1, output: 2, cacheRead: 3, cacheWrite: 4 };
+    const t1 = addUsageTotals(null, u);
+    assert.deepEqual(t1, u);
+    assert.deepEqual(addUsageTotals(t1, { input: 1, output: 0, cacheRead: 0, cacheWrite: 0 }), {
+      input: 2,
+      output: 2,
+      cacheRead: 3,
+      cacheWrite: 4,
+    });
+    assert.equal(addUsageTotals(t1, null), t1);
+  });
+
+  it("formatTurnStatusLine appends · Σ when session totals exist", () => {
+    const totals = { input: 4000, output: 1600, cacheRead: 0, cacheWrite: 0 };
+    assert.equal(
+      formatTurnStatusLine({ phase: "done", startedAt: 0, now: 5000, totals }),
+      "✓ 5.0s · Σ5.6k",
+    );
+    assert.equal(
+      formatTurnStatusLine({ phase: "idle", totals }),
+      "Ready · Σ5.6k",
+    );
+  });
+
+  it("message_end accumulates totals, turn_start keeps them, session_start resets", () => {
+    let state = applyTurnStatusEvent(
+      createTurnStatusState(),
+      { type: "turn_start", timestamp: 0, turnIndex: 1 },
+      0,
+    );
+    state = applyTurnStatusEvent(
+      state,
+      { type: "message_end", message: { usage: { input: 1000, output: 500, cacheRead: 0, cacheWrite: 0 } } },
+      100,
+    );
+    assert.equal(formatTotalTokens(state.totals), "Σ1.5k");
+    // second message in same turn keeps accumulating
+    state = applyTurnStatusEvent(
+      state,
+      { type: "message_end", message: { usage: { input: 1000, output: 0, cacheRead: 0, cacheWrite: 0 } } },
+      200,
+    );
+    assert.equal(formatTotalTokens(state.totals), "Σ2.5k");
+    // next turn keeps the running total
+    state = applyTurnStatusEvent(state, { type: "turn_end" }, 300);
+    state = applyTurnStatusEvent(state, { type: "turn_start", timestamp: 400, turnIndex: 2 }, 400);
+    assert.equal(formatTotalTokens(state.totals), "Σ2.5k");
+    // new session resets totals
+    state = applyTurnStatusEvent(state, { type: "session_start" }, 500);
+    assert.equal(state.totals, null);
   });
 });
 

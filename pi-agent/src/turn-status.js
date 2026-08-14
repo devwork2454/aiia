@@ -17,7 +17,35 @@ export function createTurnStatusState() {
     toolCount: 0,
     runningTools: 0,
     usage: null,
+    totals: null,
   };
+}
+
+/** Session-cumulative token totals across turns (input+output+cache). */
+export function addUsageTotals(prev, usage) {
+  if (!usage) return prev;
+  const base = prev || { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+  return {
+    input: base.input + usage.input,
+    output: base.output + usage.output,
+    cacheRead: base.cacheRead + usage.cacheRead,
+    cacheWrite: base.cacheWrite + usage.cacheWrite,
+  };
+}
+
+/** `Σ5.6k` / `Σ12k` / `Σ1.2M` — compact total-token label, or null when empty. */
+export function formatTotalTokens(totals) {
+  const n =
+    (Number(totals?.input) || 0) +
+    (Number(totals?.output) || 0) +
+    (Number(totals?.cacheRead) || 0) +
+    (Number(totals?.cacheWrite) || 0);
+  if (n <= 0) return null;
+  if (n < 1000) return `Σ${n}`;
+  if (n < 10000) return `Σ${(n / 1000).toFixed(1)}k`;
+  if (n < 1_000_000) return `Σ${Math.round(n / 1000)}k`;
+  if (n < 10_000_000) return `Σ${(n / 1_000_000).toFixed(1)}M`;
+  return `Σ${Math.round(n / 1_000_000)}M`;
 }
 
 export function formatDuration(ms) {
@@ -71,23 +99,25 @@ export function cacheHitPct(usage) {
 }
 
 export function formatTurnStatusLine(state) {
+  const totalSuffix = formatTotalTokens(state?.totals);
+  const suffix = totalSuffix ? ` · ${totalSuffix}` : "";
   const phase = state?.phase || "idle";
-  if (phase === "idle") return "Ready";
+  if (phase === "idle") return `Ready${suffix}`;
   const elapsed = formatDuration((Number(state.now) || 0) - (Number(state.startedAt) || 0));
   if (phase === "thinking" || phase === "responding") {
-    return `◐ ${elapsed} · ${phase}`;
+    return `◐ ${elapsed} · ${phase}${suffix}`;
   }
   if (phase === "tool") {
     const tool = state.toolSummary || state.toolName || "tool";
     const extra = Number(state.toolCount) > 1 ? ` · ${state.toolCount} tools` : "";
-    return `◐ ${elapsed} · ${tool}${extra}`;
+    return `◐ ${elapsed} · ${tool}${extra}${suffix}`;
   }
   const bits = [`✓ ${elapsed}`];
   const hit = cacheHitPct(state.usage);
   if (hit != null) bits.push(`cache ${hit}%`);
   const tools = Number(state.toolCount) || 0;
   if (tools > 0) bits.push(`${tools} tool${tools === 1 ? "" : "s"}`);
-  return bits.join(" · ");
+  return `${bits.join(" · ")}${suffix}`;
 }
 
 export function formatWorkingMessage(state) {
@@ -105,6 +135,7 @@ export function applyTurnStatusEvent(state, event, now = Date.now()) {
     const startedAt = Number(event?.timestamp) || now;
     return {
       ...createTurnStatusState(),
+      totals: prev.totals, // keep session totals across turns
       phase: "thinking",
       startedAt,
       now,
@@ -135,7 +166,13 @@ export function applyTurnStatusEvent(state, event, now = Date.now()) {
     };
   }
   if (type === "message_end") {
-    return { ...prev, now, usage: extractUsage(event?.message) || prev.usage };
+    const usage = extractUsage(event?.message);
+    return {
+      ...prev,
+      now,
+      usage: usage || prev.usage,
+      totals: addUsageTotals(prev.totals, usage),
+    };
   }
   if (type === "turn_end" || type === "agent_end") {
     return {
