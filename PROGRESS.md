@@ -8,7 +8,7 @@
 - `bash -n install.sh` 通过；本机 node 24 探测返回 0；模拟旧 Node 探测失败与特征日志分支符合预期
 - `.harness/verify.sh` 退出 0
 ### 状态
-进行中（2026-08-14）
+通过（2026-08-14）：`.harness/verify.sh` 退出 0；commit 9c27915 已 push GitHub+Gitee 双源
 ### 代定决策
 - 用语义探测而非版本号区间：未来 undici 要求再变无需改门限
 - 不强制在升级 Node 后重装 pi（undici 为纯 JS，Node 22 下可直接复用），Step 9 仅在冒烟异常时才重装
