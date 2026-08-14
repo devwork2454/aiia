@@ -30,6 +30,7 @@ export const CORE_EXTENSIONS = Object.freeze([
 export const VISUAL_EXTENSIONS = Object.freeze([
   "ui-task-board",
   "compact-progress",
+  "turn-status",
 ]);
 
 /** Catalog tool name → extension id (file basename without .js). */

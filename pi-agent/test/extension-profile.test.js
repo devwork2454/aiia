@@ -31,12 +31,14 @@ describe("extension profile (lean default)", () => {
     }
     assert.equal(CORE_EXTENSIONS.includes("ui-task-board"), false);
     assert.equal(CORE_EXTENSIONS.includes("compact-progress"), false);
+    assert.equal(CORE_EXTENSIONS.includes("turn-status"), false);
   });
 
   test("AIIA_VISUAL_DISABLED turns off visual extras only", () => {
     const env = { AIIA_VISUAL_DISABLED: "1" };
     assert.equal(isExtensionEnabled("ui-task-board", env), false);
     assert.equal(isExtensionEnabled("compact-progress", env), false);
+    assert.equal(isExtensionEnabled("turn-status", env), false);
     assert.equal(isExtensionEnabled("safety", env), true);
     assert.equal(isExtensionEnabled("cron-scheduler", env), false);
   });

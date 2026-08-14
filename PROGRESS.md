@@ -1,5 +1,22 @@
 # 项目进度
 
+## GOAL
+对照 deepseek-harness 做架构取舍，并给 Pi TUI 加 turn 耗时 / 缓存命中 / 命令执行中状态。
+### 验收标准
+- 调研结论写入本条：dsh 是 Cordis「一切皆插件」+ ReAct 自由循环，不引入 Cordis、不换 Pi 内核、不搬 Web UI
+- 新视觉扩展 `turn-status`（文件名=门禁 id）：footer `setStatus` 显示 `◐ Ns · thinking|bash …` / `✓ Ns · cache N% · N tools`
+- 纯函数：`formatDuration` / `summarizeTool` / `extractUsage` / `cacheHitPct` / `formatTurnStatusLine` / `applyTurnStatusEvent` 产出与单测一致
+- 钩子：`turn_start` / `tool_execution_start|end` / `message_end` / `turn_end` / `session_shutdown`；工具执行中同步 `setWorkingMessage`
+- 默认随视觉件开启；`AIIA_VISUAL_DISABLED=1` 或 `AIIA_DISABLE_TURN_STATUS=1` 不注册
+- 单测进 verify；`node scripts/generate-api-docs.mjs` 后 docs-check 过；`.harness/verify.sh` 退出 0
+### 状态
+进行中（2026-08-14）
+### 代定决策
+- 只抄 dsh 的 4 个展示信号（相位+耗时、缓存%、工具运行态、压缩进度已有），不抄 StatsLine/TTFT/tok/s/OTel
+- 展示走 footer，不加 widget，避免和 To-do / compact 条抢编辑器上方
+- 不在本刀做 tool-result prune+spill / system 分段（调研排序靠前，但是架构改动，另开目标）
+- 不进 CORE：视觉件，杀手沿用 `AIIA_VISUAL_DISABLED=1`
+
 ## GOAL（已完成）
 修复远程新机 `pi` 启动即崩：undici 8.9.0 在加载时调用 `node:worker_threads.markAsUncloneable`（仅 Node ≥ 22.10），install.sh 门限只查 `NODE_MAJOR<20`，Node 20.20.1 被放行导致 TypeError。
 ### 验收标准
