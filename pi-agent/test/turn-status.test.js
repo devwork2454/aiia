@@ -40,10 +40,10 @@ describe("turn-status helpers", () => {
   });
 
   it("formatTurnStatusLine covers idle / thinking / tool / done", () => {
-    assert.equal(formatTurnStatusLine(createTurnStatusState()), "Ready");
+    assert.equal(formatTurnStatusLine(createTurnStatusState()), "[Ready]");
     assert.equal(
       formatTurnStatusLine({ phase: "thinking", startedAt: 0, now: 2400 }),
-      "◐ 2.4s · thinking",
+      "⠋ [2.4s] 正在思考...",
     );
     assert.equal(
       formatTurnStatusLine({
@@ -53,7 +53,7 @@ describe("turn-status helpers", () => {
         toolSummary: "bash npm test",
         toolCount: 3,
       }),
-      "◐ 8.1s · bash npm test · 3 tools",
+      "⠋ [8.1s] 运行中: bash npm test | 累计执行: 3 个工具",
     );
     assert.equal(
       formatTurnStatusLine({
@@ -63,7 +63,7 @@ describe("turn-status helpers", () => {
         usage: { input: 20, cacheRead: 80, cacheWrite: 0 },
         toolCount: 2,
       }),
-      "✓ 12s · cache 80% · 2 tools",
+      "✓ [12s] 完成 | 缓存: 80% | 共调用 2 次工具",
     );
     assert.equal(formatWorkingMessage({ phase: "tool", toolSummary: "bash ls" }), "bash ls");
     assert.equal(formatWorkingMessage({ phase: "thinking" }), undefined);
@@ -72,17 +72,17 @@ describe("turn-status helpers", () => {
   it("applyTurnStatusEvent walks a turn then keeps the done line", () => {
     let state = createTurnStatusState();
     state = applyTurnStatusEvent(state, { type: "session_start" }, 0);
-    assert.equal(formatTurnStatusLine(state), "Ready");
+    assert.equal(formatTurnStatusLine(state), "[Ready]");
 
     state = applyTurnStatusEvent(state, { type: "turn_start", turnIndex: 1, timestamp: 1000 }, 1000);
-    assert.match(formatTurnStatusLine(state), /thinking/);
+    assert.match(formatTurnStatusLine(state), /正在思考.../);
 
     state = applyTurnStatusEvent(
       state,
       { type: "tool_execution_start", toolName: "bash", args: { command: "ls" } },
       2500,
     );
-    assert.equal(formatTurnStatusLine(state), "◐ 1.5s · bash ls");
+    assert.equal(formatTurnStatusLine(state), "⠋ [1.5s] 运行中: bash ls");
     assert.equal(formatWorkingMessage(state), "bash ls");
 
     state = applyTurnStatusEvent(state, { type: "tool_execution_end", toolName: "bash" }, 4000);
@@ -97,7 +97,7 @@ describe("turn-status helpers", () => {
       5000,
     );
     state = applyTurnStatusEvent(state, { type: "turn_end" }, 5000);
-    assert.equal(formatTurnStatusLine(state), "✓ 4.0s · cache 90% · 1 tool · Σ102");
+    assert.equal(formatTurnStatusLine(state), "✓ [4.0s] 完成 | 缓存: 90% | 共调用 1 次工具 | 消耗: Σ102");
   });
 
   it("formatTotalTokens renders compact Σ label and null when empty", () => {
@@ -129,15 +129,15 @@ describe("turn-status helpers", () => {
     assert.equal(addUsageTotals(t1, null), t1);
   });
 
-  it("formatTurnStatusLine appends · Σ when session totals exist", () => {
+  it("formatTurnStatusLine appends | 消耗: Σ when session totals exist", () => {
     const totals = { input: 4000, output: 1600, cacheRead: 0, cacheWrite: 0 };
     assert.equal(
       formatTurnStatusLine({ phase: "done", startedAt: 0, now: 5000, totals }),
-      "✓ 5.0s · Σ5.6k",
+      "✓ [5.0s] 完成 | 消耗: Σ5.6k",
     );
     assert.equal(
       formatTurnStatusLine({ phase: "idle", totals }),
-      "Ready · Σ5.6k",
+      "[Ready] | 消耗: Σ5.6k",
     );
   });
 
@@ -202,10 +202,10 @@ describe("turn-status extension", () => {
     };
 
     await handlers.session_start[0]({ type: "session_start" }, ctx);
-    assert.equal(statuses.get("turn-status"), "Ready");
+    assert.equal(statuses.get("turn-status"), "[Ready]");
 
     await handlers.turn_start[0]({ type: "turn_start", turnIndex: 1, timestamp: Date.now() }, ctx);
-    assert.match(statuses.get("turn-status") || "", /thinking/);
+    assert.match(statuses.get("turn-status") || "", /正在思考.../);
 
     await handlers.tool_execution_start[0](
       { type: "tool_execution_start", toolName: "bash", args: { command: "npm test" } },
@@ -225,7 +225,7 @@ describe("turn-status extension", () => {
       ctx,
     );
     assert.match(statuses.get("turn-status") || "", /✓/);
-    assert.match(statuses.get("turn-status") || "", /cache 75%/);
+    assert.match(statuses.get("turn-status") || "", /缓存: 75%/);
 
     await handlers.session_shutdown[0]({ type: "session_shutdown" }, ctx);
     assert.equal(statuses.has("turn-status"), false);

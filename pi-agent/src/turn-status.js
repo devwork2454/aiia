@@ -3,7 +3,7 @@
  */
 
 export const STATUS_KEY = "turn-status";
-export const TICK_MS = 250;
+export const TICK_MS = 80;
 export const TOOL_SUMMARY_MAX = 40;
 
 export function createTurnStatusState() {
@@ -11,6 +11,7 @@ export function createTurnStatusState() {
     phase: "idle",
     startedAt: 0,
     now: 0,
+    tickIndex: 0,
     turnIndex: 0,
     toolName: "",
     toolSummary: "",
@@ -110,26 +111,31 @@ export function cacheHitPct(usage) {
   return Math.round((usage.cacheRead / denom) * 100);
 }
 
+export const BRAILLE_SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
 export function formatTurnStatusLine(state) {
   const totalSuffix = formatTotalTokens(state?.totals);
-  const suffix = totalSuffix ? ` · ${totalSuffix}` : "";
+  const suffix = totalSuffix ? ` | 消耗: ${totalSuffix}` : "";
   const phase = state?.phase || "idle";
-  if (phase === "idle") return `Ready${suffix}`;
+  if (phase === "idle") return `[Ready]${suffix}`;
+  
+  const spinner = BRAILLE_SPINNER[(state?.tickIndex || 0) % BRAILLE_SPINNER.length];
   const elapsed = formatDuration((Number(state.now) || 0) - (Number(state.startedAt) || 0));
+  
   if (phase === "thinking" || phase === "responding") {
-    return `◐ ${elapsed} · ${phase}${suffix}`;
+    return `${spinner} [${elapsed}] 正在思考...${suffix}`;
   }
   if (phase === "tool") {
     const tool = state.toolSummary || state.toolName || "tool";
-    const extra = Number(state.toolCount) > 1 ? ` · ${state.toolCount} tools` : "";
-    return `◐ ${elapsed} · ${tool}${extra}${suffix}`;
+    const extra = Number(state.toolCount) > 1 ? ` | 累计执行: ${state.toolCount} 个工具` : "";
+    return `${spinner} [${elapsed}] 运行中: ${tool}${extra}${suffix}`;
   }
-  const bits = [`✓ ${elapsed}`];
+  const bits = [`✓ [${elapsed}] 完成`];
   const hit = cacheHitPct(state.usage);
-  if (hit != null) bits.push(`cache ${hit}%`);
+  if (hit != null) bits.push(`缓存: ${hit}%`);
   const tools = Number(state.toolCount) || 0;
-  if (tools > 0) bits.push(`${tools} tool${tools === 1 ? "" : "s"}`);
-  return `${bits.join(" · ")}${suffix}`;
+  if (tools > 0) bits.push(`共调用 ${tools} 次工具`);
+  return `${bits.join(" | ")}${suffix}`;
 }
 
 export function formatWorkingMessage(state) {

@@ -58,7 +58,7 @@ export default function turnStatusExtension(pi) {
   function startTick(ctx) {
     clearTimer();
     timer = setInterval(() => {
-      state = { ...state, now: Date.now() };
+      state = { ...state, now: Date.now(), tickIndex: (state.tickIndex || 0) + 1 };
       paint(activeCtx || ctx);
     }, TICK_MS);
   }
