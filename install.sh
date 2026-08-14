@@ -248,6 +248,26 @@ else
   success "环境变量已配置（跳过）"
 fi
 
+# 检查是否已配置 pi wrapper
+if [ -n "$SHELL_RC" ] && ! grep -q "# AIIA Pi Wrapper" "$SHELL_RC"; then
+  cat >> "$SHELL_RC" << 'ENVEOF'
+
+# AIIA Pi Wrapper
+pi() {
+  if [[ "$1" == "aiia" ]]; then
+    if [[ "$2" == "update" ]]; then
+      bash ~/project/aiia/install.sh
+    else
+      node ~/project/aiia/pi-agent/src/cli.js "$2"
+    fi
+  else
+    command pi "$@"
+  fi
+}
+ENVEOF
+  success "Shell 拦截器已写入 $SHELL_RC"
+fi
+
 # ─── Step 8: Tmux AI 助手配置 ─────────────────────────────────────────────────
 step "Step 8/9  Tmux AI 助手配置 (可选)"
 
