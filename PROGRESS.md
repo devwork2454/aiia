@@ -1,6 +1,23 @@
 # 项目进度
 
 ## GOAL
+OpenAI Completions / Responses 工具配对做完整本地兼容性探测，避免再 400，且合法流量不被改写。
+### 验收标准
+- 纯函数 `probeCompletionsMessages` / `probeResponsesInput` / `probeProviderPayload`：只读，列出 `orphan_tool` / `unmatched_tool_call` / `orphan_function_call_output` / `duplicate_*`
+- 共享夹具覆盖：合法对、孤儿 tool、拆组、user 插入、id 错配、重复结果、无 id、abort 残留、Pi-native `toolResult`、`role:function`、Responses `function_call` 与 `custom_tool_call`
+- 每条非法夹具：probe 报红 → repair 后 probe 全绿
+- 每条合法夹具：probe 全绿，且 `repair*` 返回同一数组引用（不改写）
+- `scripts/probe-openai-tool-pairs.mjs` 跑全部夹具；可扫 session jsonl；进 verify
+- 不打真实 API；不改 Pi 源码；不换协议
+- `.harness/verify.sh` 退出 0
+### 状态
+通过（2026-08-14）：`.harness/verify.sh` 退出 0（299 unit + 24 fixture probe）
+### 代定决策
+- 探测是本地夹具 + 出站形状，不是联网打官方端点（避免费用和不稳定）
+- 重复 `function_call_output` 也丢掉（部分中转会 400）
+- 不新开扩展：probe 挂在已有 repair 模块旁
+
+## GOAL（已完成）
 修复 Pi 400：`Messages with role 'tool' must be a response to a preceding message with 'tool_calls'`（及同类 Responses 孤儿 `function_call_output`）。
 ### 验收标准
 - 根因：发出去的 Completions `role:tool` 没有紧挨着带 `tool_calls` 的 assistant；常见来源是 GC 从多 tool 对中间切断、Pi 丢掉 aborted assistant 却留下 toolResult

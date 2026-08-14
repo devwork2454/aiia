@@ -29,6 +29,7 @@ const MONOLOGUE_TEXT_CHARS = 1800;
 
 import fs from "node:fs";
 import path from "node:path";
+import { probeProviderPayload } from "../src/tool-pair-probe.js";
 import { hasToolCalls, isToolRole, repairProviderPayload } from "../src/tool-pair-repair.js";
 
 /** @type {{ until: number, reason: string } | null} */
@@ -425,6 +426,11 @@ function applyToolPairRepair(req, cwd) {
   const { dropped } = repairProviderPayload(req);
   if (dropped > 0) {
     logGcError(cwd, `Dropped ${dropped} orphan tool result(s) (unpaired tool_calls).`);
+  }
+  const probe = probeProviderPayload(req);
+  if (!probe.ok) {
+    const codes = probe.violations.map((v) => v.code).join(",");
+    logGcError(cwd, `tool-pair probe still dirty after repair: ${codes}`);
   }
 }
 

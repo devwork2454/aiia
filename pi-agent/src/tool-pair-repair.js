@@ -135,8 +135,8 @@ export function repairCompletionsMessages(messages) {
   return { messages: dropped ? out : messages, dropped };
 }
 
-const CALL_TYPES = new Set(["function_call", "custom_tool_call"]);
-const OUTPUT_TYPES = new Set(["function_call_output", "custom_tool_call_output"]);
+export const CALL_TYPES = new Set(["function_call", "custom_tool_call"]);
+export const OUTPUT_TYPES = new Set(["function_call_output", "custom_tool_call_output"]);
 
 /**
  * Drop Responses items whose call_id has no preceding function_call.
@@ -147,6 +147,7 @@ const OUTPUT_TYPES = new Set(["function_call_output", "custom_tool_call_output"]
 export function repairResponsesInput(input) {
   if (!Array.isArray(input)) return { input, dropped: 0 };
   const seen = new Set();
+  const used = new Set();
   const out = [];
   let dropped = 0;
   for (const item of input) {
@@ -158,7 +159,8 @@ export function repairResponsesInput(input) {
       continue;
     }
     if (OUTPUT_TYPES.has(type)) {
-      if (callId && seen.has(callId)) {
+      if (callId && seen.has(callId) && !used.has(callId)) {
+        used.add(callId);
         out.push(item);
       } else {
         dropped += 1;
