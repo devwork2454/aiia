@@ -53,14 +53,14 @@ echo "  ╚═══════════════════════
 echo -e "${RESET}"
 
 # ─── Step 1: 检查 Node.js ────────────────────────────────────────────────────
-step "Step 1/8  检查 Node.js 环境"
+step "Step 1/9  检查 Node.js 环境"
 
 if command -v node &>/dev/null; then
   NODE_VER=$(node --version)
   NODE_MAJOR=$(echo "$NODE_VER" | sed 's/v\([0-9]*\).*/\1/')
   if [ "$NODE_MAJOR" -lt 20 ]; then
     warn "当前 Node.js 版本 $NODE_VER 过低（需要 ≥ v20）"
-    info "正在通过 nvm 安装 Node.js 20..."
+    info "正在通过 nvm 安装 Node.js 22..."
     install_node=true
   else
     success "Node.js $NODE_VER ✓"
@@ -75,22 +75,22 @@ if [ "$install_node" = true ]; then
   # 优先使用 nvm
   if command -v nvm &>/dev/null || [ -f "$HOME/.nvm/nvm.sh" ]; then
     source "$HOME/.nvm/nvm.sh" 2>/dev/null || true
-    nvm install 20 && nvm use 20 && nvm alias default 20
-    success "Node.js 20 安装完成 (nvm)"
+    nvm install 22 && nvm use 22 && nvm alias default 22
+    success "Node.js 22 安装完成 (nvm)"
   elif command -v apt-get &>/dev/null; then
-    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
     sudo apt-get install -y nodejs
-    success "Node.js 20 安装完成 (apt)"
+    success "Node.js 22 安装完成 (apt)"
   elif command -v brew &>/dev/null; then
-    brew install node@20
-    success "Node.js 20 安装完成 (brew)"
+    brew install node@22
+    success "Node.js 22 安装完成 (brew)"
   else
     error "无法自动安装 Node.js，请手动安装 Node.js ≥ 20 后重试\n       推荐: https://nodejs.org 或使用 nvm"
   fi
 fi
 
 # ─── Step 2: 安装 pi CLI ──────────────────────────────────────────────────────
-step "Step 2/8  安装 Pi CLI"
+step "Step 2/9  安装 Pi CLI"
 
 detect_mirror
 if [ "$AIIA_MIRROR" = "gitee" ]; then
@@ -108,7 +108,7 @@ else
 fi
 
 # ─── Step 3: 获取 AIIA 项目 ──────────────────────────────────────────────────
-step "Step 3/8  获取 AIIA 项目"
+step "Step 3/9  获取 AIIA 项目"
 
 if [ -d "$AIIA_DIR/pi-agent" ]; then
   success "AIIA 项目已存在于 $AIIA_DIR"
@@ -145,7 +145,7 @@ else
 fi
 
 # ─── Step 4: 安装 Pi-agent 依赖 ───────────────────────────────────────────────
-step "Step 4/8  安装 AIIA 依赖"
+step "Step 4/9  安装 AIIA 依赖"
 
 cd "$AIIA_DIR/pi-agent"
 info "正在安装 npm 依赖..."
@@ -153,7 +153,7 @@ npm install --prefer-offline 2>/dev/null || npm install
 success "依赖安装完成"
 
 # ─── Step 5: 注册为 Pi Package ───────────────────────────────────────────────
-step "Step 5/8  注册 AIIA 为 Pi 全局插件"
+step "Step 5/9  注册 AIIA 为 Pi 全局插件"
 
 # 检查是否已注册
 if pi list 2>/dev/null | grep -q "aiia"; then
@@ -179,7 +179,7 @@ if [[ -f "$AIIA_DIR/scripts/clean-stray-pi-extensions.sh" ]]; then
 fi
 
 # ─── Step 6: 链接默认 Pi Skills（新机即用）───────────────────────────────────
-step "Step 6/8  链接默认 Pi Skills（auto-harness、goal、imp 等）"
+step "Step 6/9  链接默认 Pi Skills（auto-harness、goal、imp 等）"
 
 if [[ ! -f "$AIIA_DIR/scripts/link-pi-skills.sh" ]]; then
   error "缺少 $AIIA_DIR/scripts/link-pi-skills.sh（新机无法默认启用 auto-harness/goal）"
@@ -216,7 +216,7 @@ fs.writeFileSync(settingsPath, JSON.stringify(s,null,2)+"\n");
 fi
 
 # ─── Step 7: 配置环境变量 ─────────────────────────────────────────────────────
-step "Step 7/8  配置环境变量"
+step "Step 7/9  配置环境变量"
 
 SHELL_RC=""
 if [ -f "$HOME/.zshrc" ]; then
@@ -243,7 +243,7 @@ else
 fi
 
 # ─── Step 8: Tmux AI 助手配置 ─────────────────────────────────────────────────
-step "Step 8/8  Tmux AI 助手配置 (可选)"
+step "Step 8/9  Tmux AI 助手配置 (可选)"
 
 if command -v tmux &>/dev/null; then
   echo -e "${YELLOW}检测到系统已安装 Tmux。是否为您配置 AIIA 的 Tmux 屏幕抓取助手？${RESET}"
@@ -266,6 +266,53 @@ if command -v tmux &>/dev/null; then
   fi
 else
   info "未检测到 Tmux，跳过该步。"
+fi
+
+# ─── Step 9: pi 启动冒烟检查 ────────────────────────────────────────────────
+# 段错误(SIGSEGV)多由 Node 版本与系统 glibc 兼容问题引起(如 Node 20.20.x)。
+# 检测到即自动切 Node 22 重装 pi;进程无段错误则安装成功,不因缺模型配置阻断。
+step "Step 9/9  pi 启动冒烟检查"
+
+if command -v pi &>/dev/null; then
+  PI_SMOKE_LOG="${TMPDIR:-/tmp}/aiia-pi-smoke.log"
+  info "运行 pi 冒烟测试(pi -p hello)…"
+  if timeout 30 pi -p "hello" >"$PI_SMOKE_LOG" 2>&1; then
+    SMOKE_CODE=0
+  else
+    SMOKE_CODE=$?
+  fi
+
+  if [ "$SMOKE_CODE" -eq 139 ]; then
+    warn "⚠️  pi 启动段错误(SIGSEGV),疑似 Node 版本兼容问题。自动切换 Node 22 并重装 pi…"
+    export NVM_DIR="$HOME/.nvm"
+    if [ -s "$NVM_DIR/nvm.sh" ]; then
+      . "$NVM_DIR/nvm.sh"
+    else
+      curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+      . "$NVM_DIR/nvm.sh" 2>/dev/null || true
+    fi
+    if [ "$AIIA_MIRROR" = "gitee" ]; then
+      export NVM_NODEJS_ORG_MIRROR=https://npmmirror.com/mirrors/node
+    fi
+    nvm install 22 >/dev/null 2>&1 && nvm use 22 >/dev/null 2>&1 && nvm alias default 22 >/dev/null 2>&1
+    npm install -g @earendil-works/pi-coding-agent >/dev/null 2>&1
+    if timeout 30 pi -p "hello" >"$PI_SMOKE_LOG" 2>&1; then
+      SMOKE_CODE=0
+    else
+      SMOKE_CODE=$?
+    fi
+    if [ "$SMOKE_CODE" -eq 139 ]; then
+      error "pi 在 Node 22 下仍段错误。请反馈: $(uname -m) / $(ldd --version 2>/dev/null | head -1) / node $(node -v 2>/dev/null)"
+    fi
+    success "pi 在 Node 22 下启动正常 ✓"
+  elif [ "$SMOKE_CODE" -ne 0 ] && [ "$SMOKE_CODE" -ne 124 ]; then
+    warn "pi 冒烟退出码 $SMOKE_CODE(常为模型未配置)。详情: $PI_SMOKE_LOG"
+    success "pi 冒烟完成(进程未段错误,可继续安装)"
+  else
+    success "pi 启动冒烟通过 ✓"
+  fi
+else
+  warn "未找到 pi,跳过冒烟检查。"
 fi
 
 # ─── 完成 ─────────────────────────────────────────────────────────────────────
