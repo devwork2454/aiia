@@ -159,6 +159,10 @@ AIIA Trajectory Logger extension (S2 / L7 collection only) Writes JSONL on agent
 
 AIIA Turn Status Footer line for live turn elapsed time, running tool, and last cache hit. Kill: AIIA_VISUAL_DISABLED=1 or AIIA_DISABLE_TURN_STATUS=1
 
+## `ui-beautify.js`
+
+AIIA Output Beautifier Introduces rounded borders (card layout) and Markdown syntax highlighting for assistant messages.
+
 ## `ui-task-board.js`
 
 Persistent To-do progress widget + checklist renderer. Agent tool `update_todos` writes the live list. TUI shows: To-do Working on N to-dos • M done ✔ completed ◐ in progress ○ pending /demo-board seeds a sample. Kill: AIIA_VISUAL_DISABLED=1

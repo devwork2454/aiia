@@ -34,6 +34,7 @@ export const VISUAL_EXTENSIONS = Object.freeze([
   "ui-task-board",
   "compact-progress",
   "turn-status",
+  "ui-beautify",
 ]);
 
 /** Catalog tool name → extension id (file basename without .js). */
