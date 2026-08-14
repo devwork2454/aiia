@@ -25,6 +25,7 @@ export const CORE_EXTENSIONS = Object.freeze([
   "add-dir",
   "vault",
   "steer",
+  "markdown-transform",
   "manage",
 ]);
 

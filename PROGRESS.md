@@ -1,5 +1,33 @@
 # 项目进度
 
+## GOAL
+记忆注入改成 `convertToLlm` 能留下的 custom 消息（不并进快照）。
+### 验收标准
+- 纯函数 `pi-agent/src/memory-inject.js`：抽出用户 query（支持 text 块数组）、格式化、upsert `role:custom` / `aiia-memory`
+- `extensions/memory.js` 不再写 `role: system`；空列表删除已有记忆条
+- 不并进 `prompt-snapshot`（query 每轮会变）
+- `convertToLlm` 后 JSON 仍含 `[AIIA active memories]` 与种子内容
+- 真实 `emitContext` 测试同步断言；单测进 verify；`.harness/verify.sh` 退出 0
+### 状态
+进行中（2026-08-14）
+### 代定决策
+- 与快照同款 custom 角色，记忆仍按本轮 query 独立注入
+- 顺手修 last-user 只读 string 的 bug（Pi 真消息 content 常是 text 数组）
+
+## GOAL（已完成）
+利用 Pi 的 `markdownTransformer` 口子，新增 `markdown-transform` 扩展：TUI 渲染 GitHub callout。
+### 验收标准
+- 根因：Pi 已内置 Markdown 渲染（pi-tui `Markdown` 组件 + highlight.js），但 GitHub callout（`> [!NOTE]`）不处理，原样显示在斜体引用里
+- 纯函数 `src/markdown-transform.js`：`transformGitHubCallouts` 把 `> [!NOTE|TIP|IMPORTANT|WARNING|CAUTION]` 转成 `**📝 NOTE**` 前缀；跳过 fenced code block 内部；kill `AIIA_MARKDOWN_TRANSFORM_DISABLED=1`
+- 工厂 `extensions/markdown-transform.js` 经 `pi.registerMarkdownTransformer` 注册；Pi 的 `getMarkdownTransformers()=[mermaid, ...扩展]` 应用于 assistant+user 消息渲染；文件名=门禁 id；进 `CORE_EXTENSIONS`
+- 单测 `test/markdown-transform.test.js` 进 verify；`docs/EXTENSIONS.md` 同步；`.harness/verify.sh` 退出 0
+### 状态
+通过（2026-08-14）：`.harness/verify.sh` 退出 0
+### 代定决策
+- 只增强 callout，不改 Pi 渲染本身；transformer 是渲染前纯文本改写，增量安全
+- 进 CORE 默认启用（渲染增强非行为改变），kill switch 可关
+- 不做完整 Markdown 重写：Pi 已渲染标题/代码/列表，mermaid 已有内置 transformer
+
 ## GOAL（已完成）
 把 catalog/profile（及 reply、add-dir、secret 名字）从每轮无效的 system 追加，改成 cache-safe 快照。
 ### 验收标准

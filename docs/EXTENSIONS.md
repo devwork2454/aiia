@@ -67,6 +67,10 @@ AIIA Hybrid KB search extension (S3 minimum slice). Registers `kb_search` — le
 
 AIIA management commands: /aiia status + /aiia update. status  — repo branch/commit, remotes, upstream, pi skill linking state. update  — git pull latest code, re-link pi skills (conflicts keep existing).
 
+## `markdown-transform.js`
+
+AIIA Markdown Transform Renders GitHub-style callouts (> [!NOTE|TIP|IMPORTANT|WARNING|CAUTION]) in Pi's TUI. Pi already renders Markdown; this only enhances callout blocks that pi-tui otherwise shows as raw text. Kill: AIIA_MARKDOWN_TRANSFORM_DISABLED=1
+
 ## `memory.js`
 
 AIIA memory extension — injects active memories into the real Pi context and exposes /memory + agent tools. SQLite lives in this same Node process. Env: AIIA_DB (default ~/.config/aiia/aiia.db)
