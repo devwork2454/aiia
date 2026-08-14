@@ -1,6 +1,6 @@
 # 项目进度
 
-## GOAL
+## GOAL（已完成）
 给 `tool_result` 加无模型截断和外溢（prune + spill）。
 ### 验收标准
 - 纯函数 `pi-agent/src/tool-result-prune.js`：超长文本 head+省略标记+tail；短文本 / 已带 spill 标记不改
@@ -11,7 +11,7 @@
 - 保留 image 块；不调用 LLM 做摘要
 - 单测进 verify；`docs/EXTENSIONS.md` 同步；`.harness/verify.sh` 退出 0
 ### 状态
-进行中（2026-08-14）
+通过（2026-08-14）：`.harness/verify.sh` 退出 0（230 unit）；commit `bf9abd4`
 ### 代定决策
 - 新 CORE 扩展，不塞进 quality-gate：要对 bash/read 等全部工具结果生效
 - 文件名 `tool-result-prune.js` 排在 quality-gate 之后，质量回灌先落地再截断
