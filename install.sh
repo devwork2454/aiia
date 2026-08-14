@@ -238,6 +238,7 @@ if [ -n "$SHELL_RC" ] && ! grep -q "AIIA_GITHUB_CLIENT_ID" "$SHELL_RC"; then
   cat >> "$SHELL_RC" << 'ENVEOF'
 
 # ─── AIIA 配置 ────────────────────────────────────────────────────────────────
+export PATH="$HOME/.local/bin:$PATH"                # 确保全局包装器路径优先
 export AIIA_GITHUB_CLIENT_ID=Ov23lifLgXiZSFLXmvww   # AIIA Sync OAuth App
 
 # 加载机密环境变量（如果存在）
@@ -248,25 +249,37 @@ else
   success "环境变量已配置（跳过）"
 fi
 
-# 检查是否已配置 pi wrapper
-if [ -n "$SHELL_RC" ] && ! grep -q "# AIIA Pi Wrapper" "$SHELL_RC"; then
-  cat >> "$SHELL_RC" << 'ENVEOF'
+# ─── Step 8: 注入全局命令包装器 ───────────────────────────────────────────────
+step "Step 8/9  注入 Pi 全局防崩包装器"
 
-# AIIA Pi Wrapper
-pi() {
-  if [[ "$1" == "aiia" ]]; then
-    if [[ "$2" == "update" ]]; then
-      bash ~/project/aiia/install.sh
-    else
-      node ~/project/aiia/pi-agent/src/cli.js "$2"
-    fi
+# 创建 ~/.local/bin 包装器，替代脆弱的 shell function
+mkdir -p "$HOME/.local/bin"
+PI_WRAPPER="$HOME/.local/bin/pi"
+
+cat > "$PI_WRAPPER" << 'EOF'
+#!/usr/bin/env bash
+
+# 拦截 pi aiia 指令
+if [[ "$1" == "aiia" ]]; then
+  if [[ "$2" == "update" ]]; then
+    exec bash "$HOME/project/aiia/install.sh"
   else
-    command pi "$@"
+    exec node "$HOME/project/aiia/pi-agent/src/cli.js" "$2"
   fi
-}
-ENVEOF
-  success "Shell 拦截器已写入 $SHELL_RC"
 fi
+
+# 寻找真实的 pi 可执行文件，跳过本脚本
+REAL_PI=$(which -a pi | grep -v "$HOME/.local/bin/pi" | head -n 1)
+
+if [[ -z "$REAL_PI" ]]; then
+  echo "Error: Cannot find original 'pi' executable." >&2
+  exit 1
+fi
+
+exec "$REAL_PI" "$@"
+EOF
+chmod +x "$PI_WRAPPER"
+success "全局包装器已安装至 $PI_WRAPPER"
 
 # ─── Step 8: Tmux AI 助手配置 ─────────────────────────────────────────────────
 step "Step 8/9  Tmux AI 助手配置 (可选)"
