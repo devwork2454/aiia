@@ -1,6 +1,7 @@
 import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import contextGCExtension, { _test } from "../extensions/context-gc.js";
+import { repairCompletionsMessages } from "../src/tool-pair-repair.js";
 
 function loadHook() {
   let hookFn;
@@ -30,6 +31,7 @@ function buildBloatedReq() {
     req.messages.push({
       role: "tool",
       name: "cmd",
+      tool_call_id: `call_${i}`,
       content: `${massiveOutput}\nError: boom status 500 at /tmp/fail.log`,
     });
   }
@@ -56,12 +58,18 @@ describe("Context GC", () => {
     const messages = [
       { role: "system", content: "s" },
       { role: "user", content: "u" },
-      { role: "assistant", tool_calls: [{ id: "1" }] },
-      { role: "tool", content: "out" },
+      { role: "assistant", tool_calls: [{ id: "1" }, { id: "2" }] },
+      { role: "tool", tool_call_id: "1", content: "out-a" },
+      { role: "tool", tool_call_id: "2", content: "out-b" },
       { role: "user", content: "next" },
     ];
-    const cut = _test.findSafeCutoffIndex(messages, 3);
-    assert.ok(cut === 3 || cut === 1);
+    // Mid-group (first of two tools) must not become the cutoff.
+    const mid = _test.findSafeCutoffIndex(messages, 3);
+    assert.notEqual(mid, 3);
+    assert.ok(mid === -1 || mid === 1);
+    // Last tool of the group is a safe fold point.
+    const last = _test.findSafeCutoffIndex(messages, 4);
+    assert.equal(last, 4);
   });
 
   test("buildHeuristicSummary retains paths and errors", () => {
@@ -113,6 +121,7 @@ describe("Context GC", () => {
     // Survivor is folded into system prompt (not a fake assistant turn)
     assert.match(req.messages[0].content, /\[AIIA GC Survivor Memory\]/);
     assert.match(req.messages[0].content, /path|Error|Folded|intent/i);
+    assert.equal(repairCompletionsMessages(req.messages).dropped, 0);
   });
 
   test("circuit breaker skips repeated LLM attempts after failure", async () => {

@@ -1,5 +1,20 @@
 # 项目进度
 
+## GOAL
+修复 Pi 400：`Messages with role 'tool' must be a response to a preceding message with 'tool_calls'`（及同类 Responses 孤儿 `function_call_output`）。
+### 验收标准
+- 根因：发出去的 Completions `role:tool` 没有紧挨着带 `tool_calls` 的 assistant；常见来源是 GC 从多 tool 对中间切断、Pi 丢掉 aborted assistant 却留下 toolResult
+- 纯函数 `pi-agent/src/tool-pair-repair.js`：Completions 丢掉孤儿 tool / 拆掉未配对 tool_calls；Responses `input` 丢掉无对应 `function_call` 的 `function_call_output`
+- `context-gc` 的 `before_provider_request` 在 hygiene/GC 之后始终跑修复（`AIIA_DISABLE_GC=1` 也修）；`AIIA_DISABLE_TOOL_PAIR_REPAIR=1` 可关
+- `findSafeCutoffIndex` 不再把 cutoff 落在 tool 上（避免拆开同一组 tool 结果）
+- 单测进 verify；`.harness/verify.sh` 退出 0
+### 状态
+通过（2026-08-14）：`.harness/verify.sh` 退出 0（271 unit，含 tool-pair-repair）
+### 代定决策
+- 不改 Pi 源码；只在发请求前修 payload
+- 不把孤儿 tool 改写成假 user 文本（丢配对结果，避免再引入非法 role 序列）
+- 不新开 CORE 扩展：挂在已有 context-gc 钩子，保证 GC 折叠后再修一次
+
 ## GOAL（已完成）
 `/aiia update` 必须有可见日志（会话消息 + 落盘）。
 ### 验收标准

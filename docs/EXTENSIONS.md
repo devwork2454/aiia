@@ -33,7 +33,7 @@ Inject merged UserCard/ProjectCard summary each turn. Commands: /profile show|re
 
 ## `context-gc.js`
 
-AIIA Context GC Extension (JVM Generational GC inspired) Dynamically folds old process context into summarized Survivor memories. Quiet by default: no console noise on happy path. Real failures are rate-limited to console.error + .agent/error.log.
+AIIA Context GC Extension (JVM Generational GC inspired) Dynamically folds old process context into summarized Survivor memories. Quiet by default: no console noise on happy path. Real failures are rate-limited to console.error + .agent/error.log. Also repairs orphan tool / function_call_output pairs before the provider call.
 
 ## `cron-scheduler.js`
 

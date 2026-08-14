@@ -4,6 +4,7 @@
  *
  * Quiet by default: no console noise on happy path.
  * Real failures are rate-limited to console.error + .agent/error.log.
+ * Also repairs orphan tool / function_call_output pairs before the provider call.
  */
 
 // Soft trigger: only compact when context is large (avoid every-turn folding).
@@ -28,6 +29,7 @@ const MONOLOGUE_TEXT_CHARS = 1800;
 
 import fs from "node:fs";
 import path from "node:path";
+import { hasToolCalls, isToolRole, repairProviderPayload } from "../src/tool-pair-repair.js";
 
 /** @type {{ until: number, reason: string } | null} */
 let llmCircuitOpen = null;
@@ -93,19 +95,17 @@ function estimateTokens(messages) {
 }
 
 function findSafeCutoffIndex(messages, targetIndex) {
-  // Find a safe message to cut off at (must not split tool_calls and tool_results)
+  // Never split a tool_calls group: skip mid-run tool results and the assistant
+  // that still owns later sibling tools. The last tool in a consecutive run is
+  // safe (the whole pair is summarized; the tail starts after it).
   for (let i = targetIndex; i > 1; i--) {
     const msg = messages[i];
-    if (msg.role === "user") return i;
-    if (msg.role === "tool") return i;
-    if (msg.role === "assistant" && (!msg.tool_calls || msg.tool_calls.length === 0)) {
-      // Prefer pure assistant text; content-array tool calls still cut after tool results
-      const parts = Array.isArray(msg.content) ? msg.content : [];
-      const hasToolCallPart = parts.some(
-        (p) => p?.type === "toolCall" || p?.type === "tool_use",
-      );
-      if (!hasToolCallPart) return i;
+    if (isToolRole(msg)) {
+      if (isToolRole(messages[i + 1])) continue;
+      return i;
     }
+    if (msg.role === "user") return i;
+    if (msg.role === "assistant" && !hasToolCalls(msg)) return i;
   }
   return -1;
 }
@@ -421,56 +421,68 @@ function sanitizeMessages(messages) {
   return { thinkingStubbed, monologueCollapsed };
 }
 
+function applyToolPairRepair(req, cwd) {
+  const { dropped } = repairProviderPayload(req);
+  if (dropped > 0) {
+    logGcError(cwd, `Dropped ${dropped} orphan tool result(s) (unpaired tool_calls).`);
+  }
+}
+
 export default function contextGCExtension(pi) {
   pi.on("before_provider_request", async (event, ctx) => {
     const req = getRequestPayload(event);
-    if (!req || !req.messages || !Array.isArray(req.messages)) return;
+    if (!req) return;
+
+    const hasMessages = Array.isArray(req.messages);
 
     // Hygiene always on: cut thinking bloat + planning monologues (UI noise + loop fuel).
-    if (process.env.AIIA_DISABLE_CONTEXT_HYGIENE !== "1") {
+    if (hasMessages && process.env.AIIA_DISABLE_CONTEXT_HYGIENE !== "1") {
       sanitizeMessages(req.messages);
     }
 
-    if (process.env.AIIA_DISABLE_GC === "1") return req;
+    if (hasMessages && process.env.AIIA_DISABLE_GC !== "1") {
+      const currentTokens = estimateTokens(req.messages);
+      const overSoft =
+        currentTokens > GC_TOKEN_THRESHOLD || req.messages.length > GC_MSG_THRESHOLD;
+      const emergency = currentTokens > GC_EMERGENCY_TOKEN_THRESHOLD;
+      const intervalOk = Date.now() - lastGcAt >= GC_MIN_INTERVAL_MS;
 
-    const currentTokens = estimateTokens(req.messages);
-    const overSoft =
-      currentTokens > GC_TOKEN_THRESHOLD || req.messages.length > GC_MSG_THRESHOLD;
-    const emergency = currentTokens > GC_EMERGENCY_TOKEN_THRESHOLD;
-    const intervalOk = Date.now() - lastGcAt >= GC_MIN_INTERVAL_MS;
+      // Rare compaction: soft threshold + min interval; emergency bypasses interval only.
+      if (overSoft && (intervalOk || emergency)) {
+        const targetIndex = Math.max(1, req.messages.length - GC_KEEP_RECENT);
+        const cutoff = findSafeCutoffIndex(req.messages, targetIndex);
 
-    // Rare compaction: soft threshold + min interval; emergency bypasses interval only.
-    if (overSoft && (intervalOk || emergency)) {
-      const targetIndex = Math.max(1, req.messages.length - GC_KEEP_RECENT);
-      const cutoff = findSafeCutoffIndex(req.messages, targetIndex);
+        if (cutoff > 1) {
+          const messagesToSummarize = req.messages.slice(1, cutoff + 1);
+          let summaryText = await summarizeWithLLM(messagesToSummarize, ctx);
 
-      if (cutoff > 1) {
-        const messagesToSummarize = req.messages.slice(1, cutoff + 1);
-        let summaryText = await summarizeWithLLM(messagesToSummarize, ctx);
+          if (!summaryText) {
+            summaryText = buildHeuristicSummary(messagesToSummarize);
+          }
 
-        if (!summaryText) {
-          summaryText = buildHeuristicSummary(messagesToSummarize);
+          // Fold summary into system prompt when possible (no fake assistant/user turns).
+          const systemMsg = req.messages[0];
+          const survivorBlock = `[AIIA GC Survivor Memory]\n${summaryText}`;
+          const tail = req.messages.slice(cutoff + 1);
+          if (systemMsg?.role === "system" && typeof systemMsg.content === "string") {
+            req.messages = [
+              { ...systemMsg, content: `${systemMsg.content}\n\n${survivorBlock}` },
+              ...tail,
+            ];
+          } else {
+            req.messages = [
+              systemMsg,
+              { role: "user", content: survivorBlock },
+              ...tail,
+            ];
+          }
+          lastGcAt = Date.now();
         }
-
-        // Fold summary into system prompt when possible (no fake assistant/user turns).
-        const systemMsg = req.messages[0];
-        const survivorBlock = `[AIIA GC Survivor Memory]\n${summaryText}`;
-        const tail = req.messages.slice(cutoff + 1);
-        if (systemMsg?.role === "system" && typeof systemMsg.content === "string") {
-          req.messages = [
-            { ...systemMsg, content: `${systemMsg.content}\n\n${survivorBlock}` },
-            ...tail,
-          ];
-        } else {
-          req.messages = [
-            systemMsg,
-            { role: "user", content: survivorBlock },
-            ...tail,
-          ];
-        }
-        lastGcAt = Date.now();
       }
     }
+
+    // Completions + Responses: drop orphan tool results even when GC is off.
+    applyToolPairRepair(req, ctx?.cwd);
 
     // Return mutated payload so handler chain always sees the compacted request.
     return req;
