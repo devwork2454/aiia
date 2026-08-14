@@ -1,6 +1,20 @@
 # 项目进度
 
 ## GOAL（已完成）
+修复远程新机 `pi` 启动即崩：undici 8.9.0 在加载时调用 `node:worker_threads.markAsUncloneable`（仅 Node ≥ 22.10），install.sh 门限只查 `NODE_MAJOR<20`，Node 20.20.1 被放行导致 TypeError。
+### 验收标准
+- Step 1 门限改为语义探测 `node_has_mark_uncloneable`（node 探测 worker_threads API，失败即升级 Node 22），不再硬编码版本号
+- Step 9 冒烟自愈识别 undici 特征错误（日志含 `markAsUncloneable`），与 SIGSEGV(139) 共用 `retry_pi_on_node22` 抽出的「切 Node 22 + 重装 pi + 重试」逻辑
+- `bash -n install.sh` 通过；本机 node 24 探测返回 0；模拟旧 Node 探测失败与特征日志分支符合预期
+- `.harness/verify.sh` 退出 0
+### 状态
+进行中（2026-08-14）
+### 代定决策
+- 用语义探测而非版本号区间：未来 undici 要求再变无需改门限
+- 不强制在升级 Node 后重装 pi（undici 为纯 JS，Node 22 下可直接复用），Step 9 仅在冒烟异常时才重装
+- install.sh 无独立单测惯例，验证以 bash -n + 逻辑模拟 + verify.sh 为准
+
+## GOAL（已完成）
 `/simplify` 质量审查：清理 feature/aiia-cli 改动代码的重复/冗余/热路径浪费。
 ### 验收标准
 - 四个角度（复用/简化/效率/抽象层次）并行审查 diff（排除 lock/文档/legacy）

@@ -55,16 +55,22 @@ echo -e "${RESET}"
 # ─── Step 1: 检查 Node.js ────────────────────────────────────────────────────
 step "Step 1/9  检查 Node.js 环境"
 
+# pi 依赖的 undici(≥8) 在加载时调用 node:worker_threads 的 markAsUncloneable，
+# 该 API 仅 Node ≥ 22.10 提供(Node 20 与 22.0-22.9 都缺，加载即崩)。
+# 用语义探测而非硬编码版本号：未来 undici 要求再变化时无需改门限。
+node_has_mark_uncloneable() {
+  node -e 'process.exitCode = typeof require("node:worker_threads").markAsUncloneable === "function" ? 0 : 1' 2>/dev/null
+}
+
 if command -v node &>/dev/null; then
   NODE_VER=$(node --version)
-  NODE_MAJOR=$(echo "$NODE_VER" | sed 's/v\([0-9]*\).*/\1/')
-  if [ "$NODE_MAJOR" -lt 20 ]; then
-    warn "当前 Node.js 版本 $NODE_VER 过低（需要 ≥ v20）"
-    info "正在通过 nvm 安装 Node.js 22..."
-    install_node=true
-  else
+  if node_has_mark_uncloneable; then
     success "Node.js $NODE_VER ✓"
     install_node=false
+  else
+    warn "当前 Node.js $NODE_VER 过旧：pi 依赖的 undici 需要 Node ≥ 22.10（缺 markAsUncloneable）"
+    info "正在升级到 Node.js 22..."
+    install_node=true
   fi
 else
   warn "未检测到 Node.js"
@@ -85,7 +91,7 @@ if [ "$install_node" = true ]; then
     brew install node@22
     success "Node.js 22 安装完成 (brew)"
   else
-    error "无法自动安装 Node.js，请手动安装 Node.js ≥ 20 后重试\n       推荐: https://nodejs.org 或使用 nvm"
+    error "无法自动安装 Node.js，请手动安装 Node.js ≥ 22.10 后重试\n       推荐: https://nodejs.org 或使用 nvm"
   fi
 fi
 
@@ -269,21 +275,18 @@ else
 fi
 
 # ─── Step 9: pi 启动冒烟检查 ────────────────────────────────────────────────
-# 段错误(SIGSEGV)多由 Node 版本与系统 glibc 兼容问题引起(如 Node 20.20.x)。
-# 检测到即自动切 Node 22 重装 pi;进程无段错误则安装成功,不因缺模型配置阻断。
+# 段错误(SIGSEGV)多由 Node 版本与系统 glibc 兼容问题引起(如 Node 20.20.x);
+# undici 报 markAsUncloneable 则是 Node < 22.10 缺少 worker_threads API。
+# 检测到即自动切 Node 22 重装 pi;进程无致命错误则安装成功,不因缺模型配置阻断。
 step "Step 9/9  pi 启动冒烟检查"
 
 if command -v pi &>/dev/null; then
   PI_SMOKE_LOG="${TMPDIR:-/tmp}/aiia-pi-smoke.log"
-  info "运行 pi 冒烟测试(pi -p hello)…"
-  if timeout 30 pi -p "hello" >"$PI_SMOKE_LOG" 2>&1; then
-    SMOKE_CODE=0
-  else
-    SMOKE_CODE=$?
-  fi
 
-  if [ "$SMOKE_CODE" -eq 139 ]; then
-    warn "⚠️  pi 启动段错误(SIGSEGV),疑似 Node 版本兼容问题。自动切换 Node 22 并重装 pi…"
+  run_pi_smoke() { timeout 30 pi -p "hello" >"$PI_SMOKE_LOG" 2>&1; }
+
+  # 切 Node 22 并重装 pi 后重跑冒烟;通过(0/124)返回 0
+  retry_pi_on_node22() {
     export NVM_DIR="$HOME/.nvm"
     if [ -s "$NVM_DIR/nvm.sh" ]; then
       . "$NVM_DIR/nvm.sh"
@@ -296,18 +299,40 @@ if command -v pi &>/dev/null; then
     fi
     nvm install 22 >/dev/null 2>&1 && nvm use 22 >/dev/null 2>&1 && nvm alias default 22 >/dev/null 2>&1
     npm install -g @earendil-works/pi-coding-agent >/dev/null 2>&1
-    if timeout 30 pi -p "hello" >"$PI_SMOKE_LOG" 2>&1; then
+    run_pi_smoke
+  }
+
+  info "运行 pi 冒烟测试(pi -p hello)…"
+  run_pi_smoke
+  SMOKE_CODE=$?
+
+  # 需要自动切 Node 22 重试的原因;空串则无需重试
+  SMOKE_RETRY=""
+  if [ "$SMOKE_CODE" -eq 139 ]; then
+    SMOKE_RETRY="段错误(SIGSEGV),疑似 Node 版本与 glibc 兼容问题"
+  elif [ "$SMOKE_CODE" -ne 0 ] && [ "$SMOKE_CODE" -ne 124 ] \
+       && grep -q "markAsUncloneable" "$PI_SMOKE_LOG" 2>/dev/null; then
+    SMOKE_RETRY="undici/Node 版本不兼容(缺 markAsUncloneable,需 Node ≥ 22.10)"
+  fi
+
+  if [ -n "$SMOKE_RETRY" ]; then
+    warn "⚠️  pi 启动异常:$SMOKE_RETRY。自动切换 Node 22 并重装 pi…"
+    if retry_pi_on_node22; then
       SMOKE_CODE=0
     else
       SMOKE_CODE=$?
     fi
     if [ "$SMOKE_CODE" -eq 139 ]; then
       error "pi 在 Node 22 下仍段错误。请反馈: $(uname -m) / $(ldd --version 2>/dev/null | head -1) / node $(node -v 2>/dev/null)"
+    elif [ "$SMOKE_CODE" -ne 0 ] && [ "$SMOKE_CODE" -ne 124 ]; then
+      warn "pi 在 Node 22 下仍退出码 $SMOKE_CODE(常为模型未配置)。详情: $PI_SMOKE_LOG"
+      success "pi 在 Node 22 下启动正常(进程无致命错误,可继续安装)"
+    else
+      success "pi 在 Node 22 下启动正常 ✓"
     fi
-    success "pi 在 Node 22 下启动正常 ✓"
   elif [ "$SMOKE_CODE" -ne 0 ] && [ "$SMOKE_CODE" -ne 124 ]; then
     warn "pi 冒烟退出码 $SMOKE_CODE(常为模型未配置)。详情: $PI_SMOKE_LOG"
-    success "pi 冒烟完成(进程未段错误,可继续安装)"
+    success "pi 冒烟完成(进程无致命错误,可继续安装)"
   else
     success "pi 启动冒烟通过 ✓"
   fi
