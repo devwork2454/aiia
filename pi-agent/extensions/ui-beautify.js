@@ -19,10 +19,19 @@ export default function uiBeautifyExtension(pi) {
       return {
         render: (width) => {
           try {
-            // 1. Syntax Highlight
-            const highlighted = highlight(content, { language: 'markdown', ignoreIllegals: true });
+            // 1. Fold <details> blocks to prevent screen flooding
+            let processedContent = content.replace(
+              /<details>\s*<summary>(.*?)<\/summary>([\s\S]*?)<\/details>/gi,
+              (_match, summary, body) => {
+                const linesCount = body.trim().split('\n').length;
+                return `\n▶ **${summary.trim()}** _(已折叠 ${linesCount} 行详情...)_\n`;
+              }
+            );
+
+            // 2. Syntax Highlight
+            const highlighted = highlight(processedContent, { language: 'markdown', ignoreIllegals: true });
             
-            // 2. Card Layout (Rounded Borders)
+            // 3. Card Layout (Rounded Borders)
             const boxed = boxen(highlighted, {
               width: width ? Math.max(width - 2, 10) : undefined,
               padding: { top: 0, bottom: 0, left: 1, right: 1 },
