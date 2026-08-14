@@ -1,5 +1,18 @@
 # 项目进度
 
+## GOAL
+`/aiia update` 必须有可见日志（会话消息 + 落盘）。
+### 验收标准
+- 根因：只 `ctx.ui.notify` 多行瞬时 toast，容易被盖掉或看不见
+- `formatUpdateReport` / `writeManageLog` 纯函数；更新结果写入 `<AIIA_DIR>/.agent/aiia-update.log`
+- 工厂用 `pi.sendMessage({ customType: "aiia-manage", display: true })` 把全文打进会话，并 notify 首行
+- `/aiia status` 同一套送达；单测进 verify；`.harness/verify.sh` 退出 0
+### 状态
+通过（2026-08-14）：单测 8/8 manage；全文走 sendMessage + `.agent/aiia-update.log`
+### 代定决策
+- 不改 Pi 源码；不依赖 toast 能显示多行
+- 不在本刀改 `/aiia help` 的 notify（slash-ux）
+
 ## GOAL（已完成）
 turn-status 状态栏加会话累计总 token（`Σ5.6k`）。
 ### 验收标准

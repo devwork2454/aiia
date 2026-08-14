@@ -65,7 +65,7 @@ AIIA Hybrid KB search extension (S3 minimum slice). Registers `kb_search` — le
 
 ## `manage.js`
 
-AIIA management commands: /aiia status + /aiia update. status  — repo branch/commit, remotes, upstream, pi skill linking state. update  — git pull latest code, re-link pi skills (conflicts keep existing).
+AIIA management commands: /aiia status + /aiia update. status  — repo branch/commit, remotes, upstream, pi skill linking state. update  — git pull latest code, re-link pi skills (conflicts keep existing). Feedback: toast first line + persistent chat message + .agent/aiia-update.log
 
 ## `markdown-transform.js`
 

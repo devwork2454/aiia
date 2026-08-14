@@ -2,7 +2,7 @@
  * AIIA management helpers: repo status, pi-skill linking state, report text.
  * Pure functions (no side effects) so /aiia status|update stays testable.
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -84,4 +84,68 @@ export function formatStatusReport(status, skills, aiiaDir = resolveAiiDir()) {
     }),
   ];
   return lines.join("\n");
+}
+
+export function manageLogPath(aiiaDir = resolveAiiDir()) {
+  return path.join(aiiaDir, ".agent", "aiia-update.log");
+}
+
+export function formatUpdateReport({
+  aiiaDir = resolveAiiDir(),
+  branch = "main",
+  pullOk = false,
+  pullOut = "",
+  linkOk = false,
+  linkOut = "",
+} = {}) {
+  const indent = (text) =>
+    String(text || "")
+      .split("\n")
+      .map((line) => `    ${line}`)
+      .join("\n");
+  const lines = [
+    `AIIA update (${branch}):`,
+    `  dir: ${aiiaDir}`,
+    pullOk ? "  git: ok" : "  git: FAILED",
+  ];
+  if (pullOut) lines.push(indent(pullOut));
+  lines.push(linkOk ? "  skills: ok" : "  skills: FAILED");
+  if (linkOut) lines.push(indent(linkOut));
+  lines.push("  next: restart pi to reload extensions");
+  lines.push("  deps: if package.json changed → cd <dir>/pi-agent && npm install");
+  return lines.join("\n");
+}
+
+export function writeManageLog(text, aiiaDir = resolveAiiDir(), { now = new Date() } = {}) {
+  const file = manageLogPath(aiiaDir);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const stamp = now instanceof Date ? now.toISOString() : String(now);
+  fs.appendFileSync(file, `\n--- ${stamp} ---\n${String(text || "").trim()}\n`);
+  return file;
+}
+
+export function runAiiUpdate(aiiaDir = resolveAiiDir(), { spawn = spawnSync } = {}) {
+  const status = getRepoStatus(aiiaDir);
+  const branch = status.branch && status.branch !== "HEAD" ? status.branch : "main";
+  const pull = spawn("git", ["-C", aiiaDir, "pull", "--ff-only", "origin", branch], {
+    encoding: "utf8",
+    timeout: 120000,
+  });
+  const pullOut = `${pull.stdout || ""}${pull.stderr || ""}`.trim();
+  const pullOk = pull.status === 0;
+
+  let linkOk = false;
+  let linkOut = "";
+  if (pullOk) {
+    const linkScript = path.join(aiiaDir, "scripts", "link-pi-skills.sh");
+    const link = spawn("bash", [linkScript], {
+      encoding: "utf8",
+      timeout: 60000,
+    });
+    linkOut = `${link.stdout || ""}${link.stderr || ""}`.trim();
+    linkOk = link.status === 0;
+  }
+
+  const report = formatUpdateReport({ aiiaDir, branch, pullOk, pullOut, linkOk, linkOut });
+  return { branch, pullOk, pullOut, linkOk, linkOut, report };
 }
