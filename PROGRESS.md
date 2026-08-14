@@ -10,7 +10,7 @@
 - 不改 memory 的 query 相关注入；不调用 LLM
 - 单测进 verify；docs-check 过；`.harness/verify.sh` 退出 0
 ### 状态
-通过（2026-08-14）：`.harness/verify.sh` 退出 0（238 unit）；commit `1a63312`
+通过（2026-08-14）：`.harness/verify.sh` 退出 0（238 unit）；commit `1a63312` + `c823518`（custom 角色，convertToLlm 可送达）
 ### 代定决策
 - 走 `context` 回写 messages，不走 `before_agent_start.systemPrompt`：快照变了不重写整段 system 前缀
 - 一份合订快照（带 hash 头），不是每段一条消息
