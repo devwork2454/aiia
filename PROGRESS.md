@@ -1,6 +1,6 @@
 # 项目进度
 
-## GOAL
+## GOAL（已完成）
 `/aiia update` 必须有可见日志（会话消息 + 落盘）。
 ### 验收标准
 - 根因：只 `ctx.ui.notify` 多行瞬时 toast，容易被盖掉或看不见
