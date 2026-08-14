@@ -15,6 +15,7 @@ import {
   globalPrefsPath,
 } from "../src/reply-prefs.js";
 import replyPrefsExtension from "../extensions/reply-prefs.js";
+import { buildPromptSnapshot, clearSnapshotSections } from "../src/prompt-snapshot.js";
 
 function tmp() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "aiia-reply-"));
@@ -83,16 +84,14 @@ describe("Pi reply preferences", () => {
     saveGlobalPrefs({ language: "zh-CN", style: "concise" }, process.env);
 
     const commands = {};
-    let hook;
     const notes = [];
     const mockPi = {
       registerCommand: (n, o) => {
         commands[n] = o;
       },
-      on: (ev, fn) => {
-        if (ev === "before_agent_start") hook = fn;
-      },
+      on() {},
     };
+    clearSnapshotSections();
     replyPrefsExtension(mockPi);
     assert.equal(typeof commands.reply?.handler, "function");
     await commands.reply.handler("lang en", {
@@ -100,8 +99,9 @@ describe("Pi reply preferences", () => {
       ui: { notify: (m) => notes.push(m) },
     });
     assert.ok(notes.some((n) => /English|en/i.test(n)));
-    const res = await hook({}, { cwd: dir });
-    assert.match(res.appendSystemPrompt, /Reply Preferences|English/i);
+    const text = buildPromptSnapshot({ cwd: dir, env: process.env });
+    assert.match(text, /Reply Preferences|English/i);
+    clearSnapshotSections();
     delete process.env.AIIA_REPLY_PREFS_PATH;
   });
 });

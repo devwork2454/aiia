@@ -15,6 +15,7 @@ import {
   storePathForCwd,
 } from "../src/add-dir-store.js";
 import addDirExtension from "../extensions/add-dir.js";
+import { buildPromptSnapshot, clearSnapshotSections } from "../src/prompt-snapshot.js";
 
 function tmp() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "aiia-add-dir-"));
@@ -93,12 +94,12 @@ describe("Pi /add-dir", () => {
       sendMessage: () => {},
       sendUserMessage: () => {},
     };
+    clearSnapshotSections();
     addDirExtension(mockPi);
     assert.equal(typeof commands["add-dir"]?.handler, "function");
     assert.equal(typeof commands["rm-dir"]?.handler, "function");
     assert.equal(typeof commands["list-dirs"]?.handler, "function");
     assert.equal(typeof hooks.resources_discover, "function");
-    assert.equal(typeof hooks.before_agent_start, "function");
     assert.equal(typeof tools.list_additional_dirs?.execute, "function");
 
     const ctx = {
@@ -110,8 +111,8 @@ describe("Pi /add-dir", () => {
     assert.ok(listDirectories(cwd).includes(path.resolve(extra)));
     assert.ok(notes.some((n) => /Added|Already/.test(n)));
 
-    const prompt = await hooks.before_agent_start({}, ctx);
-    assert.match(prompt.appendSystemPrompt, /additional directories/);
+    const prompt = buildPromptSnapshot({ cwd, env: process.env });
+    assert.match(prompt, /additional directories/);
 
     // skills discover
     const skillRoot = path.join(extra, ".agents", "skills");

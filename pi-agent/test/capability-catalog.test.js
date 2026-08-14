@@ -13,6 +13,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import capabilityCatalogExtension from "../extensions/capability-catalog.js";
+import { buildPromptSnapshot, clearSnapshotSections } from "../src/prompt-snapshot.js";
 
 function tmp() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "aiia-catalog-"));
@@ -76,30 +77,24 @@ describe("capability catalog", () => {
     assert.ok(text.includes("kb_search"));
   });
 
-  test("extension injects on before_agent_start unless disabled", async () => {
-    const hooks = {};
-    const pi = {
-      on: (ev, fn) => {
-        hooks[ev] = fn;
-      },
-    };
-    capabilityCatalogExtension(pi);
-    assert.equal(typeof hooks.before_agent_start, "function");
+  test("extension registers a snapshot section unless disabled", () => {
+    clearSnapshotSections();
+    capabilityCatalogExtension({ on() {} });
 
     const prev = process.env.AIIA_CAPABILITY_CATALOG_DISABLED;
     delete process.env.AIIA_CAPABILITY_CATALOG_DISABLED;
     try {
-      const res = await hooks.before_agent_start();
-      assert.match(res.appendSystemPrompt, /capability catalog/);
-      assert.match(res.appendSystemPrompt, /remember/);
-      assert.ok(res.appendSystemPrompt.length <= MAX_CATALOG_CHARS + 80);
+      const text = buildPromptSnapshot({ env: process.env });
+      assert.match(text, /capability catalog/);
+      assert.match(text, /remember/);
+      assert.ok(text.length <= MAX_CATALOG_CHARS + 80);
 
       process.env.AIIA_CAPABILITY_CATALOG_DISABLED = "1";
-      const res2 = await hooks.before_agent_start();
-      assert.equal(res2, undefined);
+      assert.equal(buildPromptSnapshot({ env: process.env }), "");
     } finally {
       if (prev === undefined) delete process.env.AIIA_CAPABILITY_CATALOG_DISABLED;
       else process.env.AIIA_CAPABILITY_CATALOG_DISABLED = prev;
+      clearSnapshotSections();
     }
   });
   test("extension skips catalog filtering when profile disabled", async () => {
@@ -109,13 +104,8 @@ describe("capability catalog", () => {
     fs.mkdirSync(path.join(cwd, ".agent"), { recursive: true });
     saveProjectCard({ avoid_tools: ["remember"] }, cwd);
 
-    const hooks = {};
-    const pi = {
-      on: (ev, fn) => {
-        hooks[ev] = fn;
-      },
-    };
-    capabilityCatalogExtension(pi);
+    clearSnapshotSections();
+    capabilityCatalogExtension({ on() {} });
 
     const prevUserPath = process.env.AIIA_USER_CARD_PATH;
     const prevProfileDisabled = process.env.AIIA_PROFILE_DISABLED;
@@ -126,8 +116,8 @@ describe("capability catalog", () => {
     delete process.env.AIIA_CAPABILITY_CATALOG_DISABLED;
 
     try {
-      const res = await hooks.before_agent_start({}, { cwd });
-      assert.match(res.appendSystemPrompt, /- remember:/);
+      const text = buildPromptSnapshot({ cwd, env: process.env });
+      assert.match(text, /- remember:/);
     } finally {
       if (prevUserPath === undefined) delete process.env.AIIA_USER_CARD_PATH;
       else process.env.AIIA_USER_CARD_PATH = prevUserPath;
@@ -135,6 +125,7 @@ describe("capability catalog", () => {
       else process.env.AIIA_PROFILE_DISABLED = prevProfileDisabled;
       if (prevCatalogDisabled === undefined) delete process.env.AIIA_CAPABILITY_CATALOG_DISABLED;
       else process.env.AIIA_CAPABILITY_CATALOG_DISABLED = prevCatalogDisabled;
+      clearSnapshotSections();
     }
   });
 });

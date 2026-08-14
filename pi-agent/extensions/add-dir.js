@@ -10,7 +10,7 @@
  *
  * Effects:
  *   - Persist under <cwd>/.agent/additional-dirs.json
- *   - Inject path list into system prompt each turn
+ *   - Inject path list into the cache-safe context snapshot
  *   - resources_discover: skill roots under added dirs
  */
 import {
@@ -22,6 +22,7 @@ import {
   parseAddDirArgs,
 } from "../src/add-dir-store.js";
 import { registerAiiaHandler } from "../src/command-registry.js";
+import { registerSnapshotSection } from "../src/prompt-snapshot.js";
 
 function loadSkillsEnabled(env = process.env) {
   return env.AIIA_ADD_DIR_LOAD_SKILLS !== "0" && env.AIIA_ADD_DIR_LOAD_SKILLS !== "false";
@@ -170,11 +171,8 @@ export default function addDirExtension(pi) {
     return { skillPaths };
   });
 
-  pi.on("before_agent_start", async (_event, ctx) => {
-    const cwd = ctx?.cwd || process.cwd();
-    const dirs = listDirectories(cwd);
-    const block = formatAdditionalDirsPrompt(dirs, cwd);
-    if (!block) return;
-    return { appendSystemPrompt: "\n\n" + block };
+  registerSnapshotSection("add-dir", ({ cwd }) => {
+    const root = cwd || process.cwd();
+    return formatAdditionalDirsPrompt(listDirectories(root), root);
   });
 }

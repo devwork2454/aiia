@@ -1,5 +1,5 @@
 /**
- * Short capability catalog for system-prompt injection.
+ * Short capability catalog for the cache-safe context snapshot.
  * Goal: teach the model which tools to use — not dump skill bodies.
  */
 import { isCatalogToolEnabled } from "./extension-profile.js";

@@ -17,6 +17,7 @@ import {
 } from "../src/context-card.js";
 import { buildLLMDraft } from "../src/metaprompt-optimizer.js";
 import { registerAiiaHandler } from "../src/command-registry.js";
+import { registerSnapshotSection } from "../src/prompt-snapshot.js";
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
 export default function contextCardExtension(pi) {
@@ -133,12 +134,8 @@ export default function contextCardExtension(pi) {
   });
   registerAiiaHandler("profile", profileHandler);
 
-  pi.on("before_agent_start", async (_event, ctx) => {
-    if (isProfileDisabled()) return;
-    const cwd = ctx?.cwd || process.cwd();
-    const card = loadMergedCard({ cwd });
-    const block = formatContextCardPrompt(card);
-    if (!block) return;
-    return { appendSystemPrompt: "\n\n" + block };
+  registerSnapshotSection("profile", ({ cwd, env }) => {
+    if (isProfileDisabled(env)) return "";
+    return formatContextCardPrompt(loadMergedCard({ cwd, env }));
   });
 }

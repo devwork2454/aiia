@@ -5,7 +5,7 @@
 
 ## `add-dir.js`
 
-AIIA /add-dir — Claude Code-style additional workspace directories for Pi. Commands: /add-dir <path>       add directory /add-dir list         list (also bare /add-dir) /add-dir rm <path>    remove /rm-dir <path>        alias for remove /list-dirs            alias for list Effects: - Persist under <cwd>/.agent/additional-dirs.json - Inject path list into system prompt each turn - resources_discover: skill roots under added dirs
+AIIA /add-dir — Claude Code-style additional workspace directories for Pi. Commands: /add-dir <path>       add directory /add-dir list         list (also bare /add-dir) /add-dir rm <path>    remove /rm-dir <path>        alias for remove /list-dirs            alias for list Effects: - Persist under <cwd>/.agent/additional-dirs.json - Inject path list into the cache-safe context snapshot - resources_discover: skill roots under added dirs
 
 ## `auto-router.js`
 
@@ -13,7 +13,7 @@ AIIA Autonomous Router Extension Injects a global directive to empower the Main 
 
 ## `capability-catalog.js`
 
-Inject a short tool capability catalog each turn (tool-first UX). Kill switch: AIIA_CAPABILITY_CATALOG_DISABLED=1
+Register the tool capability catalog as a cache-safe snapshot section. Kill switch: AIIA_CAPABILITY_CATALOG_DISABLED=1
 
 ## `channel-adapter.js`
 
@@ -87,6 +87,10 @@ AIIA L6 Micro-context Handoff Extension 定义并拦截 `send_message` 工具，
 
 AIIA L7.6 OS / browser extension (S4 minimum slice). Registers gated tools; default OFF; dry-run simulation; no hard desktop deps.
 
+## `prompt-snapshot.js`
+
+AIIA Prompt Snapshot Injects catalog/profile/reply/add-dir/secret-name blocks as one replaceable context message. Rewrites only when the hash changes (cache-safe). Kill: AIIA_PROMPT_SNAPSHOT_DISABLED=1
+
 ## `quality-gate.js`
 
 AIIA Quality Gate extension (S1 & S8) After edit/write succeeds, run lint/typecheck. S8: If fails, spawns a child agent to fix it locally before returning to main loop.
@@ -97,7 +101,7 @@ AIIA Quality Gate extension (S1 & S8) After edit/write succeeds, run lint/typech
 
 ## `reply-prefs.js`
 
-AIIA global reply language + style. Commands: /reply, /reply lang <...>, /reply style <...>, /reply on|off|reset Injects via before_agent_start every turn.
+AIIA global reply language + style. Commands: /reply, /reply lang <...>, /reply style <...>, /reply on|off|reset Injects via the cache-safe context snapshot.
 
 ## `router.js`
 
@@ -113,7 +117,7 @@ AIIA MCP & Skill Sandbox Policy Extension (Phase 2 P7) 1. 监听 tool_call 钩�
 
 ## `secret-gate.js`
 
-AIIA Secret Gate & Redaction Extension (Item B) 1. 在 before_agent_start 钩子中仅向 System Prompt 注入可用的 Secret Key 名称清单（零知识注入）。 2. 在 tool_result 钩子中对工具输出脱敏（Pi 字段是 content）。
+AIIA Secret Gate & Redaction Extension (Item B) 1. 把可用 Secret Key 名称清单注册进 cache-safe 快照（零知识：只注入名字）。 2. 在 tool_result 钩子中对工具输出脱敏（Pi 字段是 content）。
 
 ## `semantic-search.js`
 

@@ -32,6 +32,17 @@ export function loadSecretPairs(filePath = DEFAULT_SECRETS_FILE) {
   return pairs;
 }
 
+export function formatSecretNamesPrompt(keys) {
+  const names = (keys || []).map((k) => String(k || "").trim()).filter(Boolean);
+  if (names.length === 0) return "";
+  return [
+    "[AIIA Security Gate]",
+    "已在系统环境凭据中检测到以下可用的 Secret Key 变量名：",
+    ...names.map((key) => `  - ${key}`),
+    "【安全约束】：严禁在回复中输出这些变量的明文值。若需在命令中引用，请确保不直接打印它们。",
+  ].join("\n");
+}
+
 export function redactText(text, secretPairs) {
   let resultStr = String(text ?? "");
   let redacted = false;

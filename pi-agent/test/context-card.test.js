@@ -21,6 +21,7 @@ import {
 } from "../src/context-card.js";
 import { clearAiiaHandlers, getAiiaHandler } from "../src/command-registry.js";
 import contextCardExtension from "../extensions/context-card.js";
+import { buildPromptSnapshot, clearSnapshotSections } from "../src/prompt-snapshot.js";
 
 function tmp() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "aiia-card-"));
@@ -169,7 +170,7 @@ describe("context-card store", () => {
     assert.ok(notes.some((n) => /AIIA_PROFILE_DISABLED/.test(n)));
   });
 
-  test("extension injects summary on before_agent_start", async () => {
+  test("extension registers profile snapshot section", () => {
     const cwd = tmp();
     const envPath = path.join(tmp(), "user.json");
     const env = { AIIA_USER_CARD_PATH: envPath };
@@ -177,20 +178,17 @@ describe("context-card store", () => {
     process.env.AIIA_USER_CARD_PATH = envPath;
     delete process.env.AIIA_PROFILE_DISABLED;
 
-    let hook;
-    const mockPi = {
+    clearSnapshotSections();
+    contextCardExtension({
       registerCommand() {},
-      on(ev, fn) {
-        if (ev === "before_agent_start") hook = fn;
-      },
-    };
-    contextCardExtension(mockPi);
-    const res = await hook({}, { cwd });
-    assert.match(res.appendSystemPrompt, /inject-me/);
+      on() {},
+    });
+    const text = buildPromptSnapshot({ cwd, env: process.env });
+    assert.match(text, /inject-me/);
 
     process.env.AIIA_PROFILE_DISABLED = "1";
-    const res2 = await hook({}, { cwd });
-    assert.equal(res2, undefined);
+    assert.equal(buildPromptSnapshot({ cwd, env: process.env }), "");
     delete process.env.AIIA_PROFILE_DISABLED;
+    clearSnapshotSections();
   });
 });

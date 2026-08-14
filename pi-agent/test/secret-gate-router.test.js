@@ -1,9 +1,16 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { redactText, redactToolResultEvent } from '../src/secret-redact.js';
+import { formatSecretNamesPrompt, redactText, redactToolResultEvent } from '../src/secret-redact.js';
 import secretGateExtension from '../extensions/secret-gate.js';
 
 describe('Secret Gate Redaction Unit Tests', () => {
+  test('formatSecretNamesPrompt lists names only', () => {
+    const text = formatSecretNamesPrompt(['OPENAI_API_KEY', 'GH_TOKEN']);
+    assert.match(text, /OPENAI_API_KEY/);
+    assert.match(text, /GH_TOKEN/);
+    assert.doesNotMatch(text, /sk-/);
+  });
+
   test('Redacts sensitive keys from tool_result text correctly', () => {
     const secrets = {
       OPENAI_API_KEY: 'sk-1234567890abcdefghijklmnopqrstuvwxyz',

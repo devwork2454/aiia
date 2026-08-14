@@ -12,6 +12,7 @@ export const CORE_EXTENSIONS = Object.freeze([
   "memory",
   "context-card",
   "capability-catalog",
+  "prompt-snapshot",
   "quality-gate",
   "tool-result-prune",
   "context-gc",

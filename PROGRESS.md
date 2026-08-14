@@ -1,5 +1,22 @@
 # 项目进度
 
+## GOAL
+把 catalog/profile（及 reply、add-dir、secret 名字）从每轮无效的 system 追加，改成 cache-safe 快照。
+### 验收标准
+- 纯函数 `pi-agent/src/prompt-snapshot.js`：分段注册、hash、`upsertSnapshotMessages`（变了才换、空则删、相同返回 null）
+- 工厂 `extensions/prompt-snapshot.js` 挂 `context`，把一份 system 快照插在首条 system 之后；文件名 = 门禁 id；进 CORE
+- catalog / context-card / reply-prefs / add-dir / secret-gate **不再** `return { appendSystemPrompt }`（Pi 不认这个字段）
+- 各扩展改为 `registerSnapshotSection`；原有 kill switch 仍生效
+- 不改 memory 的 query 相关注入；不调用 LLM
+- 单测进 verify；docs-check 过；`.harness/verify.sh` 退出 0
+### 状态
+进行中（2026-08-14）
+### 代定决策
+- 走 `context` 回写 messages，不走 `before_agent_start.systemPrompt`：快照变了不重写整段 system 前缀
+- 一份合订快照（带 hash 头），不是每段一条消息
+- secret 只快照**名字**，不写值
+- `AIIA_PROMPT_SNAPSHOT_DISABLED=1` 关闭注入（分段仍可注册）
+
 ## GOAL（已完成）
 给 `tool_result` 加无模型截断和外溢（prune + spill）。
 ### 验收标准

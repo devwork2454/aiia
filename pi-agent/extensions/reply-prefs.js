@@ -1,7 +1,7 @@
 /**
  * AIIA global reply language + style.
  * Commands: /reply, /reply lang <...>, /reply style <...>, /reply on|off|reset
- * Injects via before_agent_start every turn.
+ * Injects via the cache-safe context snapshot.
  */
 import {
   STYLE_PRESETS,
@@ -15,6 +15,7 @@ import {
   projectPrefsPath,
 } from "../src/reply-prefs.js";
 import { registerAiiaHandler } from "../src/command-registry.js";
+import { registerSnapshotSection } from "../src/prompt-snapshot.js";
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
 export default function replyPrefsExtension(pi) {
@@ -91,11 +92,7 @@ export default function replyPrefsExtension(pi) {
   });
   registerAiiaHandler("reply", replyHandler);
 
-  pi.on("before_agent_start", async (_event, ctx) => {
-    const cwd = ctx?.cwd || process.cwd();
-    const prefs = loadPrefs({ cwd });
-    const block = formatReplyPrefsPrompt(prefs);
-    if (!block) return;
-    return { appendSystemPrompt: "\n\n" + block };
+  registerSnapshotSection("reply", ({ cwd, env }) => {
+    return formatReplyPrefsPrompt(loadPrefs({ cwd, env }));
   });
 }
