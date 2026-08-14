@@ -1,6 +1,22 @@
 # 项目进度
 
 ## GOAL（已完成）
+消除 Pi 启动的 `[Skill conflicts]` 警告：user 级与 project 级同名 skill 冲突（langfuse 案例）。
+### 验收标准
+- 根因：Pi 从 `~/.agents/skills`(user) 与 `{cwd}/.agents/skills`(project) 发现 skill，同名时 project 优先、user 被跳过并刷警告；Pi 无配置开关可关闭
+- 关键机制：指向**同一真实文件**的软链被 Pi 静默去重（`realPathSet`），不产生冲突
+- `scripts/fix-skill-conflicts.sh`：扫描重名 skill，内容相同则软链化为单一真源（默认 `--keep=project`，user 级软链化并备份 `.bak` 可逆；`--keep=user` 反向），内容不同则提示跳过绝不自动改；`--dry-run` 预览；幂等
+- `scripts/fix-skill-conflicts.test.sh` 覆盖：默认软链化+备份、幂等二次 no-op、内容不同跳过、dry-run 不修改、keep=user 反向、无冲突退出 0；进 verify
+- `.harness/verify.sh` 退出 0
+### 状态
+通过（2026-08-14）：`.harness/verify.sh` 退出 0
+### 代定决策
+- 默认 keep=project：不改动项目仓库（可能是 git 交付物），只改 user 级 `~/.agents/skills`
+- 软链去重而非删除：可逆（`.bak` 备份），Pi 静默去重后警告消失、功能保留
+- 内容不同绝不自动改：避免破坏用户定制 skill
+- install.sh 不自动调用：删改用户文件有风险，作为独立工具按需运行（`bash scripts/fix-skill-conflicts.sh --project-dir=<cwd> --dry-run`）
+
+## GOAL（已完成）
 对照 deepseek-harness 做架构取舍，并给 Pi TUI 加 turn 耗时 / 缓存命中 / 命令执行中状态。
 ### 验收标准
 - 调研结论写入本条：dsh 是 Cordis「一切皆插件」+ ReAct 自由循环，不引入 Cordis、不换 Pi 内核、不搬 Web UI

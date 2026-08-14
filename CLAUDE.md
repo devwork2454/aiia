@@ -19,5 +19,6 @@
 - docs-check：新增/改扩展后跑 `node scripts/generate-api-docs.mjs` 重生成 `docs/EXTENSIONS.md` 并 commit，否则 verify 失败
 - 扩展：纯函数放 `pi-agent/src/`，工厂在 `pi-agent/extensions/`，/aiia 子命令用 `registerAiiaHandler`；新扩展加进 `CORE_EXTENSIONS` 默认启用
 - link-pi-skills：`~/.pi/agent/skills/<name>` 非软链冲突默认保留跳过（不失败）；`AIIA_LINK_FORCE=1` 备份后覆盖
+- skill 冲突自愈：Pi 从 `~/.agents/skills` 与 `<cwd>/.agents/skills` 发现同名 skill 会刷 `[Skill conflicts]` 警告；`scripts/fix-skill-conflicts.sh`（默认 `--keep=project` 软链去重，`--dry-run` 预览）消除
 - 防漂移测试锁定「扩展文件名 = 工厂门禁 id」，重命名扩展需同步
 - 管理命令：`/aiia status` 查看状态、`/aiia update` 一键更新（pi 内）
