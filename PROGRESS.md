@@ -1,6 +1,6 @@
 # 项目进度
 
-## GOAL
+## GOAL（已完成）
 对照 deepseek-harness 做架构取舍，并给 Pi TUI 加 turn 耗时 / 缓存命中 / 命令执行中状态。
 ### 验收标准
 - 调研结论写入本条：dsh 是 Cordis「一切皆插件」+ ReAct 自由循环，不引入 Cordis、不换 Pi 内核、不搬 Web UI
@@ -10,7 +10,7 @@
 - 默认随视觉件开启；`AIIA_VISUAL_DISABLED=1` 或 `AIIA_DISABLE_TURN_STATUS=1` 不注册
 - 单测进 verify；`node scripts/generate-api-docs.mjs` 后 docs-check 过；`.harness/verify.sh` 退出 0
 ### 状态
-进行中（2026-08-14）
+通过（2026-08-14）：`.harness/verify.sh` 退出 0（217 unit）；commit `845e388`
 ### 代定决策
 - 只抄 dsh 的 4 个展示信号（相位+耗时、缓存%、工具运行态、压缩进度已有），不抄 StatsLine/TTFT/tok/s/OTel
 - 展示走 footer，不加 widget，避免和 To-do / compact 条抢编辑器上方
