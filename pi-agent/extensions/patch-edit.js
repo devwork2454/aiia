@@ -83,9 +83,7 @@ export default function patchEditExtension(pi) {
       // Use GNU patch which has powerful --ignore-whitespace and --fuzz
       const { spawnSync } = await import('node:child_process');
       const r = spawnSync('patch', ['--batch', '--force', '--ignore-whitespace', '--fuzz=3', abs, tmpPatch], { encoding: 'utf8' });
-      
-      try { fs.unlinkSync(tmpPatch); } catch(e){}
-
+      fs.rmSync(tmpPatch, { force: true });
       if (r.status !== 0) {
         return { 
           isError: true, 
