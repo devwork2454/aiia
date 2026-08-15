@@ -46,18 +46,25 @@ export default function uiSubagentBoardExtension(pi) {
   let tickIndex = 0;
   const BRAILLE_SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
+  let cachedTasks = [];
+  let lastScanTime = 0;
+
   function paint() {
     if (!activeCtx || !activeCtx.ui || !activeCtx.ui.setWidget) return;
     
-    const cwd = activeCtx.cwd || process.cwd();
-    const tasks = scanWorktrees(cwd);
+    const now = Date.now();
+    if (now - lastScanTime >= POLL_INTERVAL) {
+      const cwd = activeCtx.cwd || process.cwd();
+      cachedTasks = scanWorktrees(cwd);
+      lastScanTime = now;
+    }
+    const tasks = cachedTasks;
     
     if (tasks.length === 0) {
       activeCtx.ui.setWidget(WIDGET_KEY, undefined);
       return;
     }
 
-    const now = Date.now();
     let running = 0;
     
     const lines = [];
