@@ -39,30 +39,72 @@ export default function patchEditExtension(pi) {
       if (!abs) return { isError: true, content: 'Invalid path' };
       if (!fs.existsSync(abs)) return { isError: true, content: 'File not found' };
 
-      const currentContent = fs.readFileSync(abs, 'utf8');
+      // Fix missing spaces in context lines and recalculate hunk headers
+      const lines = (args.udiff || '').split(/\r?\n/);
+      const fixed = [];
+      let currentHunk = null;
 
-      const patched = diff.applyPatch(currentContent, args.udiff, { fuzzFactor: 2 });
-      if (patched === false) {
+      for (const line of lines) {
+        if (line.startsWith('@@ ')) {
+          if (currentHunk) {
+            fixed.push(`@@ -${currentHunk.oldStart},${currentHunk.oldCount} +${currentHunk.newStart},${currentHunk.newCount} @@`);
+            fixed.push(...currentHunk.lines);
+          }
+          const m = line.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+          if (m) {
+            currentHunk = {
+              oldStart: parseInt(m[1], 10), newStart: parseInt(m[2], 10),
+              oldCount: 0, newCount: 0, lines: []
+            };
+          } else {
+            fixed.push(line);
+          }
+        } else if (currentHunk) {
+          if (line.startsWith('-')) { currentHunk.oldCount++; currentHunk.lines.push(line); }
+          else if (line.startsWith('+')) { currentHunk.newCount++; currentHunk.lines.push(line); }
+          else if (line.startsWith(' ')) { currentHunk.oldCount++; currentHunk.newCount++; currentHunk.lines.push(line); }
+          else if (line.startsWith('\\')) { currentHunk.lines.push(line); }
+          else if (line === '') { currentHunk.oldCount++; currentHunk.newCount++; currentHunk.lines.push(' '); }
+          else { currentHunk.oldCount++; currentHunk.newCount++; currentHunk.lines.push(' ' + line); }
+        } else {
+          fixed.push(line);
+        }
+      }
+      if (currentHunk) {
+        fixed.push(`@@ -${currentHunk.oldStart},${currentHunk.oldCount} +${currentHunk.newStart},${currentHunk.newCount} @@`);
+        fixed.push(...currentHunk.lines);
+      }
+      
+      const patchContent = fixed.join('\n') + '\n';
+      const tmpPatch = path.join(ctx?.cwd || process.cwd(), '.agent', `patch-${Date.now()}.diff`);
+      fs.mkdirSync(path.dirname(tmpPatch), { recursive: true });
+      fs.writeFileSync(tmpPatch, patchContent, 'utf8');
+
+      // Use GNU patch which has powerful --ignore-whitespace and --fuzz
+      const { spawnSync } = await import('node:child_process');
+      const r = spawnSync('patch', ['--batch', '--force', '--ignore-whitespace', '--fuzz=3', abs, tmpPatch], { encoding: 'utf8' });
+      
+      try { fs.unlinkSync(tmpPatch); } catch(e){}
+
+      if (r.status !== 0) {
         return { 
           isError: true, 
-          content: 'Failed to apply diff patch. The fuzzy matcher could not locate the context lines. Please verify your diff and try again, or use the regular edit tool if the diff is too complex.' 
+          content: `Failed to apply diff patch.\nPatch Output:\n${r.stdout}\n${r.stderr}\nPlease verify your diff and try again, or use the regular edit tool.` 
         };
       }
-
-      fs.writeFileSync(abs, patched, 'utf8');
       
       // Fire tool_result event to trigger quality gate
       if (typeof pi.emit === 'function') {
         pi.emit('tool_result', {
           toolName: 'patch_edit',
           input: args,
-          content: [{ type: 'text', text: `Successfully patched ${rel}` }],
+          content: [{ type: 'text', text: `Successfully patched ${rel}\n${r.stdout}` }],
           isError: false
         }, ctx);
       }
 
       return {
-        content: `Successfully applied patch to ${rel}.`
+        content: `Successfully applied patch to ${rel}.\n${r.stdout}`
       };
     }
   });
