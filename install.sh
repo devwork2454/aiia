@@ -120,7 +120,14 @@ if [ -d "$AIIA_DIR/pi-agent" ]; then
   success "AIIA 项目已存在于 $AIIA_DIR"
   if [ -n "$AIIA_REPO" ]; then
     info "正在拉取最新代码..."
-    git -C "$AIIA_DIR" pull --ff-only || warn "git pull 失败，使用本地版本"
+    if git -C "$AIIA_DIR" pull --ff-only; then
+      success "代码更新成功，当前版本信息："
+      echo -e "${CYAN}"
+      git -C "$AIIA_DIR" log -3 --oneline --color=always | sed 's/^/  /'
+      echo -e "${RESET}"
+    else
+      warn "git pull 失败，使用本地版本"
+    fi
   fi
 else
   if [ -n "$AIIA_REPO" ]; then
@@ -137,7 +144,10 @@ else
         git clone "https://github.com/$AIIA_REPO.git" "$AIIA_DIR" || git clone "$AIIA_REPO" "$AIIA_DIR"
       fi
     fi
-    success "项目克隆完成"
+    success "项目克隆完成，当前版本信息："
+    echo -e "${CYAN}"
+    git -C "$AIIA_DIR" log -3 --oneline --color=always | sed 's/^/  /'
+    echo -e "${RESET}"
   else
     # 没有 git 仓库时，从当前脚本所在目录使用
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
