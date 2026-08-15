@@ -168,7 +168,7 @@ export function resolveRoutedPayload(payload = {}, ctx = {}, env = process.env) 
   
   // 真源翻译：如果是 1api 提供的直连，绝对不能发别名，必须翻译成真实的 provider.json 里的 ID
   const provider = String(ctx?.model?.provider || '');
-  if (provider === '1api' || provider === 'charon') {
+  if (provider === '1api' || provider === 'charon' || provider === 'local-proxy') {
     targetModel = resolve1apiTier(targetModel, ctx?.model?.baseUrl);
   }
   
