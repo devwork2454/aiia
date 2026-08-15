@@ -36,6 +36,7 @@ export function buildGoalKickoffMessage(args = "") {
     fromProgress ? "（未提供显式目标：先读 PROGRESS.md 锚定）" : "",
     "",
     "硬约束：",
+    "0. 启动时必须立即调用 update_todos 工具创建 5 个阶段节点：需求分析、资源检索、编码执行、本地验证、验收。并随着进展实时更新状态。",
     "1. 更新 PROGRESS.md 的 GOAL / 验收标准 / 本轮计划",
     "2. 实现后必须亲自运行：bash .harness/verify.sh（非 0 不得报通过）",
     "3. 写 artifacts/eval/EVAL.md（D1–D5）；无 Critical/Major 才可停机「通过」",
@@ -43,7 +44,7 @@ export function buildGoalKickoffMessage(args = "") {
     "5. 最多 3 轮实现→评估；阻塞写入 PROGRESS「阻塞」节后停止",
     "6. 按 skill 汇报格式收尾（含下一步建议；无则写「无」）",
     "",
-    "请立即开始：先读 PROGRESS.md 与 git log，再锚定 GOAL 并执行。",
+    "请立即开始：先调用 update_todos 初始化阶段进度条，然后读 PROGRESS.md 与 git log 锚定 GOAL 执行。",
   ]
     .filter((line) => line !== "")
     .join("\n");

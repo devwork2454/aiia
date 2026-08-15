@@ -33,10 +33,10 @@ describe("todo-progress helpers", () => {
     assert.equal(summary.total, 9);
     assert.equal(summary.done, 2);
     assert.equal(summary.inProgress, 1);
-    assert.equal(formatTodoHeader(summary), "To-do Working on 9 to-dos • 2 done");
+    assert.equal(formatTodoHeader(summary), "To-do Working on 9 to-dos • 2 done (22%)");
 
     const lines = formatTodoWidgetLines(demo);
-    assert.equal(lines[0], "To-do Working on 9 to-dos • 2 done");
+    assert.equal(lines[0], "To-do Working on 9 to-dos • 2 done (22%)");
     assert.match(lines[1], /✔ SDD 工作区 \/ worktree \/ ledger/);
     assert.match(lines[3], /◐ Task 2: watermark 单调合并/);
     assert.match(lines[4], /○ Task 3: 0 行不 REPLACE/);
@@ -96,7 +96,7 @@ describe("todo-progress helpers", () => {
     paintTodoWidget(ui, normalizeTodos(DEMO_TODOS));
     const painted = widgets.get(WIDGET_KEY);
     assert.equal(painted.opts.placement, "aboveEditor");
-    assert.equal(painted.content[0], "To-do Working on 9 to-dos • 2 done");
+    assert.equal(painted.content[0], "To-do Working on 9 to-dos • 2 done (22%)");
     paintTodoWidget(ui, []);
     assert.equal(widgets.has(WIDGET_KEY), false);
   });

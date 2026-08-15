@@ -34,6 +34,18 @@ export default function qualityGateExtension(pi) {
     let report = evaluateFileQuality(abs, { cwd, env });
     if (!report || report.passed) return null;
 
+    if (env.QUALITY_GATE_DRAFT_MODE === '1' || env.AIIA_DRAFT_MODE === '1') {
+      const feedback = formatQualityFeedback(report);
+      ctx?.ui?.notify?.(`[Draft Mode] Ignored Quality Gate errors for ${rel}`, 'warn');
+      return {
+        content: [
+          ...(Array.isArray(event?.content) ? event.content : []),
+          { type: 'text', text: `\n[Draft Mode Warn] File written, but has errors:\n${feedback}\nThese must be fixed during convergence phase.\n` },
+        ],
+        isError: false, // Do not block
+      };
+    }
+
     const MAX_RETRIES = qualityGateMaxRetries(env);
     let attempt = 0;
 
@@ -79,4 +91,21 @@ export default function qualityGateExtension(pi) {
 
     return null;
   });
+
+  if (typeof pi.registerCommand === 'function') {
+    pi.registerCommand('draft', {
+      description: 'Toggle Draft Mode (bypasses local quality gate errors to allow fast prototyping)',
+      handler: async (args, ctx) => {
+        const current = process.env.AIIA_DRAFT_MODE === '1';
+        const nextState = !current;
+        process.env.AIIA_DRAFT_MODE = nextState ? '1' : '0';
+        ctx?.ui?.notify?.(
+          nextState 
+            ? '🚀 Draft Mode Enabled: Quality Gate will now only WARN on errors.' 
+            : '🛡️ Draft Mode Disabled: Strict Quality Gate is active.',
+          'info'
+        );
+      }
+    });
+  }
 }

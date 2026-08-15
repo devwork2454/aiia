@@ -63,10 +63,6 @@ AIIA Hybrid KB search extension (S3 minimum slice). Registers `kb_search` — le
 
 
 
-## `manage.js`
-
-AIIA management commands: /aiia status + /aiia update. status  — repo branch/commit, remotes, upstream, pi skill linking state. update  — git pull latest code, re-link pi skills (conflicts keep existing). Feedback: toast first line + persistent chat message + .agent/aiia-update.log
-
 ## `markdown-transform.js`
 
 AIIA Markdown Transform Renders GitHub-style callouts (> [!NOTE|TIP|IMPORTANT|WARNING|CAUTION]) in Pi's TUI. Pi already renders Markdown; this only enhances callout blocks that pi-tui otherwise shows as raw text. Kill: AIIA_MARKDOWN_TRANSFORM_DISABLED=1

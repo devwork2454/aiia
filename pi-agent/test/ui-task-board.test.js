@@ -159,7 +159,7 @@ describe("ui-task-board", () => {
       ctx,
     );
     const lines = widgets.get("todo-progress");
-    assert.equal(lines[0], "To-do Working on 3 to-dos • 1 done");
+    assert.equal(lines[0], "To-do Working on 3 to-dos • 1 done (33%)");
     assert.match(result.content[0].text, /◐ Task 2/);
     await tools.update_todos.execute("tc2", { clear: true }, undefined, undefined, ctx);
     assert.equal(widgets.has("todo-progress"), false);

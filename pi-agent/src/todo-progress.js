@@ -90,10 +90,11 @@ export function formatTodoHeader(summary) {
   const total = Number(summary?.total) || 0;
   const done = Number(summary?.done) || 0;
   const inProgress = Number(summary?.inProgress) || 0;
+  const percentage = total > 0 ? Math.round((done / total) * 100) : 100;
   const noun = total === 1 ? "to-do" : "to-dos";
-  if (inProgress > 0) return `To-do Working on ${total} ${noun} • ${done} done`;
-  if (total > 0 && done === total) return `To-do ${total} ${noun} • all done`;
-  return `To-do ${total} ${noun} • ${done} done`;
+  if (inProgress > 0) return `To-do Working on ${total} ${noun} • ${done} done (${percentage}%)`;
+  if (total > 0 && done === total) return `To-do ${total} ${noun} • all done (${percentage}%)`;
+  return `To-do ${total} ${noun} • ${done} done (${percentage}%)`;
 }
 
 export function formatTodoLine(todo) {
