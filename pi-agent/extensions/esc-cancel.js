@@ -4,7 +4,10 @@ export default function escCancelExtension(pi) {
   pi.on("session_start", (event, ctx) => {
     
     const cancelTasks = (source) => {
-      ctx?.ui?.notify?.(`⚠️ [${source}] 拦截指令：正在取消任务与工具调用...`, "warning");
+      ctx?.ui?.notify?.(`⚠️ [${source}] 拦截指令：正在中断请求与任务...`, "warning");
+      if (ctx?.session && typeof ctx.session.abort === 'function') {
+        ctx.session.abort();
+      }
       if (typeof pi.cancelActiveTasks === 'function') {
         pi.cancelActiveTasks();
       } else if (ctx?.session && typeof ctx.session.cancelActiveToolCalls === 'function') {

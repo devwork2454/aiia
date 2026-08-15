@@ -86,7 +86,7 @@ export default function subagentWorktreeExtension(pi) {
               try {
                 fs.symlinkSync(rootEnvPath, worktreeEnvPath, 'dir');
               } catch (e) {
-                // Ignore failure (e.g., Windows privileges)
+                console.debug(`Failed to symlink ${envDir}: ${e.message}`);
               }
             }
           }
