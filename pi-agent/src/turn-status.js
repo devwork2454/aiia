@@ -117,25 +117,29 @@ export function formatTurnStatusLine(state) {
   const totalSuffix = formatTotalTokens(state?.totals);
   const suffix = totalSuffix ? ` | 消耗: ${totalSuffix}` : "";
   const phase = state?.phase || "idle";
-  if (phase === "idle") return `[Ready]${suffix}`;
+  
+  const draftPrefix = process.env.AIIA_DRAFT_MODE === '1' ? '[DRAFT] ' : '';
+
+  if (phase === "idle") return `${draftPrefix}[Ready]${suffix}`;
   
   const spinner = BRAILLE_SPINNER[(state?.tickIndex || 0) % BRAILLE_SPINNER.length];
   const elapsed = formatDuration((Number(state.now) || 0) - (Number(state.startedAt) || 0));
   
   if (phase === "thinking" || phase === "responding") {
-    return `${spinner} [${elapsed}] 正在思考...${suffix}`;
+    return `${draftPrefix}${spinner} [${elapsed}] 正在思考...${suffix}`;
   }
   if (phase === "tool") {
     const tool = state.toolSummary || state.toolName || "tool";
     const extra = Number(state.toolCount) > 1 ? ` | 累计执行: ${state.toolCount} 个工具` : "";
-    return `${spinner} [${elapsed}] 运行中: ${tool}${extra}${suffix}`;
+    return `${draftPrefix}${spinner} [${elapsed}] 运行中: ${tool}${extra}${suffix}`;
   }
   const bits = [`✓ [${elapsed}] 完成`];
   const hit = cacheHitPct(state.usage);
   if (hit != null) bits.push(`缓存: ${hit}%`);
   const tools = Number(state.toolCount) || 0;
   if (tools > 0) bits.push(`共调用 ${tools} 次工具`);
-  return `${bits.join(" | ")}${suffix}`;
+  
+  return `${draftPrefix}${bits.join(" | ")}${suffix}`;
 }
 
 export function formatWorkingMessage(state) {
