@@ -16,7 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
-const MUTATING_TOOLS = new Set(['edit', 'write']);
+const MUTATING_TOOLS = new Set(['edit', 'write', 'patch_edit']);
 const __qgDir = path.dirname(fileURLToPath(import.meta.url));
 const __piAgentRoot = path.resolve(__qgDir, '..');
 const requireFromPi = createRequire(path.join(__piAgentRoot, 'package.json'));

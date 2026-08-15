@@ -87,6 +87,10 @@ AIIA L6 Micro-context Handoff Extension 定义并拦截 `send_message` 工具，
 
 AIIA L7.6 OS / browser extension (S4 minimum slice). Registers gated tools; default OFF; dry-run simulation; no hard desktop deps.
 
+## `patch-edit.js`
+
+AIIA Unified Diff Patch Editor Registers `patch_edit` tool. Replaces the brittle exact-string-match 'edit' tool with a fuzzy-matching udiff algorithm, drastically reducing indentation/whitespace hallucinations from breaking the development workflow.
+
 ## `prompt-snapshot.js`
 
 AIIA Prompt Snapshot Injects catalog/profile/reply/add-dir/secret-name blocks as one replaceable context message. Rewrites only when the hash changes (cache-safe). Kill: AIIA_PROMPT_SNAPSHOT_DISABLED=1
