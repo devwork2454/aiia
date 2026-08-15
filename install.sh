@@ -120,14 +120,21 @@ if [ -d "$AIIA_DIR/pi-agent" ]; then
   success "AIIA 项目已存在于 $AIIA_DIR"
   if [ -n "$AIIA_REPO" ]; then
     info "正在拉取最新代码..."
-    if git -C "$AIIA_DIR" pull --ff-only; then
-      success "代码更新成功，当前版本信息："
-      echo -e "${CYAN}"
-      git -C "$AIIA_DIR" log -3 --oneline --color=always | sed 's/^/  /'
-      echo -e "${RESET}"
-    else
-      warn "git pull 失败，使用本地版本"
+    # 消除由 npm install 导致的常规依赖锁意外变脏
+    git -C "$AIIA_DIR" checkout -- pi-agent/package-lock.json 2>/dev/null || true
+    
+    if ! git -C "$AIIA_DIR" pull --ff-only 2>/dev/null; then
+      warn "常规 pull 被拦截，尝试暂存(stash)本地修改后强行拉取..."
+      git -C "$AIIA_DIR" stash >/dev/null 2>&1 || true
+      if ! git -C "$AIIA_DIR" pull --ff-only; then
+        error "代码合并彻底失败！请进入 $AIIA_DIR 手动排查冲突。"
+      fi
     fi
+    
+    success "代码更新成功，当前版本信息："
+    echo -e "${CYAN}"
+    git -C "$AIIA_DIR" log -3 --oneline --color=always | sed 's/^/  /'
+    echo -e "${RESET}"
   fi
 else
   if [ -n "$AIIA_REPO" ]; then
