@@ -16,6 +16,12 @@ export default function uiBeautifyExtension(pi) {
       const content = msg.content || "";
       if (msg.role !== "assistant" || msg.customType) return undefined;
       
+      // Prevent heavy regex and syntax highlighting during streaming
+      const isStreaming = msg.status === "in_progress" || msg.status === "streaming" || msg.final === false;
+      if (isStreaming) {
+        return undefined; // Fall back to fast default renderer during stream
+      }
+
       return {
         render: (width) => {
           try {
