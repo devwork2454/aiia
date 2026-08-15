@@ -42,19 +42,19 @@ export default function sandboxPolicyExtension(pi) {
           mode,
           allowedTools: params.allowedTools || []
         });
-        return {
-          status: 'success',
+        const _res = { status: 'success',
           message: `✅ 沙箱策略模式已成功设置为 ${mode}`,
           policy: {
             mode: currentPolicy.mode,
             allowedTools: Array.from(currentPolicy.allowedTools)
           }
         };
+        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
       } catch (e) {
-        return {
-          status: 'error',
+        const _res = { status: 'error',
           message: `❌ ${e.message}`,
         };
+        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
       }
     }
   });
@@ -67,14 +67,14 @@ export default function sandboxPolicyExtension(pi) {
       properties: {}
     },
     async execute() {
-      return {
-        status: 'success',
+      const _res = { status: 'success',
         policy: {
           mode: currentPolicy.mode,
           allowedTools: Array.from(currentPolicy.allowedTools),
           blockedPaths: currentPolicy.blockedPaths
         }
       };
+        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
     }
   });
 }

@@ -134,7 +134,8 @@ export default function subagentWorktreeExtension(pi) {
       const cwd = ctx?.cwd || process.cwd();
       const baseWorktreeDir = path.join(cwd, '.agent', 'worktrees');
       if (!fs.existsSync(baseWorktreeDir)) {
-        return { status: 'success', worktrees: [], count: 0 };
+        const _res = { status: 'success', worktrees: [], count: 0 };
+        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
       }
 
       const dirs = fs.readdirSync(baseWorktreeDir);
@@ -194,11 +195,11 @@ export default function subagentWorktreeExtension(pi) {
         });
       }
 
-      return {
-        status: 'success',
+      const _res = { status: 'success',
         count: list.length,
         worktrees: list
       };
+        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
     }
   });
 

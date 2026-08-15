@@ -116,10 +116,10 @@ export default function taskRunnerExtension(pi) {
           const _res = { status: 'error', message: `未找到 DAG 图 #${params.dagId} 的信息` };
         return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
         }
-        return {
-          status: 'success',
+        const _res = { status: 'success',
           summary: runner.getStatus()
         };
+        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
       } catch (e) {
         return {
           status: 'error',
