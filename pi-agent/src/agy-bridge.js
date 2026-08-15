@@ -58,7 +58,7 @@ export function startAgyBridgeServer(port = PORT) {
             object: 'model', 
             created: Date.now(), 
             owned_by: 'google-deepmind',
-            context_window: 200000,
+            context_window: 256000,
             max_tokens: 8192
           }
         ]
