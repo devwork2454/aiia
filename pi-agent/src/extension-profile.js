@@ -27,6 +27,8 @@ export const CORE_EXTENSIONS = Object.freeze([
   "steer",
   "markdown-transform",
   "manage",
+  "progress-archiver",
+  "large-file-gate",
 ]);
 
 /** Default-on TUI extras. Not CORE. Kill: AIIA_VISUAL_DISABLED=1 */

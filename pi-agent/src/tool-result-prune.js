@@ -115,8 +115,18 @@ export function writeSpillFile(opts) {
   writeFile(abs, body, { encoding: "utf8", mode: 0o600 });
   try {
     chmod(abs, 0o600);
+    // GC old spills to prevent disk exhaustion (keep last 15)
+    const files = fs.readdirSync(dir)
+      .filter(f => f.endsWith('.txt'))
+      .map(f => ({ name: f, time: fs.statSync(path.join(dir, f)).mtimeMs }))
+      .sort((a, b) => b.time - a.time);
+    if (files.length > 15) {
+      for (let i = 15; i < files.length; i++) {
+        fs.unlinkSync(path.join(dir, files[i].name));
+      }
+    }
   } catch {
-    // best-effort on platforms that ignore writeFile mode
+    // best-effort on platforms that ignore writeFile mode or fs operations
   }
   return { abs, rel: path.join(SPILL_DIRNAME, base), bytes: body.length };
 }

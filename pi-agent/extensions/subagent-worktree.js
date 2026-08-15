@@ -77,6 +77,19 @@ export default function subagentWorktreeExtension(pi) {
             }
           }
           isNewWorktree = true;
+          
+          // Environment Symlink Share (zero-copy dependency sharing)
+          for (const envDir of ['.venv', 'node_modules']) {
+            const rootEnvPath = path.join(cwd, envDir);
+            const worktreeEnvPath = path.join(worktreeDir, envDir);
+            if (fs.existsSync(rootEnvPath) && !fs.existsSync(worktreeEnvPath)) {
+              try {
+                fs.symlinkSync(rootEnvPath, worktreeEnvPath, 'dir');
+              } catch (e) {
+                // Ignore failure (e.g., Windows privileges)
+              }
+            }
+          }
         }
 
         const logFile = path.join(worktreeDir, '.subagent.log');
