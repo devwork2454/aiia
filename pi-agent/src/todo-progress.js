@@ -136,7 +136,18 @@ export function latestTodosFromEntries(entries) {
 
 export function paintTodoWidget(ui, todos) {
   if (!ui || typeof ui.setWidget !== "function") return false;
-  const lines = formatTodoWidgetLines(todos);
+  const rawLines = formatTodoWidgetLines(todos);
+  
+  let lines = rawLines;
+  if (lines.length > 0 && process.stdout.columns) {
+    const cols = process.stdout.columns;
+    lines = rawLines.map(line => {
+      // Right align calculation
+      const pad = Math.max(0, cols - line.length - 2);
+      return " ".repeat(pad) + line;
+    });
+  }
+
   ui.setWidget(WIDGET_KEY, lines.length ? lines : undefined, { placement: "aboveEditor" });
   return true;
 }

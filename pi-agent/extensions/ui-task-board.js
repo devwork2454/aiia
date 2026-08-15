@@ -43,13 +43,21 @@ export default function uiTaskBoardExtension(pi) {
     todos = latestTodosFromEntries(branch);
   }
 
+  let currentCtx = null;
+
   function paint(ctx) {
-    paintTodoWidget(ctx?.ui, todos);
+    if (ctx) currentCtx = ctx;
+    paintTodoWidget(currentCtx?.ui, todos);
   }
+  
+  const onResize = () => {
+    if (currentCtx) paint(currentCtx);
+  };
 
   pi.on("session_start", async (_event, ctx) => {
     restoreFrom(ctx);
     paint(ctx);
+    process.stdout.on('resize', onResize);
   });
   pi.on("session_tree", async (_event, ctx) => {
     restoreFrom(ctx);
@@ -57,6 +65,7 @@ export default function uiTaskBoardExtension(pi) {
   });
   pi.on("session_shutdown", async (_event, ctx) => {
     ctx?.ui?.setWidget?.(WIDGET_KEY, undefined);
+    process.stdout.off('resize', onResize);
   });
 
   pi.registerMessageRenderer("checklist", (msg, _options, theme) => {
