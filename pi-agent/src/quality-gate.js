@@ -10,7 +10,42 @@
  *   QUALITY_GATE_SKIP_BIOME=1   skip biome (still run node --check)
  *   QUALITY_GATE_SKIP_RUFF=1    skip ruff (still run py_compile)
  */
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn as nativeSpawn } from 'node:child_process';
+
+function spawnAsync(cmd, args, opts) {
+  return new Promise((resolve) => {
+    let stdout = '';
+    let stderr = '';
+    let timedOut = false;
+    const child = nativeSpawn(cmd, args, opts);
+    
+    let timer;
+    if (opts.timeout) {
+      timer = setTimeout(() => {
+        timedOut = true;
+        child.kill('SIGKILL');
+      }, opts.timeout);
+    }
+    
+    child.stdout?.on('data', d => stdout += d);
+    child.stderr?.on('data', d => stderr += d);
+    
+    child.on('error', (err) => {
+      if (timer) clearTimeout(timer);
+      resolve({ error: err, status: null, stdout, stderr });
+    });
+    
+    child.on('close', (code) => {
+      if (timer) clearTimeout(timer);
+      if (timedOut) {
+        const err = new Error('ETIMEDOUT');
+        err.code = 'ETIMEDOUT';
+        return resolve({ error: err, status: code, stdout, stderr });
+      }
+      resolve({ status: code, stdout, stderr });
+    });
+  });
+}
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -155,17 +190,17 @@ function truncate(s, max) {
 /**
  * Execute one runner. Returns { ok, name, exitCode, output }.
  */
-export function runRunner(runner, { timeoutMs = 15000, spawn = spawnSync } = {}) {
+export async function runRunner(runner, { timeoutMs = 15000, spawn = spawnAsync } = {}) {
   let r;
   if (runner.shell) {
-    r = spawn('sh', ['-c', runner.shell], {
+    r = await spawn('sh', ['-c', runner.shell], {
       encoding: 'utf8',
       timeout: timeoutMs,
       env: process.env,
     });
   } else {
     const [cmd, ...args] = runner.argv;
-    r = spawn(cmd, args, {
+    r = await spawn(cmd, args, {
       encoding: 'utf8',
       timeout: timeoutMs,
       env: process.env,
@@ -201,9 +236,9 @@ export function runRunner(runner, { timeoutMs = 15000, spawn = spawnSync } = {})
 }
 
 /**
- * @returns {null | { path, passed, failures: Array<{name,exitCode,output}> }}
+ * @returns {Promise<null | { path, passed, failures: Array<{name,exitCode,output}> }>}
  */
-export function evaluateFileQuality(filePath, opts = {}) {
+export async function evaluateFileQuality(filePath, opts = {}) {
   const env = opts.env || process.env;
   if (env.QUALITY_GATE_DISABLED === '1' || env.QUALITY_GATE_DISABLED === 'true') {
     return null;
@@ -221,7 +256,7 @@ export function evaluateFileQuality(filePath, opts = {}) {
   const failures = [];
 
   for (const runner of runners) {
-    const result = runRunner(runner, { timeoutMs, spawn: opts.spawn });
+    const result = await runRunner(runner, { timeoutMs, spawn: opts.spawn });
     if (result.skipped) continue;
     if (!result.ok) {
       failures.push({
@@ -267,7 +302,7 @@ export function buildQualityGatePatch(event, report) {
 /**
  * High-level: from a tool_result-like event, maybe produce a patch.
  */
-export function evaluateToolResultQuality(event, opts = {}) {
+export async function evaluateToolResultQuality(event, opts = {}) {
   if (!event || event.isError) return null;
   if (!isMutatingFileTool(event.toolName)) return null;
 
@@ -275,7 +310,7 @@ export function evaluateToolResultQuality(event, opts = {}) {
   const abs = resolveTargetPath(rel, opts.cwd || process.cwd());
   if (!abs) return null;
 
-  const report = evaluateFileQuality(abs, opts);
+  const report = await evaluateFileQuality(abs, opts);
   if (!report || report.passed) return null;
   return buildQualityGatePatch(event, report);
 }
@@ -298,14 +333,14 @@ export function qualityGateMaxRetries(env = process.env) {
 /**
  * Spawn the S8 fixer. Injectable spawn for tests.
  */
-export function spawnQualityGateFixer({
+export async function spawnQualityGateFixer({
   cwd,
   task,
   env = process.env,
-  spawn = spawnSync,
+  spawn = spawnAsync,
 } = {}) {
   const timeout = qualityGateChildTimeoutMs(env);
-  return spawn('pi', ['-p', task], {
+  return await spawn('pi', ['-p', task], {
     cwd,
     encoding: 'utf8',
     stdio: 'pipe',

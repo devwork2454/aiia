@@ -34,9 +34,9 @@ describe('S1 Quality Gate core', () => {
     assert.equal(extractTargetPath({}), null);
   });
 
-  test('node --check passes on valid JS', () => {
+  test('node --check passes on valid JS', async () => {
     const { file } = tmpFile('ok.js', 'const x = 1;\nexport default x;\n');
-    const report = evaluateFileQuality(file, {
+    const report = await evaluateFileQuality(file, {
       env: { ...process.env, QUALITY_GATE_DISABLED: undefined },
       pickRunners: (p) => [{ name: 'node --check', argv: ['node', '--check', p] }],
     });
@@ -45,9 +45,9 @@ describe('S1 Quality Gate core', () => {
     assert.equal(report.failures.length, 0);
   });
 
-  test('node --check fails on syntax error and formats feedback', () => {
+  test('node --check fails on syntax error and formats feedback', async () => {
     const { file } = tmpFile('bad.js', 'const x = ;\n');
-    const report = evaluateFileQuality(file, {
+    const report = await evaluateFileQuality(file, {
       env: {},
       pickRunners: (p) => [{ name: 'node --check', argv: ['node', '--check', p] }],
     });
@@ -59,13 +59,13 @@ describe('S1 Quality Gate core', () => {
     assert.match(fb, /bad\.js/);
   });
 
-  test('QUALITY_GATE_DISABLED skips', () => {
+  test('QUALITY_GATE_DISABLED skips', async () => {
     const { file } = tmpFile('bad.js', 'const x = ;\n');
-    const report = evaluateFileQuality(file, { env: { QUALITY_GATE_DISABLED: '1' } });
+    const report = await evaluateFileQuality(file, { env: { QUALITY_GATE_DISABLED: '1' } });
     assert.equal(report, null);
   });
 
-  test('evaluateToolResultQuality patches edit failure with isError', () => {
+  test('evaluateToolResultQuality patches edit failure with isError', async () => {
     const { file } = tmpFile('broken.js', 'function ( {\n');
     const event = {
       type: 'tool_result',
@@ -75,7 +75,7 @@ describe('S1 Quality Gate core', () => {
       content: [{ type: 'text', text: 'Edited broken.js' }],
       isError: false,
     };
-    const patch = evaluateToolResultQuality(event, {
+    const patch = await evaluateToolResultQuality(event, {
       cwd: path.dirname(file),
       env: {},
       pickRunners: (p) => [{ name: 'node --check', argv: ['node', '--check', p] }],
@@ -86,14 +86,14 @@ describe('S1 Quality Gate core', () => {
     assert.match(patch.content[1].text, /Quality Gate/);
   });
 
-  test('skips non-mutating tools and already-errored results', () => {
+  test('skips non-mutating tools and already-errored results', async () => {
     const event = {
       toolName: 'bash',
       input: { command: 'ls' },
       content: [],
       isError: false,
     };
-    assert.equal(evaluateToolResultQuality(event), null);
+    assert.equal(await evaluateToolResultQuality(event), null);
 
     const editErr = {
       toolName: 'edit',
@@ -101,7 +101,7 @@ describe('S1 Quality Gate core', () => {
       content: [],
       isError: true,
     };
-    assert.equal(evaluateToolResultQuality(editErr), null);
+    assert.equal(await evaluateToolResultQuality(editErr), null);
   });
 
   test('buildQualityGatePatch appends without dropping prior content', () => {
@@ -143,13 +143,13 @@ describe('S1 Quality Gate core', () => {
     assert.equal(isQualityGateRollbackEnabled({ QUALITY_GATE_ROLLBACK: '1' }), true);
   });
 
-  test('spawnQualityGateFixer uses pi -p with timeout', () => {
+  test('spawnQualityGateFixer uses pi -p with timeout', async () => {
     let seen;
-    spawnQualityGateFixer({
+    await spawnQualityGateFixer({
       cwd: '/tmp',
       task: 'fix it',
       env: { QUALITY_GATE_CHILD_TIMEOUT_MS: '5000' },
-      spawn: (cmd, args, opts) => {
+      spawn: async (cmd, args, opts) => {
         seen = { cmd, args, opts };
         return { status: 0, stdout: '', stderr: '' };
       },

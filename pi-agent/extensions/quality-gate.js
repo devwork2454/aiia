@@ -31,7 +31,7 @@ export default function qualityGateExtension(pi) {
     const abs = resolveTargetPath(rel, cwd);
     if (!abs) return null;
 
-    let report = evaluateFileQuality(abs, { cwd, env });
+    let report = await evaluateFileQuality(abs, { cwd, env });
     if (!report || report.passed) return null;
 
     if (env.QUALITY_GATE_DRAFT_MODE === '1' || env.AIIA_DRAFT_MODE === '1') {
@@ -59,13 +59,13 @@ export default function qualityGateExtension(pi) {
       fs.appendFileSync(logFile, `\n\n--- Quality Gate Retry Attempt ${attempt}/${MAX_RETRIES} for ${rel} ---\n`);
 
       try {
-        const child = spawnQualityGateFixer({ cwd, task: fixTask, env });
+        const child = await spawnQualityGateFixer({ cwd, task: fixTask, env });
         fs.appendFileSync(logFile, `Child Exit Code: ${child.status}\nStdout:\n${child.stdout}\nStderr:\n${child.stderr}\n`);
       } catch (err) {
         fs.appendFileSync(logFile, `Execution Error: ${err.message}\n`);
       }
 
-      report = evaluateFileQuality(abs, { cwd, env });
+      report = await evaluateFileQuality(abs, { cwd, env });
     }
 
     if (!report.passed) {

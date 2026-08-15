@@ -81,28 +81,44 @@ export default function patchEditExtension(pi) {
       fs.writeFileSync(tmpPatch, patchContent, 'utf8');
 
       // Use GNU patch which has powerful --ignore-whitespace and --fuzz
-      const { spawnSync } = await import('node:child_process');
-      const r = spawnSync('patch', ['--batch', '--force', '--ignore-whitespace', '--fuzz=3', abs, tmpPatch], { encoding: 'utf8' });
+      const { execFile } = await import('node:child_process');
+      const { promisify } = await import('node:util');
+      const execFileAsync = promisify(execFile);
+      
+      let patchStdout = '';
+      let patchStderr = '';
+      let isSuccess = false;
+      try {
+        const { stdout, stderr } = await execFileAsync('patch', ['--batch', '--force', '--ignore-whitespace', '--fuzz=3', abs, tmpPatch], { encoding: 'utf8' });
+        patchStdout = stdout;
+        patchStderr = stderr;
+        isSuccess = true;
+      } catch (err) {
+        patchStdout = err.stdout || '';
+        patchStderr = err.stderr || err.message || '';
+      }
+      
       fs.rmSync(tmpPatch, { force: true });
-      if (r.status !== 0) {
+      if (!isSuccess) {
         return { 
           isError: true, 
-          content: `Failed to apply diff patch.\nPatch Output:\n${r.stdout}\n${r.stderr}\nPlease verify your diff and try again, or use the regular edit tool.` 
+          content: `Failed to apply diff patch.\nPatch Output:\n${patchStdout}\n${patchStderr}\nPlease verify your diff and try again, or use the regular edit tool.` 
         };
       }
+
       
       // Fire tool_result event to trigger quality gate
       if (typeof pi.emit === 'function') {
         pi.emit('tool_result', {
           toolName: 'patch_edit',
           input: args,
-          content: [{ type: 'text', text: `Successfully patched ${rel}\n${r.stdout}` }],
+          content: [{ type: 'text', text: `Successfully patched ${rel}\n${patchStdout}` }],
           isError: false
         }, ctx);
       }
 
       return {
-        content: `Successfully applied patch to ${rel}.\n${r.stdout}`
+        content: `Successfully applied patch to ${rel}.\n${patchStdout}`
       };
     }
   });
