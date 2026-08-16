@@ -7,6 +7,10 @@
 
 AIIA /add-dir — Claude Code-style additional workspace directories for Pi. Commands: /add-dir <path>       add directory /add-dir list         list (also bare /add-dir) /add-dir rm <path>    remove /rm-dir <path>        alias for remove /list-dirs            alias for list Effects: - Persist under <cwd>/.agent/additional-dirs.json - Inject path list into the cache-safe context snapshot - resources_discover: skill roots under added dirs
 
+## `auto-dag.js`
+
+顶尖水准的自动 DAG 状态机引擎 (Auto DAG Executor) 具备特性： 1. 严格的异步并发控制 (Concurrency Throttling) 2. 拓扑排序解析与微上下文无缝透传 (Micro-context Handoff) 3. 基于事件循环的非阻塞回调 4. 异常隔离与沙盒捕获
+
 ## `auto-router.js`
 
 AIIA Autonomous Router Extension Injects a global directive to empower the Main Agent to proactively use Subagents for complex tasks, effectively transforming it into an autonomous dispatcher.
@@ -39,6 +43,10 @@ AIIA Context GC Extension (JVM Generational GC inspired) Dynamically folds old p
 
 AIIA Cron Scheduler Extension (Phase 2 P6) 注册工具: - register_cron_task: 注册 5 段式 Cron 周期性自动化任务 - list_cron_tasks: 列表显示当前全部 Cron 定时任务与运行状态 - remove_cron_task: 注销/移除指定 Cron 任务
 
+## `dev-mode-switch.js`
+
+No description available.
+
 ## `docker-exec-proxy.js`
 
 AIIA SWE-bench Docker Exec Proxy (Phase 2 P8 Prototype) 允许 Agent 宿主脱离评测容器运行，但执行的任何 Bash 命令 都会被自动代理转发进指定的 Docker 容器。
@@ -46,6 +54,10 @@ AIIA SWE-bench Docker Exec Proxy (Phase 2 P8 Prototype) 允许 Agent 宿主脱�
 ## `ephemeral-job.js`
 
 AIIA Ephemeral Job Extension Implements K8s Job-like stateless subagents with model escalation strategy.
+
+## `esc-cancel.js`
+
+No description available.
 
 ## `goal.js`
 
@@ -58,6 +70,10 @@ AIIA /imp command — shape a rough task then execute (skill `imp`). Skill text 
 ## `kb-search.js`
 
 AIIA Hybrid KB search extension (S3 minimum slice). Registers `kb_search` — lexical hybrid over memories + Markdown knowledge roots. Optional qmd backend when installed; LanceDB/LSP still deferred. Env: AIIA_DB, AIIA_KB_PATHS, KB_SEARCH_DISABLED, QMD_BIN
+
+## `large-file-gate.js`
+
+No description available.
 
 ## `lsp-extension.js`
 
@@ -90,6 +106,10 @@ AIIA L7.6 OS / browser extension (S4 minimum slice). Registers gated tools; defa
 ## `patch-edit.js`
 
 AIIA Unified Diff Patch Editor Registers `patch_edit` tool. Replaces the brittle exact-string-match 'edit' tool with a fuzzy-matching udiff algorithm, drastically reducing indentation/whitespace hallucinations from breaking the development workflow.
+
+## `progress-archiver.js`
+
+No description available.
 
 ## `prompt-snapshot.js`
 

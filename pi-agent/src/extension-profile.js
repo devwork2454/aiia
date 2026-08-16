@@ -17,6 +17,8 @@ export const CORE_EXTENSIONS = Object.freeze([
   "tool-result-prune",
   "context-gc",
   "router",
+  "auto-router",
+  "auto-dag",
   "slash-ux",
   "goal",
   "imp",
@@ -55,6 +57,7 @@ export const CATALOG_TOOL_EXTENSION = Object.freeze({
   create_dag_task: "task-runner",
   run_dag_task: "task-runner",
   spawn_worktree_subagent: "subagent-worktree",
+  execute_dag: "auto-dag",
   set_sandbox_policy: "sandbox-policy",
   update_todos: "ui-task-board",
 });

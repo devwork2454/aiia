@@ -21,7 +21,6 @@ describe("extension profile (lean default)", () => {
     }
     assert.equal(isExtensionEnabled("cron-scheduler", env), false);
     assert.equal(isExtensionEnabled("web-search-proxy", env), false);
-    assert.equal(isExtensionEnabled("auto-router", env), false);
   });
 
   test("visual extras are enabled with empty env", () => {
