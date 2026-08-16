@@ -49,6 +49,13 @@ else
   fail=1
 fi
 
+echo "[quality] agent tool analytics probe"
+if [[ -x "$ROOT/scripts/tool_analytics.py" ]]; then
+  "$ROOT/scripts/tool_analytics.py" || true
+else
+  echo "[quality] tool_analytics.py not found or not executable"
+fi
+
 if [[ "$fail" -ne 0 ]]; then
   echo "[quality] FAILED"
   exit 1
