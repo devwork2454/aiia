@@ -119,6 +119,9 @@ function buildBiomeRunner(filePath, env = process.env) {
     name: 'biome lint',
     argv,
     optional: true,
+    // Run inside pi-agent so Biome resolves pi-agent/biome.json (or the gate
+    // config) as the root config instead of clashing with the repo root cwd.
+    cwd: __piAgentRoot,
   };
 }
 
@@ -191,20 +194,18 @@ function truncate(s, max) {
  * Execute one runner. Returns { ok, name, exitCode, output }.
  */
 export async function runRunner(runner, { timeoutMs = 15000, spawn = spawnAsync } = {}) {
+  const spawnOpts = {
+    encoding: 'utf8',
+    timeout: timeoutMs,
+    env: process.env,
+    ...(runner.cwd ? { cwd: runner.cwd } : {}),
+  };
   let r;
   if (runner.shell) {
-    r = await spawn('sh', ['-c', runner.shell], {
-      encoding: 'utf8',
-      timeout: timeoutMs,
-      env: process.env,
-    });
+    r = await spawn('sh', ['-c', runner.shell], spawnOpts);
   } else {
     const [cmd, ...args] = runner.argv;
-    r = await spawn(cmd, args, {
-      encoding: 'utf8',
-      timeout: timeoutMs,
-      env: process.env,
-    });
+    r = await spawn(cmd, args, spawnOpts);
   }
 
   const output = `${r.stdout || ''}${r.stderr || ''}`.trim();

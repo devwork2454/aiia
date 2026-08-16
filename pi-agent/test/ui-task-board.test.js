@@ -137,11 +137,13 @@ describe("ui-task-board", () => {
   it("update_todos paints the above-editor widget", async () => {
     const { tools } = loadExtension();
     const widgets = new Map();
+    const theme = makeTheme();
     const ctx = {
       ui: {
-        setWidget(key, content) {
+        setWidget(key, content, opts) {
           if (content === undefined) widgets.delete(key);
-          else widgets.set(key, content);
+          else if (typeof content === "function") widgets.set(key, { tree: content(null, theme), opts });
+          else widgets.set(key, { tree: content, opts });
         },
       },
     };
@@ -158,8 +160,17 @@ describe("ui-task-board", () => {
       undefined,
       ctx,
     );
-    const lines = widgets.get("todo-progress");
-    assert.equal(lines[0], "To-do Working on 3 to-dos • 1 done (33%)");
+    const painted = widgets.get("todo-progress");
+    assert.ok(painted, "widget must be painted");
+    assert.equal(painted.opts.placement, "aboveEditor");
+    const root = painted.tree;
+    assert.equal(root.constructor?.name, "VStack");
+    const lines = root.children.map((child) => child.text || "");
+    assert.match(lines[0], /To-do Working on 3 to-dos • 1 done \(33%\)/);
+    assert.match(lines[0], /█/); // compact progress bar present
+    assert.match(lines[1], /✔ \[success\]SDD 工作区 \/ worktree \/ ledger/);
+    assert.match(lines[2], /▶ .*◐ \[accent\]Task 2: watermark 单调合并/); // in_progress highlighted
+    assert.match(lines[3], /○ \[dim\]Task 3: 0 行不 REPLACE/);
     assert.match(result.content[0].text, /◐ Task 2/);
     await tools.update_todos.execute("tc2", { clear: true }, undefined, undefined, ctx);
     assert.equal(widgets.has("todo-progress"), false);

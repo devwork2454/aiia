@@ -27,7 +27,7 @@ describe('Phase 3 P2: Auto-Router Architecture Tests', () => {
     
     assert.ok(res.messages[0].content.includes('Original base prompt.'));
     assert.ok(res.messages[0].content.includes('[AIIA Autonomous Router Engine Active]'));
-    assert.ok(res.messages[0].content.includes('spawn_worktree_subagent'));
+    assert.ok(res.messages[0].content.includes('execute_dag'));
   });
 
   test('Auto-Router handles missing system prompt by prepending one', async () => {

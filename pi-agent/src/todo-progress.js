@@ -11,6 +11,17 @@ export const STATUS_GLYPH = Object.freeze({
   completed: "✔",
 });
 
+/**
+ * Compact progress bar like ████░░░░░░ for a 0-100 percentage.
+ * Pure string output (no ANSI) so it can be styled by the caller.
+ */
+export function formatProgressBar(pct, width = 10) {
+  const w = Math.max(2, Math.floor(Number(width) || 10));
+  const p = Math.min(100, Math.max(0, Math.round(Number(pct) || 0)));
+  const filled = Math.round((p / 100) * w);
+  return `${'█'.repeat(filled)}${'░'.repeat(Math.max(0, w - filled))}`;
+}
+
 const STATUS_ALIASES = Object.freeze({
   pending: "pending",
   todo: "pending",
@@ -26,7 +37,7 @@ const STATUS_ALIASES = Object.freeze({
 
 export const DEMO_TODOS = Object.freeze([
   { id: "sdd", content: "SDD 工作区 / worktree / ledger", status: "completed" },
-  { id: "t1", content: "Task 1: 窗口纯函数", status: "completed" },
+  { id: "t1", content: "Task 1: 窗口纯函数", status: "completed", logPath: ".agent/logs/t1_window_pure_functions.log" },
   { id: "t2", content: "Task 2: watermark 单调合并", status: "in_progress" },
   { id: "t3", content: "Task 3: 0 行不 REPLACE", status: "pending" },
   { id: "t4", content: "Task 4: 增量窗口 + SETTINGS + backfill CLI", status: "pending" },
@@ -55,7 +66,8 @@ export function normalizeTodo(raw, index = 0) {
   const content = String(raw.content || raw.task || raw.text || raw.title || "").trim();
   if (!content) return null;
   const id = String(raw.id || raw.key || `t${index + 1}`).trim() || `t${index + 1}`;
-  return { id, content, status: normalizeStatus(raw.status) };
+  const logPath = raw.logPath ? String(raw.logPath).trim() : undefined;
+  return { id, content, status: normalizeStatus(raw.status), ...(logPath && { logPath }) };
 }
 
 export function normalizeTodos(list) {
@@ -99,7 +111,8 @@ export function formatTodoHeader(summary) {
 
 export function formatTodoLine(todo) {
   const glyph = STATUS_GLYPH[todo?.status] || STATUS_GLYPH.pending;
-  return `    ${glyph} ${todo?.content || ""}`;
+  const logStr = todo?.logPath ? ` (log: ${todo.logPath})` : "";
+  return `    ${glyph} ${todo?.content || ""}${logStr}`;
 }
 
 export function formatTodoWidgetLines(todos) {
@@ -136,18 +149,7 @@ export function latestTodosFromEntries(entries) {
 
 export function paintTodoWidget(ui, todos) {
   if (!ui || typeof ui.setWidget !== "function") return false;
-  const rawLines = formatTodoWidgetLines(todos);
-  
-  let lines = rawLines;
-  if (lines.length > 0 && process.stdout.columns) {
-    const cols = process.stdout.columns;
-    lines = rawLines.map(line => {
-      // Right align calculation
-      const pad = Math.max(0, cols - line.length - 2);
-      return " ".repeat(pad) + line;
-    });
-  }
-
+  const lines = formatTodoWidgetLines(todos);
   ui.setWidget(WIDGET_KEY, lines.length ? lines : undefined, { placement: "aboveEditor" });
   return true;
 }

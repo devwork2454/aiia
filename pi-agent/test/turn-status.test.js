@@ -66,7 +66,7 @@ describe("turn-status helpers", () => {
       "✓ [12s] 完成 | 缓存: 80% | 共调用 2 次工具",
     );
     assert.equal(formatWorkingMessage({ phase: "tool", toolSummary: "bash ls" }), "bash ls");
-    assert.equal(formatWorkingMessage({ phase: "thinking" }), undefined);
+    assert.equal(formatWorkingMessage({ phase: "thinking" }), "思考中…");
   });
 
   it("applyTurnStatusEvent walks a turn then keeps the done line", () => {
@@ -215,7 +215,7 @@ describe("turn-status extension", () => {
     assert.equal(working.at(-1), "bash npm test");
 
     await handlers.tool_execution_end[0]({ type: "tool_execution_end", toolName: "bash" }, ctx);
-    assert.equal(working.at(-1), "(default)");
+    assert.equal(working.at(-1), "思考中…");
 
     await handlers.turn_end[0](
       {

@@ -9,13 +9,14 @@
  *
  * /demo-board seeds a sample. Kill: AIIA_VISUAL_DISABLED=1
  */
-import { VStack, Text } from "@earendil-works/pi-tui";
+import { VStack, Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { isExtensionEnabled } from "../src/extension-profile.js";
 import {
   DEMO_TODOS,
   STATUS_GLYPH,
   WIDGET_KEY,
   applyTodoUpdate,
+  formatProgressBar,
   formatTodoHeader,
   formatTodoWidgetLines,
   latestTodosFromEntries,
@@ -30,6 +31,40 @@ function checklistFromUnknown(raw) {
     return normalizeTodos(raw.todos);
   }
   return [];
+}
+
+/**
+ * Build the colored widget tree: header with a compact progress bar, and one
+ * line per todo — in_progress items are highlighted with ▶ + accent color.
+ */
+function buildTodoWidgetTree(theme, rawTodos) {
+  const items = normalizeTodos(rawTodos);
+  if (items.length === 0) return undefined;
+  const root = new VStack();
+  const summary = summarizeTodos(items);
+  const pct = summary.total > 0 ? Math.round((summary.done / summary.total) * 100) : 100;
+  const barColor = pct === 100 ? "success" : "accent";
+  const header = `${formatTodoHeader(summary)} ${theme.fg(barColor, formatProgressBar(pct))}`;
+  root.addChild(new Text(header, 0, 0));
+  
+  // 安全获取终端宽度，留点边距
+  const maxWidth = (process.stdout.columns || 150) - 2;
+
+  for (const item of items) {
+    const glyph = STATUS_GLYPH[item.status] || STATUS_GLYPH.pending;
+    const color =
+      item.status === "completed" ? "success" : item.status === "in_progress" ? "accent" : "dim";
+    const marker = item.status === "in_progress" ? "▶ " : "  ";
+    let text = `    ${marker}${theme.fg(color, glyph)} ${theme.fg(color, item.content)}`;
+    if (item.logPath) {
+      text += ` ${theme.fg("dim", `(log: ${item.logPath})`)}`;
+    }
+    
+    // 使用 truncateToWidth 防止超宽报错
+    text = truncateToWidth(text, maxWidth, theme.fg("dim", "..."));
+    root.addChild(new Text(text, 0, 0));
+  }
+  return root;
 }
 
 export default function uiTaskBoardExtension(pi) {
@@ -47,7 +82,16 @@ export default function uiTaskBoardExtension(pi) {
 
   function paint(ctx) {
     if (ctx) currentCtx = ctx;
-    paintTodoWidget(currentCtx?.ui, todos);
+    const ui = currentCtx?.ui;
+    if (!ui || typeof ui.setWidget !== "function") return;
+    try {
+      // Theme-aware tree (progress bar + highlight) with string fallback.
+      ui.setWidget(WIDGET_KEY, todos.length ? (_tui, theme) => buildTodoWidgetTree(theme, todos) : undefined, {
+        placement: "aboveEditor",
+      });
+    } catch {
+      paintTodoWidget(ui, todos);
+    }
   }
   
   const onResize = () => {
@@ -75,18 +119,7 @@ export default function uiTaskBoardExtension(pi) {
     } catch {
       return undefined;
     }
-    const items = checklistFromUnknown(parsed);
-    if (items.length === 0) return undefined;
-
-    const root = new VStack();
-    root.addChild(new Text(theme.fg("muted", formatTodoHeader(summarizeTodos(items))), 0, 0));
-    for (const item of items) {
-      const glyph = STATUS_GLYPH[item.status] || STATUS_GLYPH.pending;
-      const color =
-        item.status === "completed" ? "success" : item.status === "in_progress" ? "accent" : "dim";
-      root.addChild(new Text(`    ${theme.fg(color, glyph)} ${theme.fg(color, item.content)}`, 0, 0));
-    }
-    return root;
+    return buildTodoWidgetTree(theme, checklistFromUnknown(parsed));
   });
 
   pi.registerTool({
@@ -107,6 +140,7 @@ export default function uiTaskBoardExtension(pi) {
               content: { type: "string" },
               task: { type: "string" },
               status: { type: "string" },
+              logPath: { type: "string", description: "Optional path to a log file for this task" },
             },
           },
         },

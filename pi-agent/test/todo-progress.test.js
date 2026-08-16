@@ -28,19 +28,22 @@ describe("todo-progress helpers", () => {
     assert.equal(formatTodoLine(todos[2]).includes("◐"), true);
     assert.equal(formatTodoLine(todos[3]).includes("○"), true);
 
-    const demo = normalizeTodos(DEMO_TODOS);
+    const demo = normalizeTodos([
+      ...DEMO_TODOS,
+      { id: "with-log", content: "With Log", status: "pending", logPath: ".agent/logs/test.log" }
+    ]);
     const summary = summarizeTodos(demo);
-    assert.equal(summary.total, 9);
+    assert.equal(summary.total, 10);
     assert.equal(summary.done, 2);
     assert.equal(summary.inProgress, 1);
-    assert.equal(formatTodoHeader(summary), "To-do Working on 9 to-dos • 2 done (22%)");
+    assert.equal(formatTodoHeader(summary), "To-do Working on 10 to-dos • 2 done (20%)");
 
     const lines = formatTodoWidgetLines(demo);
-    assert.equal(lines[0], "To-do Working on 9 to-dos • 2 done (22%)");
+    assert.equal(lines[0], "To-do Working on 10 to-dos • 2 done (20%)");
     assert.match(lines[1], /✔ SDD 工作区 \/ worktree \/ ledger/);
     assert.match(lines[3], /◐ Task 2: watermark 单调合并/);
     assert.match(lines[4], /○ Task 3: 0 行不 REPLACE/);
-    assert.match(lines.at(-1), /○ 整支审查 \+ verifier \+ 收尾/);
+    assert.match(lines.at(-1), /○ With Log \(log: .agent\/logs\/test\.log\)/);
   });
 
   it("replace vs merge vs clear", () => {

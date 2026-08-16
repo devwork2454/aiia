@@ -75,6 +75,10 @@ AIIA Hybrid KB search extension (S3 minimum slice). Registers `kb_search` — le
 
 No description available.
 
+## `lark-progress-sync.js`
+
+飞书遥控结果回传 (Lark Remote Progress Sync) 配合 src/lark-daemon.js 使用：Pi 引擎执行完语音/文本任务后， 通过 message_end 捕获最后一段 assistant 回答，session_shutdown 时 仅向飞书回复一张绿色结果卡片（含实际回答，超 8000 字符截断）。 不推送实时进度卡片，避免刷屏。
+
 ## `lsp-extension.js`
 
 
@@ -167,6 +171,10 @@ GitHub Device Flow 授权 返回 access_token 字符串
 
 AIIA Task DAG Runner Extension (Phase 2 P5) 注册工具: - create_dag_task: 创建由依赖节点构成的任务 DAG 图 - run_dag_task: 调度运行或断点恢复执行 DAG 任务图 - get_dag_task_status: 查看 DAG 调度状态、进度与节点详情
 
+## `todo-sync-guard.js`
+
+AIIA Todo-Sync Guard Auto-checks at turn_end whether the reply's progress claims match the latest update_todos list state. On mismatch: notify (interactive) + append log. Kill: AIIA_VISUAL_DISABLED=1
+
 ## `tool-result-prune.js`
 
 AIIA Tool Result Prune Model-free head+tail truncation for oversized tool_result text. Overflow is written to .agent/spill/ (0600) with a locator in the preview. Kill: AIIA_TOOL_RESULT_PRUNE_DISABLED=1
@@ -183,6 +191,10 @@ AIIA Turn Status Footer line for live turn elapsed time, running tool, and last 
 
 AIIA Output Beautifier Introduces rounded borders (card layout) and Markdown syntax highlighting for assistant messages.
 
+## `ui-footer.js`
+
+AIIA Custom Footer 三行定制页脚：品牌/路径/分支 · token 统计/上下文占用 · 实时轮次状态。 颜色全部走主题令牌（跟随 tokyo-night 等主题自动变化）。 Kill: AIIA_VISUAL_DISABLED=1
+
 ## `ui-subagent-board.js`
 
 AIIA Subagent Concurrent Board Displays a real-time TUI panel for background Git Worktree Subagents.
@@ -191,9 +203,17 @@ AIIA Subagent Concurrent Board Displays a real-time TUI panel for background Git
 
 Persistent To-do progress widget + checklist renderer. Agent tool `update_todos` writes the live list. TUI shows: To-do Working on N to-dos • M done ✔ completed ◐ in progress ○ pending /demo-board seeds a sample. Kill: AIIA_VISUAL_DISABLED=1
 
+## `ui-tool-inline.js`
+
+AIIA Tool Inline Renderer Intercepts toolCall and toolResult to render them as lightweight, Antigravity CLI-style inline indented text instead of bulky Boxes. Limits tool output preview to 5 lines.
+
 ## `vault.js`
 
 AIIA Vault Extension 本地加密存储结构化敏感数据：账号密码、身份信息、地址、银行卡、自定义笔记 数据存储于 ~/.config/aiia/vault.enc.json（AES-256-GCM 加密，不落明文） 用法: /vault                     — 帮助 /vault list [分类]          — 列出条目（默认掩码） /vault add <分类> <名称>    — 交互式添加条目 /vault show <分类> <名称>   — 查看条目明文（需输入主密码） /vault delete <分类> <名称>— 删除条目（需输入主密码） /vault categories          — 查看所有分类
+
+## `vision-fallback.js`
+
+AIIA Vision Fallback Extension 当请求 payload 含图片（image_url / image），而当前模型不支持视觉输入时， 自动调用 Gemini 视觉模型把每张图片转述为结构化文本描述，替换 payload 中的 图片块，避免文本模型上游返回 400 (unknown variant `image_url`)。 触发点：before_provider_request（payload 序列化之前），无需等待报错后重试。 配置： AIIA_VISION_FALLBACK=0        关闭本扩展（默认开启） AIIA_VISION_MODEL=gemini-2.5-flash   转述用视觉模型（默认 gemini-2.5-flash） AIIA_VISION_MODELS=gpt-4o,gemini-2.5-flash  已知支持视觉的模型白名单（命中则放行原图） GEMINI_API_KEYS=...           官方格式 key（已存在）
 
 ## `web-search-proxy.js`
 

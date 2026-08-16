@@ -1,5 +1,6 @@
 import boxen from 'boxen';
 import { highlight } from 'cli-highlight';
+import { truncateToWidth } from "@earendil-works/pi-tui";
 import { isExtensionEnabled } from "../src/extension-profile.js";
 
 /**
@@ -36,10 +37,12 @@ export default function uiBeautifyExtension(pi) {
 
             // 2. Syntax Highlight
             const highlighted = highlight(processedContent, { language: 'markdown', ignoreIllegals: true });
-            
-            return highlighted.split('\n');
+
+            // 3. Hard-truncate every line to the terminal width — long code lines /
+            //    URLs must never crash the TUI renderer (Rendered line exceeds width).
+            return highlighted.split('\n').map((line) => truncateToWidth(line, width));
           } catch (e) {
-            return content.split('\n');
+            return content.split('\n').map((line) => truncateToWidth(line, width));
           }
         }
       };

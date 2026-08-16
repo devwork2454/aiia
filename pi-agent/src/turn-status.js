@@ -4,7 +4,7 @@
 
 export const STATUS_KEY = "turn-status";
 export const TICK_MS = 80;
-export const TOOL_SUMMARY_MAX = 40;
+export const TOOL_SUMMARY_MAX = 96;
 
 export function createTurnStatusState() {
   return {
@@ -125,8 +125,11 @@ export function formatTurnStatusLine(state) {
   const spinner = BRAILLE_SPINNER[(state?.tickIndex || 0) % BRAILLE_SPINNER.length];
   const elapsed = formatDuration((Number(state.now) || 0) - (Number(state.startedAt) || 0));
   
-  if (phase === "thinking" || phase === "responding") {
+  if (phase === "thinking") {
     return `${draftPrefix}${spinner} [${elapsed}] 正在思考...${suffix}`;
+  }
+  if (phase === "responding") {
+    return `${draftPrefix}${spinner} [${elapsed}] 正在生成回复...${suffix}`;
   }
   if (phase === "tool") {
     const tool = state.toolSummary || state.toolName || "tool";
@@ -143,8 +146,9 @@ export function formatTurnStatusLine(state) {
 }
 
 export function formatWorkingMessage(state) {
-  if (state?.phase !== "tool") return undefined;
-  return state.toolSummary || state.toolName || "tool";
+  if (state?.phase === "tool") return state.toolSummary || state.toolName || "tool";
+  if (state?.phase === "thinking" || state?.phase === "responding") return "思考中…";
+  return undefined;
 }
 
 export function applyTurnStatusEvent(state, event, now = Date.now()) {

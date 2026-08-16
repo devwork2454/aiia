@@ -17,6 +17,7 @@ export const CORE_EXTENSIONS = Object.freeze([
   "tool-result-prune",
   "context-gc",
   "router",
+  "vision-fallback",
   "auto-router",
   "auto-dag",
   "slash-ux",
@@ -32,6 +33,7 @@ export const CORE_EXTENSIONS = Object.freeze([
   "progress-archiver",
   "large-file-gate",
   "esc-cancel",
+  "lark-progress-sync"
 ]);
 
 /** Default-on TUI extras. Not CORE. Kill: AIIA_VISUAL_DISABLED=1 */
@@ -41,6 +43,9 @@ export const VISUAL_EXTENSIONS = Object.freeze([
   "turn-status",
   "ui-beautify",
   "ui-subagent-board",
+  "ui-footer",
+  "todo-sync-guard",
+  "ui-tool-inline"
 ]);
 
 /** Catalog tool name → extension id (file basename without .js). */
