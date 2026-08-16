@@ -115,6 +115,10 @@ AIIA Unified Diff Patch Editor Registers `patch_edit` tool. Replaces the brittle
 
 No description available.
 
+## `project-router.js`
+
+AIIA Project Router Extension 注入项目路由表到 prompt snapshot（cache-safe），并提供 /projects 命令查看。 语音/文本下达跨项目任务时，agent 上下文自带项目列表与路由规则，自动 cd 到目标项目执行。 Env: AIIA_PROJECTS_ROOT, AIIA_PROJECT_ROUTER_DISABLED=1
+
 ## `prompt-snapshot.js`
 
 AIIA Prompt Snapshot Injects catalog/profile/reply/add-dir/secret-name blocks as one replaceable context message. Rewrites only when the hash changes (cache-safe). Kill: AIIA_PROMPT_SNAPSHOT_DISABLED=1

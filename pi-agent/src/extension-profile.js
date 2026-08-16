@@ -33,7 +33,8 @@ export const CORE_EXTENSIONS = Object.freeze([
   "progress-archiver",
   "large-file-gate",
   "esc-cancel",
-  "lark-progress-sync"
+  "lark-progress-sync",
+  "project-router"
 ]);
 
 /** Default-on TUI extras. Not CORE. Kill: AIIA_VISUAL_DISABLED=1 */
