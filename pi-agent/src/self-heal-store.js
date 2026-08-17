@@ -399,13 +399,23 @@ export function buildRecoverySummary(cwd = process.cwd(), opts = {}) {
 function readLastTrajectorySummary(cwd, env) {
   try {
     const p = path.join(cwd, '.agent', 'trajectories.jsonl');
-    const raw = fs.readFileSync(p, 'utf-8');
-    const lines = raw.trim().split('\n').filter(Boolean);
-    if (!lines.length) return '';
-    const last = JSON.parse(lines[lines.length - 1]);
-    const s = last.summary || {};
-    const tools = Array.isArray(s.toolNames) ? s.toolNames.slice(0, 8).join(',') : '';
-    return `kind=${last.kind || '?'} msg=${last.messageCount ?? '?'} errorTools=${s.errorTools ?? 0}${tools ? ` tools=[${tools}]` : ''}`;
+    // 只读文件尾部（最多 64KB），避免大文件全量读取随 trajectory 增长线性变慢
+    const fd = fs.openSync(p, 'r');
+    try {
+      const size = fs.fstatSync(fd).size;
+      const readLen = Math.min(size, 65536);
+      const buf = Buffer.alloc(readLen);
+      fs.readSync(fd, buf, 0, readLen, size - readLen);
+      const tail = buf.toString('utf-8');
+      const lines = tail.trim().split('\n').filter(Boolean);
+      if (!lines.length) return '';
+      const last = JSON.parse(lines[lines.length - 1]);
+      const s = last.summary || {};
+      const tools = Array.isArray(s.toolNames) ? s.toolNames.slice(0, 8).join(',') : '';
+      return `kind=${last.kind || '?'} msg=${last.messageCount ?? '?'} errorTools=${s.errorTools ?? 0}${tools ? ` tools=[${tools}]` : ''}`;
+    } finally {
+      fs.closeSync(fd);
+    }
   } catch {
     return '';
   }
