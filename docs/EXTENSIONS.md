@@ -127,6 +127,10 @@ AIIA Prompt Snapshot Injects catalog/profile/reply/add-dir/secret-name blocks as
 
 AIIA Quality Gate extension (S1 & S8) After edit/write succeeds, run lint/typecheck. S8: If fails, spawns a child agent to fix it locally before returning to main loop.
 
+## `release.js`
+
+AIIA /release command — Automates local CI/CD verification and release flow. Skill text lives in `.agents/skills/release`.
+
 ## `remote-config.js`
 
 
@@ -150,6 +154,10 @@ AIIA MCP & Skill Sandbox Policy Extension (Phase 2 P7) 1. 监听 tool_call 钩�
 ## `secret-gate.js`
 
 AIIA Secret Gate & Redaction Extension (Item B) 1. 把可用 Secret Key 名称清单注册进 cache-safe 快照（零知识：只注入名字）。 2. 在 tool_result 钩子中对工具输出脱敏（Pi 字段是 content）。
+
+## `self-heal.js`
+
+AIIA Self-Heal extension — 报错/崩溃自动采集，入修复队列供 goal 循环消费。 L0/L1 落点： - 监听 error 事件：把 aiia 自身运行期错误写入修复队列（不打断当前循环） - 监听 agent_end：扫描本次会话错误消息 + pi-crash.log 新增段 → 去重入队 - 修复动作由 goal 循环（D6 自省 + 修复队列消费）在确定性门禁内执行 Env: AIIA_DISABLE_SELF_HEAL=1  关闭采集
 
 ## `semantic-search.js`
 

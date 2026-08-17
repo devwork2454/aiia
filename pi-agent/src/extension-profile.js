@@ -35,6 +35,7 @@ export const CORE_EXTENSIONS = Object.freeze([
   'esc-cancel',
   'lark-progress-sync',
   'project-router',
+  'self-heal',
 ]);
 
 /** Default-on TUI extras. Not CORE. Kill: AIIA_VISUAL_DISABLED=1 */
