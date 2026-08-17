@@ -1,0 +1,19 @@
+id: pi-tool-return-missing-content
+language: javascript
+severity: error
+message: |
+  Tool extensions must return a compliant Pi tool result object containing a `content` array (or use `toolResult()` wrapper) to avoid crashing the render engine (TypeError: Cannot read properties of undefined (reading 'filter')).
+rule:
+  all:
+    - pattern: return { $$$ }
+    - inside:
+        pattern: pi.registerTool($_)
+        stopBy: end
+  not:
+    regex: "content\\s*:"
+files:
+  - 'pi-agent/**/*.js'
+  - 'pi-agent/**/*.ts'
+ignores:
+  - '**/node_modules/**'
+  - '**/test/**'
