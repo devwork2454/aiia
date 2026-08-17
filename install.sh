@@ -285,6 +285,11 @@ if [[ "$1" == "aiia" ]]; then
   fi
 fi
 
+# AIIA 启动前自检：坏扩展自动隔离，保证 pi 永远能启动（无改动时 ~1ms）
+if [[ "${AIIA_SKIP_PREFLIGHT:-0}" != "1" && -f "$HOME/project/aiia/scripts/pi-preflight.mjs" ]]; then
+  node "$HOME/project/aiia/scripts/pi-preflight.mjs" --root "$HOME/project/aiia" --quiet || true
+fi
+
 # 寻找真实的 pi 可执行文件，跳过本脚本
 REAL_PI=$(which -a pi | grep -v "$HOME/.local/bin/pi" | head -n 1)
 
