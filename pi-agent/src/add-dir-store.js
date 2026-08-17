@@ -10,25 +10,36 @@ import {
   realpathSync,
   statSync,
   writeFileSync,
-} from "node:fs";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+} from 'node:fs';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 
-const STORE_REL = join(".agent", "additional-dirs.json");
+const STORE_REL = join('.agent', 'additional-dirs.json');
 
 /** Paths that must never be added as workspace roots. */
-const BLOCKED_ROOTS = new Set(["/", "/etc", "/usr", "/bin", "/sbin", "/var", "/boot", "/dev", "/proc", "/sys"]);
+const BLOCKED_ROOTS = new Set([
+  '/',
+  '/etc',
+  '/usr',
+  '/bin',
+  '/sbin',
+  '/var',
+  '/boot',
+  '/dev',
+  '/proc',
+  '/sys',
+]);
 
 export function storePathForCwd(cwd = process.cwd()) {
   return resolve(cwd, STORE_REL);
 }
 
 export function resolveDirPath(raw, cwd = process.cwd()) {
-  const input = String(raw || "").trim();
+  const input = String(raw || '').trim();
   if (!input) return null;
-  const expanded = input.startsWith("~/")
-    ? join(process.env.HOME || "", input.slice(2))
-    : input === "~"
-      ? process.env.HOME || ""
+  const expanded = input.startsWith('~/')
+    ? join(process.env.HOME || '', input.slice(2))
+    : input === '~'
+      ? process.env.HOME || ''
       : input;
   const abs = isAbsolute(expanded) ? resolve(expanded) : resolve(cwd, expanded);
   try {
@@ -42,7 +53,7 @@ export function resolveDirPath(raw, cwd = process.cwd()) {
  * @returns {{ok:true, path:string}|{ok:false, error:string}}
  */
 export function validateDirectory(absPath) {
-  if (!absPath) return { ok: false, error: "empty path" };
+  if (!absPath) return { ok: false, error: 'empty path' };
   if (BLOCKED_ROOTS.has(absPath)) {
     return { ok: false, error: `refusing blocked root: ${absPath}` };
   }
@@ -65,7 +76,7 @@ export function loadDirs(cwd = process.cwd()) {
   const file = storePathForCwd(cwd);
   if (!existsSync(file)) return [];
   try {
-    const raw = JSON.parse(readFileSync(file, "utf8"));
+    const raw = JSON.parse(readFileSync(file, 'utf8'));
     const list = Array.isArray(raw?.dirs) ? raw.dirs : Array.isArray(raw) ? raw : [];
     return [...new Set(list.map((d) => String(d)).filter(Boolean))];
   } catch {
@@ -78,7 +89,7 @@ export function saveDirs(dirs, cwd = process.cwd()) {
   const dir = dirname(file);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   const uniq = [...new Set((dirs || []).map((d) => String(d)).filter(Boolean))];
-  writeFileSync(file, JSON.stringify({ dirs: uniq, updatedAt: Date.now() }, null, 2) + "\n");
+  writeFileSync(file, JSON.stringify({ dirs: uniq, updatedAt: Date.now() }, null, 2) + '\n');
   return uniq;
 }
 
@@ -114,9 +125,9 @@ export function listDirectories(cwd = process.cwd()) {
 /** Candidate skill roots under an added directory. */
 export function skillRootsForDir(dirPath) {
   const candidates = [
-    join(dirPath, ".agents", "skills"),
-    join(dirPath, ".pi", "agent", "skills"),
-    join(dirPath, "skills"),
+    join(dirPath, '.agents', 'skills'),
+    join(dirPath, '.pi', 'agent', 'skills'),
+    join(dirPath, 'skills'),
   ];
   return candidates.filter((p) => {
     try {
@@ -137,32 +148,35 @@ export function collectSkillPaths(dirs = []) {
 
 /** Compact prompt block for before_agent_start / context. */
 export function formatAdditionalDirsPrompt(dirs, primaryCwd) {
-  if (!dirs?.length) return "";
+  if (!dirs?.length) return '';
   const lines = dirs.map((d, i) => `${i + 1}. ${d}`);
   return [
-    "[AIIA additional directories — /add-dir]",
+    '[AIIA additional directories — /add-dir]',
     `Primary cwd: ${primaryCwd}`,
-    "You may read/edit/search these directories in this session (same tools; prefer absolute paths):",
+    'You may read/edit/search these directories in this session (same tools; prefer absolute paths):',
     ...lines,
-    "Use absolute paths when operating outside primary cwd. Do not assume files are auto-loaded; read as needed.",
-  ].join("\n");
+    'Use absolute paths when operating outside primary cwd. Do not assume files are auto-loaded; read as needed.',
+  ].join('\n');
 }
 
 /**
  * Parse `/add-dir` args.
  * @returns {{action:'add'|'rm'|'list'|'help', path?:string}}
  */
-export function parseAddDirArgs(args = "") {
-  const parts = String(args || "").trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return { action: "list" };
+export function parseAddDirArgs(args = '') {
+  const parts = String(args || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return { action: 'list' };
   const head = parts[0].toLowerCase();
-  if (head === "list" || head === "ls" || head === "--list") return { action: "list" };
-  if (head === "help" || head === "-h" || head === "--help") return { action: "help" };
-  if (head === "rm" || head === "remove" || head === "--rm" || head === "-r") {
-    return { action: "rm", path: parts.slice(1).join(" ") };
+  if (head === 'list' || head === 'ls' || head === '--list') return { action: 'list' };
+  if (head === 'help' || head === '-h' || head === '--help') return { action: 'help' };
+  if (head === 'rm' || head === 'remove' || head === '--rm' || head === '-r') {
+    return { action: 'rm', path: parts.slice(1).join(' ') };
   }
-  if (head === "add" || head === "--add") {
-    return { action: "add", path: parts.slice(1).join(" ") };
+  if (head === 'add' || head === '--add') {
+    return { action: 'add', path: parts.slice(1).join(' ') };
   }
-  return { action: "add", path: parts.join(" ") };
+  return { action: 'add', path: parts.join(' ') };
 }

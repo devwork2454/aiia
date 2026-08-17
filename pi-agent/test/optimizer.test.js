@@ -21,7 +21,7 @@ describe('S9 L7 Optimizer Core', () => {
     const cwd = tmpDir();
     fs.mkdirSync(path.join(cwd, '.agent'));
     fs.writeFileSync(path.join(cwd, '.agent', 'trajectories.jsonl'), '');
-    
+
     const result = runBatchOptimization({ cwd });
     assert.equal(result.status, 'skipped');
     assert.match(result.message, /empty/);
@@ -31,7 +31,7 @@ describe('S9 L7 Optimizer Core', () => {
     const cwd = tmpDir();
     fs.mkdirSync(path.join(cwd, '.agent'));
     fs.writeFileSync(path.join(cwd, '.agent', 'trajectories.jsonl'), '{"foo":"bar"}\n');
-    
+
     let spawnedCmd, spawnedArgs, spawnedOpts;
     const mockSpawn = (cmd, args, opts) => {
       spawnedCmd = cmd;
@@ -41,7 +41,7 @@ describe('S9 L7 Optimizer Core', () => {
     };
 
     const result = runBatchOptimization({ cwd, spawn: mockSpawn });
-    
+
     assert.equal(result.status, 'success');
     assert.equal(result.exitCode, 0);
     assert.equal(spawnedCmd, 'pi');

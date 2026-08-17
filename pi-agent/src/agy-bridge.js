@@ -15,8 +15,11 @@ const AGY_BIN = process.env.AGY_BIN_PATH || '/home/zakza/.local/bin/agy';
 function extractPrompt(messages = []) {
   if (!Array.isArray(messages) || messages.length === 0) return '';
   // 取最后一个 user 消息，附带之前的上下文 system 提示
-  const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n');
-  const lastUser = messages.filter(m => m.role === 'user').slice(-1)[0]?.content || '';
+  const system = messages
+    .filter((m) => m.role === 'system')
+    .map((m) => m.content)
+    .join('\n');
+  const lastUser = messages.filter((m) => m.role === 'user').slice(-1)[0]?.content || '';
   if (system) {
     return `[System Context]\n${system}\n\n[User Prompt]\n${lastUser}`;
   }
@@ -42,34 +45,38 @@ export function startAgyBridgeServer(port = PORT) {
     // GET /v1/models 或 GET /health
     if (req.method === 'GET' && (url.pathname === '/v1/models' || url.pathname === '/health')) {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({
-        object: 'list',
-        data: [
-          { 
-            id: 'agy-deepmind', 
-            object: 'model', 
-            created: Date.now(), 
-            owned_by: 'google-deepmind',
-            context_window: 2000000,
-            max_tokens: 8192
-          },
-          { 
-            id: 'antigravity-web', 
-            object: 'model', 
-            created: Date.now(), 
-            owned_by: 'google-deepmind',
-            context_window: 256000,
-            max_tokens: 8192
-          }
-        ]
-      }));
+      res.end(
+        JSON.stringify({
+          object: 'list',
+          data: [
+            {
+              id: 'agy-deepmind',
+              object: 'model',
+              created: Date.now(),
+              owned_by: 'google-deepmind',
+              context_window: 2000000,
+              max_tokens: 8192,
+            },
+            {
+              id: 'antigravity-web',
+              object: 'model',
+              created: Date.now(),
+              owned_by: 'google-deepmind',
+              context_window: 256000,
+              max_tokens: 8192,
+            },
+          ],
+        }),
+      );
       return;
     }
 
     // POST /v1/chat/completions
     if (req.method === 'POST' && url.pathname === '/v1/chat/completions') {
       let bodyStr = '';
-      req.on('data', chunk => { bodyStr += chunk; });
+      req.on('data', (chunk) => {
+        bodyStr += chunk;
+      });
       req.on('end', () => {
         try {
           const body = JSON.parse(bodyStr || '{}');
@@ -83,14 +90,14 @@ export function startAgyBridgeServer(port = PORT) {
           }
 
           // 核心：拉起官方 agy CLI 子进程
-          const child = spawn(AGY_BIN, [
-            '-p', prompt,
-            '--output-format', 'stream-json',
-            '--dangerously-skip-permissions'
-          ], {
-            env: { ...process.env },
-            stdio: ['pipe', 'pipe', 'pipe']
-          });
+          const child = spawn(
+            AGY_BIN,
+            ['-p', prompt, '--output-format', 'stream-json', '--dangerously-skip-permissions'],
+            {
+              env: { ...process.env },
+              stdio: ['pipe', 'pipe', 'pipe'],
+            },
+          );
 
           const created = Math.floor(Date.now() / 1000);
           const chatId = `chatcmpl-agy-${Date.now()}`;
@@ -99,12 +106,12 @@ export function startAgyBridgeServer(port = PORT) {
             res.writeHead(200, {
               'Content-Type': 'text/event-stream',
               'Cache-Control': 'no-cache',
-              'Connection': 'keep-alive'
+              Connection: 'keep-alive',
             });
 
             // 监听 stdout 逐行解析 agy JSONL
             const rl = readline.createInterface({ input: child.stdout });
-            rl.on('line', line => {
+            rl.on('line', (line) => {
               if (!line.trim()) return;
               try {
                 const item = JSON.parse(line);
@@ -115,7 +122,7 @@ export function startAgyBridgeServer(port = PORT) {
                     object: 'chat.completion.chunk',
                     created,
                     model: body.model || 'agy-deepmind',
-                    choices: [{ index: 0, delta: { content: delta }, finish_reason: null }]
+                    choices: [{ index: 0, delta: { content: delta }, finish_reason: null }],
                   };
                   res.write(`data: ${JSON.stringify(chunk)}\n\n`);
                 }
@@ -128,7 +135,7 @@ export function startAgyBridgeServer(port = PORT) {
                 object: 'chat.completion.chunk',
                 created,
                 model: body.model || 'agy-deepmind',
-                choices: [{ index: 0, delta: {}, finish_reason: 'stop' }]
+                choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
               };
               res.write(`data: ${JSON.stringify(stopChunk)}\n\n`);
               res.write('data: [DONE]\n\n');
@@ -138,7 +145,7 @@ export function startAgyBridgeServer(port = PORT) {
             // 非流式，全量合并后返回
             let fullText = '';
             const rl = readline.createInterface({ input: child.stdout });
-            rl.on('line', line => {
+            rl.on('line', (line) => {
               try {
                 const item = JSON.parse(line);
                 const delta = item?.step_update?.text_delta;
@@ -148,17 +155,27 @@ export function startAgyBridgeServer(port = PORT) {
 
             child.on('close', () => {
               res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({
-                id: chatId,
-                object: 'chat.completion',
-                created,
-                model: body.model || 'agy-deepmind',
-                choices: [{ index: 0, message: { role: 'assistant', content: fullText }, finish_reason: 'stop' }]
-              }));
+              res.end(
+                JSON.stringify({
+                  id: chatId,
+                  object: 'chat.completion',
+                  created,
+                  model: body.model || 'agy-deepmind',
+                  choices: [
+                    {
+                      index: 0,
+                      message: { role: 'assistant', content: fullText },
+                      finish_reason: 'stop',
+                    },
+                  ],
+                }),
+              );
             });
           }
 
-          req.on('close', () => { child.kill(); });
+          req.on('close', () => {
+            child.kill();
+          });
         } catch (e) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: { message: e.message } }));
@@ -184,7 +201,7 @@ export function startAgyBridgeServer(port = PORT) {
   });
   // 仅当非独立运行时才 unref (以便测试自然退出)
   if (import.meta.url !== `file://${process.argv[1]}`) {
-    server.unref(); 
+    server.unref();
   }
 
   return server;

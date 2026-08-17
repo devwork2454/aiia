@@ -21,14 +21,14 @@ let bridgeServer = null;
 
 export function isSearchIntent(text = '') {
   if (!text) return false;
-  return SEARCH_KEYWORDS.some(kw => text.includes(kw));
+  return SEARCH_KEYWORDS.some((kw) => text.includes(kw));
 }
 
 function messageText(msg) {
   if (!msg) return '';
   if (typeof msg.content === 'string') return msg.content;
   if (Array.isArray(msg.content)) {
-    return msg.content.map(c => c.text || c.content || '').join(' ');
+    return msg.content.map((c) => c.text || c.content || '').join(' ');
   }
   return '';
 }
@@ -65,7 +65,7 @@ export function injectSearchDirective(messages) {
       return true;
     }
   } else if (Array.isArray(lastUser.content)) {
-    const textObj = lastUser.content.find(c => c.type === 'text' || typeof c.text === 'string');
+    const textObj = lastUser.content.find((c) => c.type === 'text' || typeof c.text === 'string');
     if (textObj && !textObj.text.includes('[Web Search Active')) {
       textObj.text = `[Web Search Active: 请结合全网最新知识与实时检索信息回答]\n${textObj.text}`;
       return true;
@@ -95,10 +95,10 @@ export function shouldRewriteSearchModel(req = {}, ctx = {}, env = process.env) 
   return false;
 }
 
-import { isExtensionEnabled } from "../src/extension-profile.js";
+import { isExtensionEnabled } from '../src/extension-profile.js';
 
 export default function webSearchProxyExtension(pi) {
-  if (!isExtensionEnabled("web-search-proxy")) return;
+  if (!isExtensionEnabled('web-search-proxy')) return;
   // 自动启动后台 AGY Bridge（端口占用时静默跳过，不拖垮 Pi / 测试）
   if (!bridgeServer && process.env.AIIA_SKIP_AGY_BRIDGE !== '1') {
     try {
@@ -117,7 +117,8 @@ export default function webSearchProxyExtension(pi) {
       injectSearchDirective(req.messages);
 
       if (shouldRewriteSearchModel(req, ctx, process.env)) {
-        const targetModel = process.env.SEARCH_MODEL_OVERRIDE || (req.model ? `${req.model}-search` : 'high-search');
+        const targetModel =
+          process.env.SEARCH_MODEL_OVERRIDE || (req.model ? `${req.model}-search` : 'high-search');
         req.model = targetModel;
 
         if (process.env.SEARCH_PROXY_URL) {

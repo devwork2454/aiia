@@ -40,7 +40,10 @@ export default function qualityGateExtension(pi) {
       return {
         content: [
           ...(Array.isArray(event?.content) ? event.content : []),
-          { type: 'text', text: `\n[Draft Mode Warn] File written, but has errors:\n${feedback}\nThese must be fixed during convergence phase.\n` },
+          {
+            type: 'text',
+            text: `\n[Draft Mode Warn] File written, but has errors:\n${feedback}\nThese must be fixed during convergence phase.\n`,
+          },
         ],
         isError: false, // Do not block
       };
@@ -56,11 +59,17 @@ export default function qualityGateExtension(pi) {
 
       const logFile = path.join(cwd, '.agent', 'quality-gate.log');
       fs.mkdirSync(path.dirname(logFile), { recursive: true });
-      fs.appendFileSync(logFile, `\n\n--- Quality Gate Retry Attempt ${attempt}/${MAX_RETRIES} for ${rel} ---\n`);
+      fs.appendFileSync(
+        logFile,
+        `\n\n--- Quality Gate Retry Attempt ${attempt}/${MAX_RETRIES} for ${rel} ---\n`,
+      );
 
       try {
         const child = await spawnQualityGateFixer({ cwd, task: fixTask, env });
-        fs.appendFileSync(logFile, `Child Exit Code: ${child.status}\nStdout:\n${child.stdout}\nStderr:\n${child.stderr}\n`);
+        fs.appendFileSync(
+          logFile,
+          `Child Exit Code: ${child.status}\nStdout:\n${child.stdout}\nStderr:\n${child.stderr}\n`,
+        );
       } catch (err) {
         fs.appendFileSync(logFile, `Execution Error: ${err.message}\n`);
       }
@@ -81,10 +90,7 @@ export default function qualityGateExtension(pi) {
       const patch = buildQualityGatePatch(event, report);
       const extra = `\n[AIIA Quality Gate] CRITICAL: File ${rel} failed verification and auto-retry exhausted (${MAX_RETRIES} attempts). ${rollbackNote}\nDo not try the exact same small edit again. You must rethink your approach or use a different library/method.\n`;
       return {
-        content: [
-          ...(patch?.content || []),
-          { type: 'text', text: extra },
-        ],
+        content: [...(patch?.content || []), { type: 'text', text: extra }],
         isError: true,
       };
     }
@@ -94,18 +100,19 @@ export default function qualityGateExtension(pi) {
 
   if (typeof pi.registerCommand === 'function') {
     pi.registerCommand('draft', {
-      description: 'Toggle Draft Mode (bypasses local quality gate errors to allow fast prototyping)',
+      description:
+        'Toggle Draft Mode (bypasses local quality gate errors to allow fast prototyping)',
       handler: async (args, ctx) => {
         const current = process.env.AIIA_DRAFT_MODE === '1';
         const nextState = !current;
         process.env.AIIA_DRAFT_MODE = nextState ? '1' : '0';
         ctx?.ui?.notify?.(
-          nextState 
-            ? '🚀 Draft Mode Enabled: Quality Gate will now only WARN on errors.' 
+          nextState
+            ? '🚀 Draft Mode Enabled: Quality Gate will now only WARN on errors.'
             : '🛡️ Draft Mode Disabled: Strict Quality Gate is active.',
-          'info'
+          'info',
         );
-      }
+      },
     });
   }
 }

@@ -8,16 +8,16 @@ import {
   formatSecretNamesPrompt,
   loadSecretPairs,
   redactToolResultEvent,
-} from "../src/secret-redact.js";
-import { registerSnapshotSection } from "../src/prompt-snapshot.js";
+} from '../src/secret-redact.js';
+import { registerSnapshotSection } from '../src/prompt-snapshot.js';
 
 export default function secretGateExtension(pi) {
   const secretPairs = loadSecretPairs();
   const secretKeys = Object.keys(secretPairs);
 
-  registerSnapshotSection("secret-names", () => formatSecretNamesPrompt(secretKeys));
+  registerSnapshotSection('secret-names', () => formatSecretNamesPrompt(secretKeys));
 
-  pi.on("tool_result", async (event) => {
+  pi.on('tool_result', async (event) => {
     if (secretKeys.length === 0) return;
     redactToolResultEvent(event, secretPairs);
   });

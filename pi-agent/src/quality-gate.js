@@ -18,7 +18,7 @@ function spawnAsync(cmd, args, opts) {
     let stderr = '';
     let timedOut = false;
     const child = nativeSpawn(cmd, args, opts);
-    
+
     let timer;
     if (opts.timeout) {
       timer = setTimeout(() => {
@@ -26,15 +26,15 @@ function spawnAsync(cmd, args, opts) {
         child.kill('SIGKILL');
       }, opts.timeout);
     }
-    
-    child.stdout?.on('data', d => stdout += d);
-    child.stderr?.on('data', d => stderr += d);
-    
+
+    child.stdout?.on('data', (d) => (stdout += d));
+    child.stderr?.on('data', (d) => (stderr += d));
+
     child.on('error', (err) => {
       if (timer) clearTimeout(timer);
       resolve({ error: err, status: null, stdout, stderr });
     });
-    
+
     child.on('close', (code) => {
       if (timer) clearTimeout(timer);
       if (timedOut) {
@@ -273,10 +273,7 @@ export async function evaluateFileQuality(filePath, opts = {}) {
 
 export function formatQualityFeedback(report) {
   if (!report || report.passed) return null;
-  const lines = [
-    '[AIIA Quality Gate] FAILED — fix before continuing',
-    `file: ${report.path}`,
-  ];
+  const lines = ['[AIIA Quality Gate] FAILED — fix before continuing', `file: ${report.path}`];
   for (const f of report.failures) {
     lines.push(`--- ${f.name} (exit ${f.exitCode}) ---`);
     lines.push(f.output || '(no output)');
@@ -293,10 +290,7 @@ export function buildQualityGatePatch(event, report) {
   if (!feedback) return null;
 
   const prev = Array.isArray(event?.content) ? event.content : [];
-  const content = [
-    ...prev,
-    { type: 'text', text: `\n${feedback}\n` },
-  ];
+  const content = [...prev, { type: 'text', text: `\n${feedback}\n` }];
   return { content, isError: true };
 }
 

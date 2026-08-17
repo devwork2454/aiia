@@ -28,13 +28,13 @@ export class TaskDAGRunner {
   loadStateMachineRules() {
     const defaultRules = {
       transitions: {
-        'PLANNING': ['EXECUTION', 'PLANNING'],
-        'EXECUTION': ['EXECUTION', 'ASSERTION'],
-        'ASSERTION': ['ASSERTION', 'MERGE', 'ROLLBACK'],
-        'MERGE': ['MERGE'],
-        'ROLLBACK': ['ROLLBACK']
+        PLANNING: ['EXECUTION', 'PLANNING'],
+        EXECUTION: ['EXECUTION', 'ASSERTION'],
+        ASSERTION: ['ASSERTION', 'MERGE', 'ROLLBACK'],
+        MERGE: ['MERGE'],
+        ROLLBACK: ['ROLLBACK'],
       },
-      maxAssertionRetries: 3
+      maxAssertionRetries: 3,
     };
     if (fs.existsSync(this.smRulesFile)) {
       try {
@@ -58,14 +58,18 @@ export class TaskDAGRunner {
 
     if (this.smRules) {
       if (!Object.keys(this.smRules.transitions).includes(type)) {
-        throw new Error(`Invalid node type '${type}'. Allowed types: ${Object.keys(this.smRules.transitions).join(', ')}`);
+        throw new Error(
+          `Invalid node type '${type}'. Allowed types: ${Object.keys(this.smRules.transitions).join(', ')}`,
+        );
       }
-      for (const depId of (Array.isArray(dependsOn) ? dependsOn : [])) {
+      for (const depId of Array.isArray(dependsOn) ? dependsOn : []) {
         const depNode = this.nodes.get(depId);
         if (depNode) {
           const allowedNext = this.smRules.transitions[depNode.type] || [];
           if (!allowedNext.includes(type)) {
-            throw new Error(`State machine transition error: cannot transition from ${depNode.type} to ${type}`);
+            throw new Error(
+              `State machine transition error: cannot transition from ${depNode.type} to ${type}`,
+            );
           }
         }
       }
@@ -81,7 +85,7 @@ export class TaskDAGRunner {
       retryAttempts: 0,
       output: null,
       error: null,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
     this.saveCheckpoint();
   }
@@ -93,7 +97,7 @@ export class TaskDAGRunner {
     const data = {
       dagId: this.dagId,
       updatedAt: new Date().toISOString(),
-      nodes: Array.from(this.nodes.values())
+      nodes: Array.from(this.nodes.values()),
     };
     fs.writeFileSync(this.checkpointFile, JSON.stringify(data, null, 2));
   }
@@ -127,7 +131,11 @@ export class TaskDAGRunner {
       if (node.status !== 'pending' && node.status !== 'failed') continue;
 
       let nodeMaxRetries = this.maxRetries;
-      if (node.type === 'ASSERTION' && this.smRules && this.smRules.maxAssertionRetries !== undefined) {
+      if (
+        node.type === 'ASSERTION' &&
+        this.smRules &&
+        this.smRules.maxAssertionRetries !== undefined
+      ) {
         nodeMaxRetries = this.smRules.maxAssertionRetries;
       }
 
@@ -142,31 +150,39 @@ export class TaskDAGRunner {
         if (!depNode) continue;
 
         let depMaxRetries = this.maxRetries;
-        if (depNode.type === 'ASSERTION' && this.smRules && this.smRules.maxAssertionRetries !== undefined) {
+        if (
+          depNode.type === 'ASSERTION' &&
+          this.smRules &&
+          this.smRules.maxAssertionRetries !== undefined
+        ) {
           depMaxRetries = this.smRules.maxAssertionRetries;
         }
 
-        const isDepFailedForever = (depNode.status === 'skipped' || (depNode.status === 'failed' && depNode.retryAttempts >= depMaxRetries));
+        const isDepFailedForever =
+          depNode.status === 'skipped' ||
+          (depNode.status === 'failed' && depNode.retryAttempts >= depMaxRetries);
         const isDepCompleted = depNode.status === 'completed';
 
         if (node.type === 'MERGE' && depNode.type === 'ASSERTION') {
-           const hasPass = isDepCompleted && typeof depNode.output === 'string' && depNode.output.includes('PASS');
-           if (!hasPass && isDepCompleted) {
-             depsFailed = true;
-           } else if (!isDepCompleted) {
-             depsOk = false;
-           }
-           if (isDepFailedForever) depsFailed = true;
+          const hasPass =
+            isDepCompleted && typeof depNode.output === 'string' && depNode.output.includes('PASS');
+          if (!hasPass && isDepCompleted) {
+            depsFailed = true;
+          } else if (!isDepCompleted) {
+            depsOk = false;
+          }
+          if (isDepFailedForever) depsFailed = true;
         } else if (node.type === 'ROLLBACK' && depNode.type === 'ASSERTION') {
-           const hasPass = isDepCompleted && typeof depNode.output === 'string' && depNode.output.includes('PASS');
-           if (isDepFailedForever || (isDepCompleted && !hasPass)) {
-             shouldRollback = true;
-           } else if (!isDepCompleted) {
-             depsOk = false;
-           }
+          const hasPass =
+            isDepCompleted && typeof depNode.output === 'string' && depNode.output.includes('PASS');
+          if (isDepFailedForever || (isDepCompleted && !hasPass)) {
+            shouldRollback = true;
+          } else if (!isDepCompleted) {
+            depsOk = false;
+          }
         } else {
-           if (!isDepCompleted) depsOk = false;
-           if (isDepFailedForever) depsFailed = true;
+          if (!isDepCompleted) depsOk = false;
+          if (isDepFailedForever) depsFailed = true;
         }
       }
 
@@ -178,11 +194,11 @@ export class TaskDAGRunner {
           node.updatedAt = new Date().toISOString();
           this.saveCheckpoint();
         } else if (depsOk && node.dependsOn.length > 0) {
-           node.status = 'skipped';
-           node.updatedAt = new Date().toISOString();
-           this.saveCheckpoint();
+          node.status = 'skipped';
+          node.updatedAt = new Date().toISOString();
+          this.saveCheckpoint();
         } else if (depsOk && node.dependsOn.length === 0) {
-           ready.push(node);
+          ready.push(node);
         }
       } else {
         if (depsFailed) {
@@ -252,14 +268,14 @@ export class TaskDAGRunner {
   getStatus() {
     const nodes = Array.from(this.nodes.values());
     const total = nodes.length;
-    const completed = nodes.filter(n => n.status === 'completed').length;
-    const failed = nodes.filter(n => n.status === 'failed').length;
-    const skipped = nodes.filter(n => n.status === 'skipped').length;
-    const running = nodes.filter(n => n.status === 'running').length;
-    const pending = nodes.filter(n => n.status === 'pending').length;
+    const completed = nodes.filter((n) => n.status === 'completed').length;
+    const failed = nodes.filter((n) => n.status === 'failed').length;
+    const skipped = nodes.filter((n) => n.status === 'skipped').length;
+    const running = nodes.filter((n) => n.status === 'running').length;
+    const pending = nodes.filter((n) => n.status === 'pending').length;
 
-    let isDone = completed + failed + skipped === total;
-    let isSuccess = completed === total;
+    const isDone = completed + failed + skipped === total;
+    const isSuccess = completed === total;
 
     return {
       dagId: this.dagId,
@@ -267,7 +283,7 @@ export class TaskDAGRunner {
       isSuccess,
       progress: total > 0 ? Math.round(((completed + skipped + failed) / total) * 100) : 100,
       stats: { total, completed, failed, skipped, running, pending },
-      nodes
+      nodes,
     };
   }
 }

@@ -56,38 +56,41 @@ async function walkAndIndex(cwd, store, maxFiles, ctx) {
 }
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
-import { isExtensionEnabled } from "../src/extension-profile.js";
+import { isExtensionEnabled } from '../src/extension-profile.js';
 
 export default function semanticSearchExtension(pi) {
-  if (!isExtensionEnabled("semantic-search")) return;
+  if (!isExtensionEnabled('semantic-search')) return;
   pi.registerTool({
     name: 'semantic_index_workspace',
     description: 'Indexes the current workspace into the local semantic vector database.',
     parameters: {
       type: 'object',
       properties: {
-        maxFiles: { type: 'number', description: 'Max files to index (default 500)' }
-      }
+        maxFiles: { type: 'number', description: 'Max files to index (default 500)' },
+      },
     },
     async execute(_id, params, _signal, _onUpdate, ctx) {
       const cwd = ctx?.cwd || process.cwd();
       const store = getStore(cwd);
       const maxFiles = params?.maxFiles || 500;
       const indexed = await walkAndIndex(cwd, store, maxFiles, ctx);
-      return { content: [{ type: 'text', text: `Indexed ${indexed} files into semantic database.` }] };
-    }
+      return {
+        content: [{ type: 'text', text: `Indexed ${indexed} files into semantic database.` }],
+      };
+    },
   });
 
   pi.registerTool({
     name: 'semantic_search',
-    description: 'Searches the local semantic vector database for the given query using embedding similarities.',
+    description:
+      'Searches the local semantic vector database for the given query using embedding similarities.',
     parameters: {
       type: 'object',
       properties: {
         query: { type: 'string' },
-        topK: { type: 'number' }
+        topK: { type: 'number' },
       },
-      required: ['query']
+      required: ['query'],
     },
     async execute(_id, params, _signal, _onUpdate, ctx) {
       const cwd = ctx?.cwd || process.cwd();
@@ -96,10 +99,12 @@ export default function semanticSearchExtension(pi) {
       if (!results || results.length === 0) {
         return { content: [{ type: 'text', text: 'No semantic matches found.' }] };
       }
-      const output = results.map((r) => {
-        return `File: ${r.file_path}\nScore: ${r.score.toFixed(3)}\nContent:\n${r.content}\n---`;
-      }).join('\n');
+      const output = results
+        .map((r) => {
+          return `File: ${r.file_path}\nScore: ${r.score.toFixed(3)}\nContent:\n${r.content}\n---`;
+        })
+        .join('\n');
       return { content: [{ type: 'text', text: output }] };
-    }
+    },
   });
 }

@@ -2,19 +2,19 @@
  * Pure helpers for the turn status footer (elapsed, cache, running tool).
  */
 
-export const STATUS_KEY = "turn-status";
+export const STATUS_KEY = 'turn-status';
 export const TICK_MS = 80;
 export const TOOL_SUMMARY_MAX = 96;
 
 export function createTurnStatusState() {
   return {
-    phase: "idle",
+    phase: 'idle',
     startedAt: 0,
     now: 0,
     tickIndex: 0,
     turnIndex: 0,
-    toolName: "",
-    toolSummary: "",
+    toolName: '',
+    toolSummary: '',
     toolCount: 0,
     runningTools: 0,
     usage: null,
@@ -55,9 +55,9 @@ export function formatTotalTokens(totals) {
   if (n <= 0) return null;
   if (n < 1000) return `Σ${n}`;
   const label =
-    compactTokens(n, 1_000, "k") ||
-    compactTokens(n, 1_000_000, "M") ||
-    compactTokens(n, 1_000_000_000, "G");
+    compactTokens(n, 1_000, 'k') ||
+    compactTokens(n, 1_000_000, 'M') ||
+    compactTokens(n, 1_000_000_000, 'G');
   return `Σ${label}`;
 }
 
@@ -68,25 +68,25 @@ export function formatDuration(ms) {
   if (n < 60_000) return `${Math.round(n / 1000)}s`;
   const minutes = Math.floor(n / 60_000);
   const seconds = Math.round((n % 60_000) / 1000);
-  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+  return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
 }
 
 function collapseWs(text) {
-  return String(text).replace(/\s+/g, " ").trim();
+  return String(text).replace(/\s+/g, ' ').trim();
 }
 
 export function summarizeTool(toolName, args) {
-  const name = String(toolName || "tool").trim() || "tool";
-  const input = args && typeof args === "object" ? args : {};
+  const name = String(toolName || 'tool').trim() || 'tool';
+  const input = args && typeof args === 'object' ? args : {};
   const cmd = input.command ?? input.cmd;
-  if (typeof cmd === "string" && cmd.trim()) {
+  if (typeof cmd === 'string' && cmd.trim()) {
     const clipped = collapseWs(cmd).slice(0, TOOL_SUMMARY_MAX);
     return `${name} ${clipped}`;
   }
   const file = input.path ?? input.file ?? input.filename ?? input.target;
-  if (typeof file === "string" && file.trim()) {
-    const normalized = file.replace(/\\/g, "/");
-    const base = normalized.split("/").pop() || file;
+  if (typeof file === 'string' && file.trim()) {
+    const normalized = file.replace(/\\/g, '/');
+    const base = normalized.split('/').pop() || file;
     return `${name} ${base}`;
   }
   return name;
@@ -94,7 +94,7 @@ export function summarizeTool(toolName, args) {
 
 export function extractUsage(message) {
   const raw = message?.usage || message?.message?.usage;
-  if (!raw || typeof raw !== "object") return null;
+  if (!raw || typeof raw !== 'object') return null;
   const input = Number(raw.input ?? raw.input_tokens ?? 0) || 0;
   const output = Number(raw.output ?? raw.output_tokens ?? 0) || 0;
   const cacheRead =
@@ -111,29 +111,29 @@ export function cacheHitPct(usage) {
   return Math.round((usage.cacheRead / denom) * 100);
 }
 
-export const BRAILLE_SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+export const BRAILLE_SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
 export function formatTurnStatusLine(state) {
   const totalSuffix = formatTotalTokens(state?.totals);
-  const suffix = totalSuffix ? ` | 消耗: ${totalSuffix}` : "";
-  const phase = state?.phase || "idle";
-  
+  const suffix = totalSuffix ? ` | 消耗: ${totalSuffix}` : '';
+  const phase = state?.phase || 'idle';
+
   const draftPrefix = process.env.AIIA_DRAFT_MODE === '1' ? '[DRAFT] ' : '';
 
-  if (phase === "idle") return `${draftPrefix}[Ready]${suffix}`;
-  
+  if (phase === 'idle') return `${draftPrefix}[Ready]${suffix}`;
+
   const spinner = BRAILLE_SPINNER[(state?.tickIndex || 0) % BRAILLE_SPINNER.length];
   const elapsed = formatDuration((Number(state.now) || 0) - (Number(state.startedAt) || 0));
-  
-  if (phase === "thinking") {
+
+  if (phase === 'thinking') {
     return `${draftPrefix}${spinner} [${elapsed}] 正在思考...${suffix}`;
   }
-  if (phase === "responding") {
+  if (phase === 'responding') {
     return `${draftPrefix}${spinner} [${elapsed}] 正在生成回复...${suffix}`;
   }
-  if (phase === "tool") {
-    const tool = state.toolSummary || state.toolName || "tool";
-    const extra = Number(state.toolCount) > 1 ? ` | 累计执行: ${state.toolCount} 个工具` : "";
+  if (phase === 'tool') {
+    const tool = state.toolSummary || state.toolName || 'tool';
+    const extra = Number(state.toolCount) > 1 ? ` | 累计执行: ${state.toolCount} 个工具` : '';
     return `${draftPrefix}${spinner} [${elapsed}] 运行中: ${tool}${extra}${suffix}`;
   }
   const bits = [`✓ [${elapsed}] 完成`];
@@ -141,57 +141,57 @@ export function formatTurnStatusLine(state) {
   if (hit != null) bits.push(`缓存: ${hit}%`);
   const tools = Number(state.toolCount) || 0;
   if (tools > 0) bits.push(`共调用 ${tools} 次工具`);
-  
-  return `${draftPrefix}${bits.join(" | ")}${suffix}`;
+
+  return `${draftPrefix}${bits.join(' | ')}${suffix}`;
 }
 
 export function formatWorkingMessage(state) {
-  if (state?.phase === "tool") return state.toolSummary || state.toolName || "tool";
-  if (state?.phase === "thinking" || state?.phase === "responding") return "思考中…";
+  if (state?.phase === 'tool') return state.toolSummary || state.toolName || 'tool';
+  if (state?.phase === 'thinking' || state?.phase === 'responding') return '思考中…';
   return undefined;
 }
 
 export function applyTurnStatusEvent(state, event, now = Date.now()) {
-  const prev = state && typeof state === "object" ? state : createTurnStatusState();
+  const prev = state && typeof state === 'object' ? state : createTurnStatusState();
   const type = event?.type;
-  if (type === "session_start" || type === "session_shutdown") {
+  if (type === 'session_start' || type === 'session_shutdown') {
     return { ...createTurnStatusState(), now };
   }
-  if (type === "turn_start" || type === "agent_start") {
+  if (type === 'turn_start' || type === 'agent_start') {
     const startedAt = Number(event?.timestamp) || now;
     return {
       ...createTurnStatusState(),
       totals: prev.totals, // keep session totals across turns
-      phase: "thinking",
+      phase: 'thinking',
       startedAt,
       now,
       turnIndex: Number(event?.turnIndex) || prev.turnIndex + 1,
     };
   }
-  if (type === "tool_execution_start") {
+  if (type === 'tool_execution_start') {
     return {
       ...prev,
       now,
-      phase: "tool",
+      phase: 'tool',
       startedAt: prev.startedAt || now,
-      toolName: event?.toolName || "tool",
+      toolName: event?.toolName || 'tool',
       toolSummary: summarizeTool(event?.toolName, event?.args),
       runningTools: (Number(prev.runningTools) || 0) + 1,
       toolCount: (Number(prev.toolCount) || 0) + 1,
     };
   }
-  if (type === "tool_execution_end") {
+  if (type === 'tool_execution_end') {
     const running = Math.max(0, (Number(prev.runningTools) || 0) - 1);
     return {
       ...prev,
       now,
       runningTools: running,
-      phase: running > 0 ? "tool" : "thinking",
-      toolName: running > 0 ? prev.toolName : "",
-      toolSummary: running > 0 ? prev.toolSummary : "",
+      phase: running > 0 ? 'tool' : 'thinking',
+      toolName: running > 0 ? prev.toolName : '',
+      toolSummary: running > 0 ? prev.toolSummary : '',
     };
   }
-  if (type === "message_end") {
+  if (type === 'message_end') {
     const usage = extractUsage(event?.message);
     return {
       ...prev,
@@ -200,14 +200,14 @@ export function applyTurnStatusEvent(state, event, now = Date.now()) {
       totals: addUsageTotals(prev.totals, usage),
     };
   }
-  if (type === "turn_end" || type === "agent_end") {
+  if (type === 'turn_end' || type === 'agent_end') {
     return {
       ...prev,
       now,
-      phase: prev.startedAt ? "done" : "idle",
+      phase: prev.startedAt ? 'done' : 'idle',
       runningTools: 0,
-      toolName: "",
-      toolSummary: "",
+      toolName: '',
+      toolSummary: '',
       usage: extractUsage(event?.message) || prev.usage,
     };
   }

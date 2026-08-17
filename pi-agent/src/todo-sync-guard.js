@@ -17,13 +17,13 @@ export const NEGATION_RE = /(未完成|没完成|尚未完成|未全部|未收�
  */
 export function extractReplyText(message) {
   const content = message?.content;
-  if (typeof content === "string") return content;
+  if (typeof content === 'string') return content;
   if (Array.isArray(content)) {
     return content
-      .map((part) => (part && typeof part === "object" ? part.text ?? "" : String(part ?? "")))
-      .join("");
+      .map((part) => (part && typeof part === 'object' ? (part.text ?? '') : String(part ?? '')))
+      .join('');
   }
-  return "";
+  return '';
 }
 
 /**
@@ -35,11 +35,11 @@ export function extractReplyText(message) {
  */
 export function checkTodoSync(todos, replyText) {
   const list = Array.isArray(todos) ? todos : [];
-  const reply = String(replyText || "");
+  const reply = String(replyText || '');
   const issues = [];
 
-  const incomplete = list.filter((t) => t.status !== "completed").length;
-  const inProgress = list.filter((t) => t.status === "in_progress").length;
+  const incomplete = list.filter((t) => t.status !== 'completed').length;
+  const inProgress = list.filter((t) => t.status === 'in_progress').length;
   const allDone = list.length > 0 && incomplete === 0;
   const cleared = list.length === 0;
 
@@ -50,7 +50,7 @@ export function checkTodoSync(todos, replyText) {
     if (current < total) {
       if (allDone || cleared) {
         issues.push(
-          `回复标记 [进度 ${current}/${total}] 声称任务未完成，但 update_todos 清单已全部归位${cleared ? "（已清空）" : ""}`,
+          `回复标记 [进度 ${current}/${total}] 声称任务未完成，但 update_todos 清单已全部归位${cleared ? '（已清空）' : ''}`,
         );
       }
     } else if (incomplete > 0) {

@@ -10,23 +10,23 @@
 
 export function isToolPairRepairDisabled(env = process.env) {
   const v = env.AIIA_DISABLE_TOOL_PAIR_REPAIR;
-  return v === "1" || v === "true";
+  return v === '1' || v === 'true';
 }
 
 export function isToolRole(msg) {
   const role = msg?.role;
-  return role === "tool" || role === "toolResult" || role === "function";
+  return role === 'tool' || role === 'toolResult' || role === 'function';
 }
 
 export function toolResultId(msg) {
-  if (!msg || typeof msg !== "object") return "";
+  if (!msg || typeof msg !== 'object') return '';
   const raw = msg.tool_call_id || msg.toolCallId || msg.id;
-  return raw == null ? "" : String(raw);
+  return raw == null ? '' : String(raw);
 }
 
 export function collectToolCallIds(msg) {
   const ids = new Set();
-  if (!msg || typeof msg !== "object") return ids;
+  if (!msg || typeof msg !== 'object') return ids;
   if (Array.isArray(msg.tool_calls)) {
     for (const call of msg.tool_calls) {
       if (call?.id) ids.add(String(call.id));
@@ -36,7 +36,7 @@ export function collectToolCallIds(msg) {
     for (const part of msg.content) {
       if (
         part &&
-        (part.type === "toolCall" || part.type === "tool_use" || part.type === "functionCall") &&
+        (part.type === 'toolCall' || part.type === 'tool_use' || part.type === 'functionCall') &&
         part.id
       ) {
         ids.add(String(part.id));
@@ -51,16 +51,12 @@ export function hasToolCalls(msg) {
 }
 
 function hasVisibleContent(content) {
-  if (typeof content === "string") return content.length > 0;
+  if (typeof content === 'string') return content.length > 0;
   if (!Array.isArray(content)) return Boolean(content);
   return content.some((part) => {
-    if (!part || typeof part !== "object") return Boolean(part);
-    if (part.type === "text") return Boolean(part.text);
-    if (
-      part.type === "toolCall" ||
-      part.type === "tool_use" ||
-      part.type === "functionCall"
-    ) {
+    if (!part || typeof part !== 'object') return Boolean(part);
+    if (part.type === 'text') return Boolean(part.text);
+    if (part.type === 'toolCall' || part.type === 'tool_use' || part.type === 'functionCall') {
       return false;
     }
     return true;
@@ -76,8 +72,8 @@ function filterAssistantToIds(msg, keepIds) {
   }
   if (Array.isArray(msg.content)) {
     next.content = msg.content.filter((part) => {
-      if (!part || typeof part !== "object") return true;
-      if (part.type === "toolCall" || part.type === "tool_use" || part.type === "functionCall") {
+      if (!part || typeof part !== 'object') return true;
+      if (part.type === 'toolCall' || part.type === 'tool_use' || part.type === 'functionCall') {
         return Boolean(part.id) && keepIds.has(String(part.id));
       }
       return true;
@@ -101,7 +97,7 @@ export function repairCompletionsMessages(messages) {
   let i = 0;
   while (i < messages.length) {
     const msg = messages[i];
-    if (msg?.role === "assistant" && hasToolCalls(msg)) {
+    if (msg?.role === 'assistant' && hasToolCalls(msg)) {
       const wanted = collectToolCallIds(msg);
       const keptTools = [];
       const keptIds = new Set();
@@ -135,8 +131,8 @@ export function repairCompletionsMessages(messages) {
   return { messages: dropped ? out : messages, dropped };
 }
 
-export const CALL_TYPES = new Set(["function_call", "custom_tool_call"]);
-export const OUTPUT_TYPES = new Set(["function_call_output", "custom_tool_call_output"]);
+export const CALL_TYPES = new Set(['function_call', 'custom_tool_call']);
+export const OUTPUT_TYPES = new Set(['function_call_output', 'custom_tool_call_output']);
 
 /**
  * Drop Responses items whose call_id has no preceding function_call.
@@ -152,7 +148,7 @@ export function repairResponsesInput(input) {
   let dropped = 0;
   for (const item of input) {
     const type = item?.type;
-    const callId = item?.call_id == null ? "" : String(item.call_id);
+    const callId = item?.call_id == null ? '' : String(item.call_id);
     if (CALL_TYPES.has(type)) {
       if (callId) seen.add(callId);
       out.push(item);
@@ -177,7 +173,7 @@ export function repairResponsesInput(input) {
  * @returns {{ dropped: number }}
  */
 export function repairProviderPayload(req, env = process.env) {
-  if (!req || typeof req !== "object") return { dropped: 0 };
+  if (!req || typeof req !== 'object') return { dropped: 0 };
   if (isToolPairRepairDisabled(env)) return { dropped: 0 };
   let dropped = 0;
   if (Array.isArray(req.messages)) {

@@ -4,9 +4,9 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { isExtensionEnabled } from "../src/extension-profile.js";
+import { isExtensionEnabled } from '../src/extension-profile.js';
 
-const WIDGET_KEY = "subagent-board";
+const WIDGET_KEY = 'subagent-board';
 const POLL_INTERVAL = 1000;
 
 function formatDuration(ms) {
@@ -21,14 +21,14 @@ function scanWorktrees(cwd) {
   if (!fs.existsSync(baseDir)) return [];
   const dirs = fs.readdirSync(baseDir);
   const tasks = [];
-  
+
   for (const dir of dirs) {
     const fullPath = path.join(baseDir, dir);
     if (!fs.statSync(fullPath).isDirectory()) continue;
-    
+
     const taskInfoFile = path.join(fullPath, '.subagent_task.json');
     if (!fs.existsSync(taskInfoFile)) continue;
-    
+
     try {
       const meta = JSON.parse(fs.readFileSync(taskInfoFile, 'utf8'));
       tasks.push(meta);
@@ -38,20 +38,20 @@ function scanWorktrees(cwd) {
 }
 
 export default function uiSubagentBoardExtension(pi) {
-  if (!isExtensionEnabled("ui-subagent-board")) return;
+  if (!isExtensionEnabled('ui-subagent-board')) return;
 
   let timer = null;
   let activeCtx = null;
 
   let tickIndex = 0;
-  const BRAILLE_SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+  const BRAILLE_SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
   let cachedTasks = [];
   let lastScanTime = 0;
 
   function paint() {
     if (!activeCtx || !activeCtx.ui || !activeCtx.ui.setWidget) return;
-    
+
     const now = Date.now();
     if (now - lastScanTime >= POLL_INTERVAL) {
       const cwd = activeCtx.cwd || process.cwd();
@@ -59,46 +59,57 @@ export default function uiSubagentBoardExtension(pi) {
       lastScanTime = now;
     }
     const tasks = cachedTasks;
-    
+
     if (tasks.length === 0) {
       activeCtx.ui.setWidget(WIDGET_KEY, undefined);
       return;
     }
 
     let running = 0;
-    
+
     const lines = [];
     const spinner = BRAILLE_SPINNER[tickIndex % BRAILLE_SPINNER.length];
 
     for (const task of tasks) {
-      const isAlive = task.pid ? (() => {
-        try { process.kill(task.pid, 0); return true; } catch { return false; }
-      })() : false;
-      
-      const status = task.status === 'merged' ? 'merged' : (isAlive ? 'running' : 'idle');
+      const isAlive = task.pid
+        ? (() => {
+            try {
+              process.kill(task.pid, 0);
+              return true;
+            } catch {
+              return false;
+            }
+          })()
+        : false;
+
+      const status = task.status === 'merged' ? 'merged' : isAlive ? 'running' : 'idle';
       if (status === 'running') running++;
-      
-      const elapsed = task.spawnedAt ? formatDuration(now - new Date(task.spawnedAt).getTime()) : '0s';
+
+      const elapsed = task.spawnedAt
+        ? formatDuration(now - new Date(task.spawnedAt).getTime())
+        : '0s';
       const branchName = task.branch || 'unknown';
       const taskDesc = (task.task || '').slice(0, 30).replace(/\n/g, ' ');
-      
+
       let glyph = '○';
       if (status === 'running') glyph = spinner;
       else if (status === 'merged') glyph = '✔';
       else if (status === 'idle') glyph = '⚠';
-      
+
       lines.push(`    ${glyph} [${branchName}] ${elapsed} | ${taskDesc}`);
     }
-    
+
     if (lines.length > 0) {
-      lines.unshift(`Subagents Working on ${running} active tasks • ${tasks.length - running} other`);
-      activeCtx.ui.setWidget(WIDGET_KEY, lines, { placement: "aboveEditor" });
+      lines.unshift(
+        `Subagents Working on ${running} active tasks • ${tasks.length - running} other`,
+      );
+      activeCtx.ui.setWidget(WIDGET_KEY, lines, { placement: 'aboveEditor' });
     } else {
       activeCtx.ui.setWidget(WIDGET_KEY, undefined);
     }
   }
 
-  pi.on("session_start", (event, ctx) => {
+  pi.on('session_start', (event, ctx) => {
     activeCtx = ctx;
     if (timer) clearInterval(timer);
     timer = setInterval(() => {
@@ -108,12 +119,12 @@ export default function uiSubagentBoardExtension(pi) {
     paint();
   });
 
-  pi.on("turn_start", (event, ctx) => {
+  pi.on('turn_start', (event, ctx) => {
     activeCtx = ctx;
     paint();
   });
 
-  pi.on("session_shutdown", () => {
+  pi.on('session_shutdown', () => {
     if (timer) {
       clearInterval(timer);
       timer = null;

@@ -8,8 +8,27 @@
  * 直连 provider（如 Charon→xAI 的 grok-4.5、DeepSeek）保持原 model，避免把别名打到上游 API。
  */
 
-const COMPLEX_KEYWORDS = ['refactor', 'architecture', 'debug', 'redesign', '重构', '架构', '报错', '死锁', '并发', '漏洞', '性能优化'];
-const REASONING_KEYWORDS = ['证明', '深度推导', '数学建模', 'prover', 'formal verification', 'benchmark'];
+const COMPLEX_KEYWORDS = [
+  'refactor',
+  'architecture',
+  'debug',
+  'redesign',
+  '重构',
+  '架构',
+  '报错',
+  '死锁',
+  '并发',
+  '漏洞',
+  '性能优化',
+];
+const REASONING_KEYWORDS = [
+  '证明',
+  '深度推导',
+  '数学建模',
+  'prover',
+  'formal verification',
+  'benchmark',
+];
 const TIER_MODELS = new Set(['low', 'medium', 'high', 'reasoning']);
 
 import fs from 'fs';
@@ -22,12 +41,12 @@ import os from 'os';
 function resolve1apiTier(tierAlias, baseUrl) {
   if (!['low', 'mid', 'medium', 'high', 'reasoning'].includes(tierAlias)) return tierAlias;
   const targetKey = tierAlias === 'medium' ? 'mid' : tierAlias;
-  
+
   try {
     const configHome = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
     const providersDir = path.join(configHome, '1api', 'providers');
     if (!fs.existsSync(providersDir)) return tierAlias;
-    
+
     for (const name of fs.readdirSync(providersDir)) {
       const pPath = path.join(providersDir, name, 'provider.json');
       if (fs.existsSync(pPath)) {
@@ -40,7 +59,7 @@ function resolve1apiTier(tierAlias, baseUrl) {
         if (data['mid']) return data['mid']; // Fallback
       }
     }
-  } catch(e) {
+  } catch (e) {
     console.debug('Failed to resolve 1api tier:', e.message);
   }
   return tierAlias;
@@ -95,12 +114,12 @@ export function evaluateModelRoute(payload = {}, env = process.env) {
   }
 
   // 2. 包含深度推理关键词 -> 推理模型
-  if (REASONING_KEYWORDS.some(kw => lowerText.includes(kw))) {
+  if (REASONING_KEYWORDS.some((kw) => lowerText.includes(kw))) {
     return 'reasoning';
   }
 
   // 3. 包含复杂架构/重构/调试关键词 或 超长上下文 -> 高阶模型
-  if (COMPLEX_KEYWORDS.some(kw => lowerText.includes(kw)) || totalTextLength >= mediumThreshold) {
+  if (COMPLEX_KEYWORDS.some((kw) => lowerText.includes(kw)) || totalTextLength >= mediumThreshold) {
     return 'high';
   }
 
@@ -165,13 +184,13 @@ export function resolveRoutedPayload(payload = {}, ctx = {}, env = process.env) 
     return undefined;
   }
   let targetModel = evaluateModelRoute(payload, env);
-  
+
   // 真源翻译：如果是 1api 提供的直连，绝对不能发别名，必须翻译成真实的 provider.json 里的 ID
   const provider = String(ctx?.model?.provider || '');
   if (provider === '1api' || provider === 'charon' || provider === 'local-proxy') {
     targetModel = resolve1apiTier(targetModel, ctx?.model?.baseUrl);
   }
-  
+
   return { ...payload, model: targetModel };
 }
 

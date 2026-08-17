@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
-import { registerAiiaHandler } from "../src/command-registry.js";
-import { isExtensionEnabled } from "../src/extension-profile.js";
+import { registerAiiaHandler } from '../src/command-registry.js';
+import { isExtensionEnabled } from '../src/extension-profile.js';
 
 /**
  * 顶尖水准的自动 DAG 状态机引擎 (Auto DAG Executor)
@@ -15,7 +15,7 @@ class DagExecutor {
     this.nodes = nodes; // { id, task, deps: string[] }
     this.concurrency = concurrency;
     this.cwd = cwd;
-    this.status = new Map(nodes.map(n => [n.id, 'pending'])); // pending | running | done | error
+    this.status = new Map(nodes.map((n) => [n.id, 'pending'])); // pending | running | done | error
     this.results = new Map();
     this.running = 0;
   }
@@ -24,18 +24,19 @@ class DagExecutor {
     return new Promise((resolve, reject) => {
       const checkAndRun = () => {
         // 1. 闭环检查：全部完成则返回
-        if (Array.from(this.status.values()).every(s => s === 'done')) {
+        if (Array.from(this.status.values()).every((s) => s === 'done')) {
           return resolve(Object.fromEntries(this.results));
         }
         // 若有任何节点 Error，立即抛出终止整图
-        if (Array.from(this.status.values()).some(s => s === 'error')) {
+        if (Array.from(this.status.values()).some((s) => s === 'error')) {
           return reject(new Error('DAG Execution failed due to a node error.'));
         }
 
         // 2. 状态机解析：找出所有入度依赖已完成的 Ready 节点
-        const readyNodes = this.nodes.filter(n => 
-          this.status.get(n.id) === 'pending' && 
-          (n.deps || []).every(dep => this.status.get(dep) === 'done')
+        const readyNodes = this.nodes.filter(
+          (n) =>
+            this.status.get(n.id) === 'pending' &&
+            (n.deps || []).every((dep) => this.status.get(dep) === 'done'),
         );
 
         // 3. 并发控制与派发
@@ -43,7 +44,7 @@ class DagExecutor {
           const node = readyNodes.shift();
           this.status.set(node.id, 'running');
           this.running++;
-          
+
           this.runNode(node).finally(() => {
             this.running--;
             // 被动回调驱动下一个 Tick
@@ -51,7 +52,7 @@ class DagExecutor {
           });
         }
       };
-      
+
       checkAndRun();
     });
   }
@@ -62,24 +63,25 @@ class DagExecutor {
         // 构建严格裁剪的微上下文 (Micro-context)
         let microContext = '';
         if (node.deps && node.deps.length > 0) {
-          microContext = "\n[前置依赖任务的输出上下文]:\n" + 
-            node.deps.map(d => `--- 节点 ${d} 结果 ---\n${this.results.get(d)}\n`).join('\n');
+          microContext =
+            '\n[前置依赖任务的输出上下文]:\n' +
+            node.deps.map((d) => `--- 节点 ${d} 结果 ---\n${this.results.get(d)}\n`).join('\n');
         }
-        
+
         const fullPrompt = `${node.task}${microContext}`;
-        
+
         // 调用底层二进制沙盒运行子任务 (避免主进程内存泄漏)
         const sub = spawn('pi', ['-p', fullPrompt], {
           cwd: this.cwd,
-          stdio: ['ignore', 'pipe', 'pipe']
+          stdio: ['ignore', 'pipe', 'pipe'],
         });
 
         let stdout = '';
         let stderr = '';
-        sub.stdout.on('data', d => stdout += d.toString());
-        sub.stderr.on('data', d => stderr += d.toString());
+        sub.stdout.on('data', (d) => (stdout += d.toString()));
+        sub.stderr.on('data', (d) => (stderr += d.toString()));
 
-        sub.on('close', code => {
+        sub.on('close', (code) => {
           if (code === 0) {
             this.status.set(node.id, 'done');
             this.results.set(node.id, stdout.trim());
@@ -100,15 +102,15 @@ class DagExecutor {
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
 export default function autoDagExtension(pi) {
-  if (!isExtensionEnabled("auto-dag")) return;
+  if (!isExtensionEnabled('auto-dag')) return;
 
   // 1. 注册主指令：将自然语言转换为严格的 JSON 依赖图 (Planner 挂载)
   const dagHandler = async (args, ctx) => {
     if (!args.trim()) {
-      ctx?.ui?.notify?.("用法: /dag <复杂任务描述>", "info");
+      ctx?.ui?.notify?.('用法: /dag <复杂任务描述>', 'info');
       return;
     }
-    
+
     // 注入底层 Prompt，强制 Agent 使用 execute_dag 工具
     const message = `[SYSTEM: 自动 DAG 编排模式]
 User task: "${args}"
@@ -122,16 +124,16 @@ User task: "${args}"
 2. 禁止死锁与环形依赖。
 3. 尽最大可能提升并行度。`;
 
-    pi.sendUserMessage(message, { deliverAs: "followUp" });
-    ctx?.ui?.notify?.(` /dag：已启动 DAG 解析引擎，正在进行拓扑拆解...`, "info");
+    pi.sendUserMessage(message, { deliverAs: 'followUp' });
+    ctx?.ui?.notify?.(` /dag：已启动 DAG 解析引擎，正在进行拓扑拆解...`, 'info');
   };
 
-  pi.registerCommand("dag", {
-    description: "全自动并发编排 | 用法: /dag <复杂任务>，后台组装依赖图并极速并发",
+  pi.registerCommand('dag', {
+    description: '全自动并发编排 | 用法: /dag <复杂任务>，后台组装依赖图并极速并发',
     handler: dagHandler,
   });
   if (typeof registerAiiaHandler === 'function') {
-    registerAiiaHandler("dag", dagHandler);
+    registerAiiaHandler('dag', dagHandler);
   }
 
   // 2. 注册底层执行器 Tool，供 LLM 解析出 JSON 后回调使用
@@ -149,40 +151,49 @@ User task: "${args}"
             properties: {
               id: { type: 'string', description: '唯一节点ID (如: fetch_db, build_ui)' },
               task: { type: 'string', description: '给到 Worker 的详细具体指令' },
-              deps: { 
-                type: 'array', 
+              deps: {
+                type: 'array',
                 items: { type: 'string' },
-                description: '该节点必须等待的前置节点 ID 数组，无依赖填空'
-              }
+                description: '该节点必须等待的前置节点 ID 数组，无依赖填空',
+              },
             },
-            required: ['id', 'task']
-          }
+            required: ['id', 'task'],
+          },
         },
-        concurrency: { type: 'number', description: '最大并发线程数 (默认 3)' }
+        concurrency: { type: 'number', description: '最大并发线程数 (默认 3)' },
       },
-      required: ['nodes']
+      required: ['nodes'],
     },
     async execute(_id, params, _signal, _onUpdate, ctx) {
       const cwd = ctx?.cwd || process.cwd();
-      ctx?.ui?.notify?.(`引擎接收到包含 ${params.nodes.length} 个节点的并发调度图，开始执行...`, "info");
-      
+      ctx?.ui?.notify?.(
+        `引擎接收到包含 ${params.nodes.length} 个节点的并发调度图，开始执行...`,
+        'info',
+      );
+
       const executor = new DagExecutor(params.nodes, params.concurrency || 3, cwd);
-      
+
       try {
         const results = await executor.execute();
-        ctx?.ui?.notify?.(`🎉 DAG 图全链路并发闭环完成`, "success");
-        return {
-          status: 'success',
-          summary: '所有并发分支节点执行完毕。',
-          nodeOutputs: results
-        };
+        ctx?.ui?.notify?.(`🎉 DAG 图全链路并发闭环完成`, 'success');
+        return (() => {
+          const _res = {
+            status: 'success',
+            summary: '所有并发分支节点执行完毕。',
+            nodeOutputs: results,
+          };
+          return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+        })();
       } catch (err) {
-        ctx?.ui?.notify?.(`❌ DAG 并发图执行崩溃: ${err.message}`, "error");
-        return {
-          status: 'error',
-          message: err.message
-        };
+        ctx?.ui?.notify?.(`❌ DAG 并发图执行崩溃: ${err.message}`, 'error');
+        return (() => {
+          const _res = {
+            status: 'error',
+            message: err.message,
+          };
+          return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+        })();
       }
-    }
+    },
   });
 }

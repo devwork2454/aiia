@@ -23,7 +23,7 @@ describe('Phase 2 P1: Web Search Proxy & AGY Bridge Tests', () => {
 
   test('AGY Bridge Server starts and responds to /v1/models', async () => {
     server = startAgyBridgeServer(8789); // 使用测试端口 8789
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 200));
 
     const res = await fetch('http://127.0.0.1:8789/v1/models');
     assert.equal(res.status, 200);
@@ -55,7 +55,9 @@ describe('Phase 2 P1: Web Search Proxy & AGY Bridge Tests', () => {
   test('before_provider_request hook redirects model and proxy url when search intent is present', async () => {
     let handler;
     const mockPi = {
-      on: (event, fn) => { if (event === 'before_provider_request') handler = fn; }
+      on: (event, fn) => {
+        if (event === 'before_provider_request') handler = fn;
+      },
     };
 
     process.env.AIIA_SKIP_AGY_BRIDGE = '1';
@@ -65,13 +67,16 @@ describe('Phase 2 P1: Web Search Proxy & AGY Bridge Tests', () => {
     const req = {
       model: 'gpt-4o',
       baseUrl: 'http://127.0.0.1:4000/v1',
-      messages: [{ role: 'user', content: '搜索最新 AI 动态' }]
+      messages: [{ role: 'user', content: '搜索最新 AI 动态' }],
     };
 
     process.env.SEARCH_MODEL_OVERRIDE = 'custom-search-model';
     process.env.SEARCH_PROXY_URL = 'http://127.0.0.1:8080/v1';
 
-    await handler({ req }, { model: { provider: 'local-proxy', id: 'high', baseUrl: req.baseUrl } });
+    await handler(
+      { req },
+      { model: { provider: 'local-proxy', id: 'high', baseUrl: req.baseUrl } },
+    );
 
     assert.equal(req.model, 'custom-search-model');
     assert.equal(req.baseUrl, 'http://127.0.0.1:8080/v1');
@@ -87,7 +92,9 @@ describe('Phase 2 P1: Web Search Proxy & AGY Bridge Tests', () => {
   test('Charon/xAI search intent injects directive but keeps grok-4.5 model', async () => {
     let handler;
     const mockPi = {
-      on: (event, fn) => { if (event === 'before_provider_request') handler = fn; }
+      on: (event, fn) => {
+        if (event === 'before_provider_request') handler = fn;
+      },
     };
     process.env.AIIA_SKIP_AGY_BRIDGE = '1';
     webSearchProxyExtension(mockPi);
@@ -95,7 +102,7 @@ describe('Phase 2 P1: Web Search Proxy & AGY Bridge Tests', () => {
     const payload = {
       model: 'grok-4.5',
       baseUrl: 'https://api.x.ai/v1',
-      messages: [{ role: 'user', content: '搜索最新 AI 动态' }]
+      messages: [{ role: 'user', content: '搜索最新 AI 动态' }],
     };
     const ctx = { model: { id: 'grok-4.5', provider: 'charon', baseUrl: 'https://api.x.ai/v1' } };
 
@@ -109,7 +116,9 @@ describe('Phase 2 P1: Web Search Proxy & AGY Bridge Tests', () => {
   test('local-proxy search intent still appends -search model suffix', async () => {
     let handler;
     const mockPi = {
-      on: (event, fn) => { if (event === 'before_provider_request') handler = fn; }
+      on: (event, fn) => {
+        if (event === 'before_provider_request') handler = fn;
+      },
     };
     process.env.AIIA_SKIP_AGY_BRIDGE = '1';
     webSearchProxyExtension(mockPi);
@@ -117,7 +126,7 @@ describe('Phase 2 P1: Web Search Proxy & AGY Bridge Tests', () => {
     const payload = {
       model: 'high',
       baseUrl: 'http://127.0.0.1:4000/v1',
-      messages: [{ role: 'user', content: '搜索最新 AI 动态' }]
+      messages: [{ role: 'user', content: '搜索最新 AI 动态' }],
     };
     const ctx = { model: { id: 'high', provider: 'local-proxy', baseUrl: payload.baseUrl } };
 
@@ -141,7 +150,9 @@ describe('Phase 2 P1: Web Search Proxy & AGY Bridge Tests', () => {
   test('bare find in tool output must not rewrite Charon model after tool turn', async () => {
     let handler;
     const mockPi = {
-      on: (event, fn) => { if (event === 'before_provider_request') handler = fn; }
+      on: (event, fn) => {
+        if (event === 'before_provider_request') handler = fn;
+      },
     };
     process.env.AIIA_SKIP_AGY_BRIDGE = '1';
     webSearchProxyExtension(mockPi);

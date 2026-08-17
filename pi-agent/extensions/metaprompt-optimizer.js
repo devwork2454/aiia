@@ -4,13 +4,13 @@ import path from 'node:path';
 /**
  * L7 Metaprompt Optimizer Extension
  * Reads trajectory logs and extracts learnings to update project guidelines.
- * 
- * @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi 
+ *
+ * @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi
  */
-import { isExtensionEnabled } from "../src/extension-profile.js";
+import { isExtensionEnabled } from '../src/extension-profile.js';
 
 export default function metapromptOptimizer(pi) {
-  if (!isExtensionEnabled("metaprompt-optimizer")) return;
+  if (!isExtensionEnabled('metaprompt-optimizer')) return;
   pi.on('before_agent_start', async (ctx) => {
     // Register the /optimize command to manually trigger reflection
     if (ctx.registerCommand) {
@@ -20,11 +20,11 @@ export default function metapromptOptimizer(pi) {
         action: async (args) => {
           const cwd = ctx.cwd || process.cwd();
           const trajPath = path.join(cwd, '.agent', 'trajectories.jsonl');
-          
+
           if (!fs.existsSync(trajPath)) {
             return {
               output: `[Optimizer] No trajectories found at ${trajPath}. Run some tasks first.`,
-              exit: true
+              exit: true,
             };
           }
 
@@ -32,7 +32,7 @@ export default function metapromptOptimizer(pi) {
           // (In a real scenario, this would be passed to an LLM to analyze)
           const content = fs.readFileSync(trajPath, 'utf8');
           const lines = content.split('\n').filter(Boolean);
-          
+
           let errorCount = 0;
           for (const line of lines) {
             if (line.includes('isError":true') || line.includes('FAILED')) {
@@ -41,12 +41,12 @@ export default function metapromptOptimizer(pi) {
           }
 
           const report = `[L7 Optimizer] Analyzed ${lines.length} trajectory events.\nFound ${errorCount} error/recovery instances.\n\n-> In a full LLM pass, these would be summarized into AGENTS.md rules to prevent future regressions.`;
-          
+
           return {
             output: report,
-            exit: true // Prevent standard chat from taking over
+            exit: true, // Prevent standard chat from taking over
           };
-        }
+        },
       });
     }
   });

@@ -26,7 +26,7 @@ describe('AIIA Phase 1 Crypto & Vault Unit Tests', () => {
       ciphertext,
       salt: salt.toString('hex'),
       iv: iv.toString('hex'),
-      authTag: cipher.getAuthTag().toString('hex')
+      authTag: cipher.getAuthTag().toString('hex'),
     };
   }
 
@@ -45,7 +45,7 @@ describe('AIIA Phase 1 Crypto & Vault Unit Tests', () => {
   test('E2EE AES-256-GCM Encryption and Decryption works correctly', () => {
     const payload = JSON.stringify({ key: 'sk-1234567890abcdef', user: 'test' });
     const encrypted = encrypt(payload, password);
-    
+
     assert.notEqual(encrypted.ciphertext, payload);
     assert.equal(typeof encrypted.salt, 'string');
     assert.equal(typeof encrypted.iv, 'string');

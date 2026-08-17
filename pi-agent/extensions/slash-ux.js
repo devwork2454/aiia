@@ -3,20 +3,19 @@
  * Kill switch: AIIA_SLASH_UX_DISABLED=1
  * Allowlist override: AIIA_SLASH_ALLOWLIST=goal,reply,add-dir,vault,aiia
  */
-import { getAiiaHandler, listAiiaHandlers } from "../src/command-registry.js";
+import { getAiiaHandler, listAiiaHandlers } from '../src/command-registry.js';
 import {
   filterSlashAutocompleteItems,
   isSlashUxDisabled,
   parseAiiaArgs,
   resolveSlashAllowlist,
   routeAiiaSubcommand,
-} from "../src/slash-visibility.js";
+} from '../src/slash-visibility.js';
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
 export default function slashUxExtension(pi) {
-  pi.registerCommand("aiia", {
-    description:
-      "AIIA command hub | /aiia help | /aiia memory|reply|goal|add-dir|vault|sync ...",
+  pi.registerCommand('aiia', {
+    description: 'AIIA command hub | /aiia help | /aiia memory|reply|goal|add-dir|vault|sync ...',
     handler: async (args, ctx) => {
       const { subcommand, rest } = parseAiiaArgs(args);
       /** @type {Record<string, Function>} */
@@ -29,22 +28,17 @@ export default function slashUxExtension(pi) {
     },
   });
 
-  if (typeof pi.addAutocompleteProvider === "function") {
+  if (typeof pi.addAutocompleteProvider === 'function') {
     pi.addAutocompleteProvider((current) => {
       const wrap = {
         triggerCharacters: current.triggerCharacters,
         async getSuggestions(lines, cursorLine, cursorCol, options) {
-          const result = await current.getSuggestions(
-            lines,
-            cursorLine,
-            cursorCol,
-            options,
-          );
+          const result = await current.getSuggestions(lines, cursorLine, cursorCol, options);
           if (!result || isSlashUxDisabled()) return result;
 
-          const prefix = String(result.prefix || "");
+          const prefix = String(result.prefix || '');
           // Only filter top-level slash command menus (no args yet)
-          if (!prefix.startsWith("/") || prefix.includes(" ")) return result;
+          if (!prefix.startsWith('/') || prefix.includes(' ')) return result;
 
           const allowlist = resolveSlashAllowlist();
           const items = filterSlashAutocompleteItems(result.items, allowlist);
@@ -52,16 +46,10 @@ export default function slashUxExtension(pi) {
           return { ...result, items };
         },
         applyCompletion(lines, cursorLine, cursorCol, item, prefix) {
-          return current.applyCompletion(
-            lines,
-            cursorLine,
-            cursorCol,
-            item,
-            prefix,
-          );
+          return current.applyCompletion(lines, cursorLine, cursorCol, item, prefix);
         },
       };
-      if (typeof current.shouldTriggerFileCompletion === "function") {
+      if (typeof current.shouldTriggerFileCompletion === 'function') {
         wrap.shouldTriggerFileCompletion = (...args) =>
           current.shouldTriggerFileCompletion(...args);
       }

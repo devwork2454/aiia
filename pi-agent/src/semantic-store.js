@@ -28,9 +28,9 @@ export class SemanticStore {
     // 降级使用原生 SQLite 替代 LanceDB，完美规避了 native binding 的报错
     const dir = path.dirname(this.dbPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    
+
     this.db = new Database(this.dbPath);
-    
+
     // 创建向量存储表 (使用 JSON 字符串存储浮点数组，内存读取)
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS semantic_nodes (
@@ -49,34 +49,38 @@ export class SemanticStore {
     // 1. Try Gemini
     if (dynamicKey || process.env.GEMINI_API_KEY) {
       const geminiKey = dynamicKey || process.env.GEMINI_API_KEY;
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${geminiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'models/text-embedding-004',
-          content: { parts: [{ text }] }
-        })
-      });
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${geminiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'models/text-embedding-004',
+            content: { parts: [{ text }] },
+          }),
+        },
+      );
       if (res.ok) {
         const data = await res.json();
         return data.embedding.values;
       }
     }
-    
+
     // 2. Try OpenAI
     if (dynamicKey || process.env.OPENAI_API_KEY) {
-      const baseUrl = ctx?.model?.baseUrl || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
+      const baseUrl =
+        ctx?.model?.baseUrl || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
       const openAiKey = dynamicKey || process.env.OPENAI_API_KEY;
       const res = await fetch(`${baseUrl}/embeddings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openAiKey}`
+          Authorization: `Bearer ${openAiKey}`,
         },
         body: JSON.stringify({
           model: 'text-embedding-3-small',
-          input: text
-        })
+          input: text,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -91,8 +95,8 @@ export class SemanticStore {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'nomic-embed-text',
-          prompt: text
-        })
+          prompt: text,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -101,7 +105,7 @@ export class SemanticStore {
     } catch (e) {
       console.warn('Ollama embedding failed:', e.message);
     }
-    
+
     // 4. Fallback to Mock (Zero-dependency fail-safe)
     return Array.from({ length: 768 }, () => Math.random() - 0.5);
   }
@@ -118,9 +122,9 @@ export class SemanticStore {
   async search(queryText, topK = 5, ctx) {
     const queryVector = await this.getEmbedding(queryText, ctx);
     const rows = this.db.prepare(`SELECT * FROM semantic_nodes`).all();
-    
+
     // JS 内存暴力计算余弦相似度（对于几十万行级别的代码库，Node.js 处理速度在 100ms 级别，体验完全可接受）
-    const results = rows.map(row => {
+    const results = rows.map((row) => {
       const vec = JSON.parse(row.vector_json);
       const score = cosineSimilarity(queryVector, vec);
       return { ...row, score };

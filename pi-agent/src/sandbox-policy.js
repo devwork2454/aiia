@@ -72,7 +72,11 @@ export class SandboxPolicy {
 
     if (this.mode === 'strict' && this.allowedTools.size > 0) {
       if (!this.allowedTools.has(name)) {
-        return { allowed: false, family: 'strict', reason: `Tool '${name}' is not in strict whitelist.` };
+        return {
+          allowed: false,
+          family: 'strict',
+          reason: `Tool '${name}' is not in strict whitelist.`,
+        };
       }
     }
 
@@ -88,7 +92,11 @@ export class SandboxPolicy {
       for (const p of inputPaths) {
         const hit = pathIsDenied(p, this.blockedPaths);
         if (hit) {
-          return { allowed: false, family: 'path', reason: `Access to restricted path '${hit}' blocked by Sandbox Policy.` };
+          return {
+            allowed: false,
+            family: 'path',
+            reason: `Access to restricted path '${hit}' blocked by Sandbox Policy.`,
+          };
         }
       }
     }

@@ -5,8 +5,8 @@
 
 export const BAR_WIDTH = 20;
 export const TICK_MS = 120;
-export const WIDGET_KEY = "compact-progress";
-export const STATUS_KEY = "compact-progress";
+export const WIDGET_KEY = 'compact-progress';
+export const STATUS_KEY = 'compact-progress';
 
 /**
  * @param {number} pct 0–100
@@ -17,7 +17,7 @@ export function renderBar(pct, width = BAR_WIDTH) {
   const p = Math.max(0, Math.min(100, Number(pct) || 0));
   const w = Math.max(4, Math.floor(width));
   const filled = Math.round((p / 100) * w);
-  return `${"█".repeat(filled)}${"░".repeat(w - filled)}`;
+  return `${'█'.repeat(filled)}${'░'.repeat(w - filled)}`;
 }
 
 /**
@@ -50,11 +50,11 @@ export function advancePct(pct, nowMs = Date.now()) {
 export function formatCompactProgressLine(opts) {
   const pct = opts.done ? 100 : Math.max(0, Math.min(100, opts.pct || 0));
   const bar = renderBar(pct, opts.width);
-  const reason = opts.reason === "threshold" ? "auto" : opts.reason || "compact";
+  const reason = opts.reason === 'threshold' ? 'auto' : opts.reason || 'compact';
   const tok =
-    typeof opts.tokensBefore === "number" && opts.tokensBefore > 0
+    typeof opts.tokensBefore === 'number' && opts.tokensBefore > 0
       ? ` · ${Math.round(opts.tokensBefore).toLocaleString()} tok`
-      : "";
-  const label = opts.done ? "done" : reason;
+      : '';
+  const label = opts.done ? 'done' : reason;
   return `Compact [${bar}] ${Math.floor(pct)}%  ${label}${tok}`;
 }

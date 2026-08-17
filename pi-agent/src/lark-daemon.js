@@ -49,7 +49,18 @@ function replyWithCard(messageId, taskDesc, progressStr, status = 'running') {
   try {
     execFileSync(
       LARK_CLI,
-      ['im', '+messages-reply', '--message-id', messageId, '--msg-type', 'interactive', '--content', cardJson, '--as', 'bot'],
+      [
+        'im',
+        '+messages-reply',
+        '--message-id',
+        messageId,
+        '--msg-type',
+        'interactive',
+        '--content',
+        cardJson,
+        '--as',
+        'bot',
+      ],
       { encoding: 'utf-8', timeout: 30_000, stdio: ['ignore', 'pipe', 'pipe'] },
     );
     console.log(`[Daemon] Sent card reply for ${messageId}`);
@@ -63,7 +74,17 @@ function replyWithReaction(messageId, emojiType = 'Get') {
   try {
     execFileSync(
       LARK_CLI,
-      ['im', 'reactions', 'create', '--message-id', messageId, '--data', JSON.stringify({ reaction_type: { emoji_type: emojiType } }), '--as', 'bot'],
+      [
+        'im',
+        'reactions',
+        'create',
+        '--message-id',
+        messageId,
+        '--data',
+        JSON.stringify({ reaction_type: { emoji_type: emojiType } }),
+        '--as',
+        'bot',
+      ],
       { encoding: 'utf-8', timeout: 15_000, stdio: ['ignore', 'pipe', 'pipe'] },
     );
     console.log(`[Daemon] Sent reaction ${emojiType} for ${messageId}`);
@@ -101,12 +122,18 @@ function downloadAudio(messageId, fileKey) {
     execFileSync(
       LARK_CLI,
       [
-        'im', '+messages-resources-download',
-        '--message-id', messageId,
-        '--file-key', fileKey,
-        '--type', 'file',
-        '--output', relPath,
-        '--as', 'bot',
+        'im',
+        '+messages-resources-download',
+        '--message-id',
+        messageId,
+        '--file-key',
+        fileKey,
+        '--type',
+        'file',
+        '--output',
+        relPath,
+        '--as',
+        'bot',
       ],
       { encoding: 'utf-8', timeout: 60_000, stdio: ['ignore', 'pipe', 'pipe'] },
     );
@@ -146,32 +173,36 @@ async function handleIncomingMessage(msg) {
     console.log(`[Daemon] Received Audio Message!`);
     // 收到语音：在消息上贴“了解”表情确认收到，不再发进度卡片（最终只返回一张结果卡片）
     replyWithReaction(messageId, 'Get');
-    
+
     try {
       const fileKey = extractAudioFileKey(msg.content);
 
       if (!fileKey) {
-        taskDesc = "(未解析出音频 file_key)";
+        taskDesc = '(未解析出音频 file_key)';
         console.error(`[Daemon] Cannot find file_key in: ${msg.content}`);
       } else {
         const audioPath = downloadAudio(messageId, fileKey);
         if (audioPath) {
           console.log(`[Daemon] Sending audio to STT Server: ${audioPath}`);
           try {
-            const sttResBuffer = execFileSync('curl', ['-s', '-X', 'POST', '-F', `file=@${audioPath}`, 'http://127.0.0.1:8001/transcribe'], { encoding: 'utf-8', timeout: 120_000 });
+            const sttResBuffer = execFileSync(
+              'curl',
+              ['-s', '-X', 'POST', '-F', `file=@${audioPath}`, 'http://127.0.0.1:8001/transcribe'],
+              { encoding: 'utf-8', timeout: 120_000 },
+            );
             const json = JSON.parse(sttResBuffer);
-            taskDesc = json.text || "(未听清内容)";
+            taskDesc = json.text || '(未听清内容)';
             console.log(`[Daemon] STT Result: ${taskDesc}`);
           } catch (curlErr) {
             console.error(`[Daemon] STT Server call failed: ${curlErr.message}`);
             taskDesc = `(语音识别服务不可用)`;
           }
         } else {
-           taskDesc = "(语音下载失败)";
+          taskDesc = '(语音下载失败)';
         }
       }
     } catch (_e) {
-      taskDesc = "(处理语音发生异常)";
+      taskDesc = '(处理语音发生异常)';
       console.error(_e);
     }
   } else {
@@ -180,7 +211,7 @@ async function handleIncomingMessage(msg) {
   }
 
   if (taskDesc.startsWith('(')) {
-    replyWithCard(messageId, taskDesc, "⚠️ 任务创建失败", "error");
+    replyWithCard(messageId, taskDesc, '⚠️ 任务创建失败', 'error');
     return;
   }
 
@@ -191,12 +222,12 @@ async function handleIncomingMessage(msg) {
   const piChild = spawn('npx', ['pi', '-p', taskDesc], {
     env: {
       ...process.env,
-      AIIA_EXTENSIONS: "all",
+      AIIA_EXTENSIONS: 'all',
       LARK_REPLY_MESSAGE_ID: messageId,
-      LARK_TASK_DESC: taskDesc
+      LARK_TASK_DESC: taskDesc,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
-    detached: true
+    detached: true,
   });
 
   let outputRaw = '';

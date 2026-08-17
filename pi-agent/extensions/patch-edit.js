@@ -5,16 +5,17 @@ import { extractTargetPath, resolveTargetPath } from '../src/quality-gate.js';
 
 /**
  * AIIA Unified Diff Patch Editor
- * Registers `patch_edit` tool. Replaces the brittle exact-string-match 'edit' tool 
- * with a fuzzy-matching udiff algorithm, drastically reducing indentation/whitespace 
+ * Registers `patch_edit` tool. Replaces the brittle exact-string-match 'edit' tool
+ * with a fuzzy-matching udiff algorithm, drastically reducing indentation/whitespace
  * hallucinations from breaking the development workflow.
- * 
- * @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi 
+ *
+ * @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi
  */
 export default function patchEditExtension(pi) {
   pi.registerTool({
     name: 'patch_edit',
-    description: 'Edit a file using Unified Diff (udiff) format with fuzzy matching. Highly recommended over pure text replacement for resilience against indentation/whitespace hallucinations. Pass the standard diff output in the udiff field.',
+    description:
+      'Edit a file using Unified Diff (udiff) format with fuzzy matching. Highly recommended over pure text replacement for resilience against indentation/whitespace hallucinations. Pass the standard diff output in the udiff field.',
     parameters: {
       type: 'object',
       properties: {
@@ -24,12 +25,13 @@ export default function patchEditExtension(pi) {
         },
         udiff: {
           type: 'string',
-          description: 'The Unified Diff string (starting with --- and +++ lines, followed by @@ hunks).',
+          description:
+            'The Unified Diff string (starting with --- and +++ lines, followed by @@ hunks).',
         },
         description: {
           type: 'string',
           description: 'A brief description of what this patch does.',
-        }
+        },
       },
       required: ['path', 'udiff', 'description'],
     },
@@ -47,34 +49,56 @@ export default function patchEditExtension(pi) {
       for (const line of lines) {
         if (line.startsWith('@@ ')) {
           if (currentHunk) {
-            fixed.push(`@@ -${currentHunk.oldStart},${currentHunk.oldCount} +${currentHunk.newStart},${currentHunk.newCount} @@`);
+            fixed.push(
+              `@@ -${currentHunk.oldStart},${currentHunk.oldCount} +${currentHunk.newStart},${currentHunk.newCount} @@`,
+            );
             fixed.push(...currentHunk.lines);
           }
           const m = line.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
           if (m) {
             currentHunk = {
-              oldStart: parseInt(m[1], 10), newStart: parseInt(m[2], 10),
-              oldCount: 0, newCount: 0, lines: []
+              oldStart: parseInt(m[1], 10),
+              newStart: parseInt(m[2], 10),
+              oldCount: 0,
+              newCount: 0,
+              lines: [],
             };
           } else {
             fixed.push(line);
           }
         } else if (currentHunk) {
-          if (line.startsWith('-')) { currentHunk.oldCount++; currentHunk.lines.push(line); }
-          else if (line.startsWith('+')) { currentHunk.newCount++; currentHunk.lines.push(line); }
-          else if (line.startsWith(' ')) { currentHunk.oldCount++; currentHunk.newCount++; currentHunk.lines.push(line); }
-          else if (line.startsWith('\\')) { currentHunk.lines.push(line); }
-          else if (line === '') { currentHunk.oldCount++; currentHunk.newCount++; currentHunk.lines.push(' '); }
-          else { currentHunk.oldCount++; currentHunk.newCount++; currentHunk.lines.push(' ' + line); }
+          if (line.startsWith('-')) {
+            currentHunk.oldCount++;
+            currentHunk.lines.push(line);
+          } else if (line.startsWith('+')) {
+            currentHunk.newCount++;
+            currentHunk.lines.push(line);
+          } else if (line.startsWith(' ')) {
+            currentHunk.oldCount++;
+            currentHunk.newCount++;
+            currentHunk.lines.push(line);
+          } else if (line.startsWith('\\')) {
+            currentHunk.lines.push(line);
+          } else if (line === '') {
+            currentHunk.oldCount++;
+            currentHunk.newCount++;
+            currentHunk.lines.push(' ');
+          } else {
+            currentHunk.oldCount++;
+            currentHunk.newCount++;
+            currentHunk.lines.push(' ' + line);
+          }
         } else {
           fixed.push(line);
         }
       }
       if (currentHunk) {
-        fixed.push(`@@ -${currentHunk.oldStart},${currentHunk.oldCount} +${currentHunk.newStart},${currentHunk.newCount} @@`);
+        fixed.push(
+          `@@ -${currentHunk.oldStart},${currentHunk.oldCount} +${currentHunk.newStart},${currentHunk.newCount} @@`,
+        );
         fixed.push(...currentHunk.lines);
       }
-      
+
       const patchContent = fixed.join('\n') + '\n';
       const tmpPatch = path.join(ctx?.cwd || process.cwd(), '.agent', `patch-${Date.now()}.diff`);
       fs.mkdirSync(path.dirname(tmpPatch), { recursive: true });
@@ -84,12 +108,16 @@ export default function patchEditExtension(pi) {
       const { execFile } = await import('node:child_process');
       const { promisify } = await import('node:util');
       const execFileAsync = promisify(execFile);
-      
+
       let patchStdout = '';
       let patchStderr = '';
       let isSuccess = false;
       try {
-        const { stdout, stderr } = await execFileAsync('patch', ['--batch', '--force', '--ignore-whitespace', '--fuzz=3', abs, tmpPatch], { encoding: 'utf8' });
+        const { stdout, stderr } = await execFileAsync(
+          'patch',
+          ['--batch', '--force', '--ignore-whitespace', '--fuzz=3', abs, tmpPatch],
+          { encoding: 'utf8' },
+        );
         patchStdout = stdout;
         patchStderr = stderr;
         isSuccess = true;
@@ -97,29 +125,32 @@ export default function patchEditExtension(pi) {
         patchStdout = err.stdout || '';
         patchStderr = err.stderr || err.message || '';
       }
-      
+
       fs.rmSync(tmpPatch, { force: true });
       if (!isSuccess) {
-        return { 
-          isError: true, 
-          content: `Failed to apply diff patch.\nPatch Output:\n${patchStdout}\n${patchStderr}\nPlease verify your diff and try again, or use the regular edit tool.` 
+        return {
+          isError: true,
+          content: `Failed to apply diff patch.\nPatch Output:\n${patchStdout}\n${patchStderr}\nPlease verify your diff and try again, or use the regular edit tool.`,
         };
       }
 
-      
       // Fire tool_result event to trigger quality gate
       if (typeof pi.emit === 'function') {
-        pi.emit('tool_result', {
-          toolName: 'patch_edit',
-          input: args,
-          content: [{ type: 'text', text: `Successfully patched ${rel}\n${patchStdout}` }],
-          isError: false
-        }, ctx);
+        pi.emit(
+          'tool_result',
+          {
+            toolName: 'patch_edit',
+            input: args,
+            content: [{ type: 'text', text: `Successfully patched ${rel}\n${patchStdout}` }],
+            isError: false,
+          },
+          ctx,
+        );
       }
 
       return {
-        content: `Successfully applied patch to ${rel}.\n${patchStdout}`
+        content: `Successfully applied patch to ${rel}.\n${patchStdout}`,
       };
-    }
+    },
   });
 }

@@ -10,10 +10,10 @@ import path from 'path';
 import { TaskDAGRunner } from '../src/task-runner.js';
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
-import { isExtensionEnabled } from "../src/extension-profile.js";
+import { isExtensionEnabled } from '../src/extension-profile.js';
 
 export default function taskRunnerExtension(pi) {
-  if (!isExtensionEnabled("task-runner")) return;
+  if (!isExtensionEnabled('task-runner')) return;
   // 1. create_dag_task
   pi.registerTool({
     name: 'create_dag_task',
@@ -31,34 +31,43 @@ export default function taskRunnerExtension(pi) {
               id: { type: 'string' },
               name: { type: 'string' },
               command: { type: 'string' },
-              dependsOn: { type: 'array', items: { type: 'string' } }
+              dependsOn: { type: 'array', items: { type: 'string' } },
             },
-            required: ['id']
-          }
-        }
+            required: ['id'],
+          },
+        },
       },
-      required: ['dagId', 'nodes']
+      required: ['dagId', 'nodes'],
     },
     async execute(_id, params, _signal, _onUpdate, ctx) {
       try {
         const cwd = ctx?.cwd || process.cwd();
-        const runner = new TaskDAGRunner({ dagId: params.dagId, storageDir: path.join(cwd, '.agent', 'dag_runner') });
+        const runner = new TaskDAGRunner({
+          dagId: params.dagId,
+          storageDir: path.join(cwd, '.agent', 'dag_runner'),
+        });
         for (const n of params.nodes) {
           runner.addNode(n);
         }
-        return {
-          status: 'success',
-          dagId: params.dagId,
-          message: `✅ 已成功创建任务 DAG 图 #${params.dagId} (包含 ${params.nodes.length} 个节点)`,
-          summary: runner.getStatus()
-        };
+        return (() => {
+          const _res = {
+            status: 'success',
+            dagId: params.dagId,
+            message: `✅ 已成功创建任务 DAG 图 #${params.dagId} (包含 ${params.nodes.length} 个节点)`,
+            summary: runner.getStatus(),
+          };
+          return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+        })();
       } catch (e) {
-        return {
-          status: 'error',
-          message: `❌ 创建 DAG 图失败: ${e.message}`
-        };
+        return (() => {
+          const _res = {
+            status: 'error',
+            message: `❌ 创建 DAG 图失败: ${e.message}`,
+          };
+          return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+        })();
       }
-    }
+    },
   });
 
   // 2. run_dag_task
@@ -68,33 +77,47 @@ export default function taskRunnerExtension(pi) {
     parameters: {
       type: 'object',
       properties: {
-        dagId: { type: 'string', description: '要调度的 DAG 任务图 ID' }
+        dagId: { type: 'string', description: '要调度的 DAG 任务图 ID' },
       },
-      required: ['dagId']
+      required: ['dagId'],
     },
     async execute(_id, params, _signal, _onUpdate, ctx) {
       try {
         const cwd = ctx?.cwd || process.cwd();
-        const runner = new TaskDAGRunner({ dagId: params.dagId, storageDir: path.join(cwd, '.agent', 'dag_runner') });
+        const runner = new TaskDAGRunner({
+          dagId: params.dagId,
+          storageDir: path.join(cwd, '.agent', 'dag_runner'),
+        });
         if (!runner.loadCheckpoint()) {
-          const _res = { status: 'error', message: `未找到 DAG 图 #${params.dagId} 的检查点文件，请先通过 create_dag_task 创建` };
-        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+          const _res = {
+            status: 'error',
+            message: `未找到 DAG 图 #${params.dagId} 的检查点文件，请先通过 create_dag_task 创建`,
+          };
+          return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
         }
 
         const finalStatus = await runner.run();
-        return {
-          status: 'success',
-          dagId: params.dagId,
-          message: finalStatus.isSuccess ? `✅ DAG 图 #${params.dagId} 全量节点顺利完成` : `⚠️ DAG 图 #${params.dagId} 执行结束 (进度 ${finalStatus.progress}%)`,
-          summary: finalStatus
-        };
+        return (() => {
+          const _res = {
+            status: 'success',
+            dagId: params.dagId,
+            message: finalStatus.isSuccess
+              ? `✅ DAG 图 #${params.dagId} 全量节点顺利完成`
+              : `⚠️ DAG 图 #${params.dagId} 执行结束 (进度 ${finalStatus.progress}%)`,
+            summary: finalStatus,
+          };
+          return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+        })();
       } catch (e) {
-        return {
-          status: 'error',
-          message: `❌ 调度 DAG 任务失败: ${e.message}`
-        };
+        return (() => {
+          const _res = {
+            status: 'error',
+            message: `❌ 调度 DAG 任务失败: ${e.message}`,
+          };
+          return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+        })();
       }
-    }
+    },
   });
 
   // 3. get_dag_task_status
@@ -104,28 +127,32 @@ export default function taskRunnerExtension(pi) {
     parameters: {
       type: 'object',
       properties: {
-        dagId: { type: 'string', description: 'DAG 任务图 ID' }
+        dagId: { type: 'string', description: 'DAG 任务图 ID' },
       },
-      required: ['dagId']
+      required: ['dagId'],
     },
     async execute(_id, params, _signal, _onUpdate, ctx) {
       try {
         const cwd = ctx?.cwd || process.cwd();
-        const runner = new TaskDAGRunner({ dagId: params.dagId, storageDir: path.join(cwd, '.agent', 'dag_runner') });
+        const runner = new TaskDAGRunner({
+          dagId: params.dagId,
+          storageDir: path.join(cwd, '.agent', 'dag_runner'),
+        });
         if (!runner.loadCheckpoint()) {
           const _res = { status: 'error', message: `未找到 DAG 图 #${params.dagId} 的信息` };
-        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+          return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
         }
-        const _res = { status: 'success',
-          summary: runner.getStatus()
-        };
+        const _res = { status: 'success', summary: runner.getStatus() };
         return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
       } catch (e) {
-        return {
-          status: 'error',
-          message: `❌ 获取 DAG 状态失败: ${e.message}`
-        };
+        return (() => {
+          const _res = {
+            status: 'error',
+            message: `❌ 获取 DAG 状态失败: ${e.message}`,
+          };
+          return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+        })();
       }
-    }
+    },
   });
 }

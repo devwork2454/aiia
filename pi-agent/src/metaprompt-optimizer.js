@@ -1,6 +1,6 @@
-import { existsSync, readFileSync, appendFileSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { buildRuleBasedDraft } from "./context-card.js";
+import { existsSync, readFileSync, appendFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { buildRuleBasedDraft } from './context-card.js';
 
 function logError(cwd, prefix, errMessage) {
   try {
@@ -16,9 +16,9 @@ function logError(cwd, prefix, errMessage) {
  * Reads the last N bytes of the trajectories.jsonl file to prevent context overflow.
  */
 function getRecentTrajectories(cwd) {
-  const trajFile = join(resolve(cwd), ".agent", "trajectories.jsonl");
-  if (!existsSync(trajFile)) return "";
-  const content = readFileSync(trajFile, "utf8");
+  const trajFile = join(resolve(cwd), '.agent', 'trajectories.jsonl');
+  if (!existsSync(trajFile)) return '';
+  const content = readFileSync(trajFile, 'utf8');
   // Keep last 30,000 characters to stay within reasonable token limits
   if (content.length > 30000) {
     return content.slice(-30000);
@@ -34,12 +34,12 @@ export async function buildLLMDraft(cwd, ctx) {
   const ruleBased = buildRuleBasedDraft(cwd);
 
   if (!trajectories) {
-    console.log("[Metaprompt Optimizer] No trajectories found. Falling back to rule-based.");
+    console.log('[Metaprompt Optimizer] No trajectories found. Falling back to rule-based.');
     return ruleBased;
   }
 
-  const baseUrl = ctx?.model?.baseUrl || "http://127.0.0.1:4000/v1";
-  const modelId = ctx?.model?.id || "high";
+  const baseUrl = ctx?.model?.baseUrl || 'http://127.0.0.1:4000/v1';
+  const modelId = ctx?.model?.id || 'high';
 
   const systemPrompt = `You are the L7 Metaprompt Optimizer.
 Your task is to analyze the agent's recent trajectory log and extract a JSON profile of the user and project.
@@ -57,38 +57,43 @@ Do not use markdown blocks. Output pure JSON.`;
   const payload = {
     model: modelId,
     messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Trajectories:\n${trajectories}` }
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `Trajectories:\n${trajectories}` },
     ],
-    temperature: 0.2
+    temperature: 0.2,
   };
 
   try {
     const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${ctx?.model?.apiKey || ctx?.model?.key || process.env.OPENAI_API_KEY || "dummy"}`
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${ctx?.model?.apiKey || ctx?.model?.key || process.env.OPENAI_API_KEY || 'dummy'}`,
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
 
     if (res.ok) {
       const data = await res.json();
-      let text = data?.choices?.[0]?.message?.content || "";
-      text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+      let text = data?.choices?.[0]?.message?.content || '';
+      text = text
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
       const llmDraft = JSON.parse(text);
-      
+
       return {
         ...ruleBased, // merge with rule-based so we don't lose static hints
         ...llmDraft,
-        confidence: 0.9 // Higher confidence because it's LLM generated
+        confidence: 0.9, // Higher confidence because it's LLM generated
       };
     } else {
       throw new Error(`LLM API returned status ${res.status}`);
     }
   } catch (err) {
-    console.debug(`[Metaprompt Optimizer] LLM draft skipped (${err.message}). Using rule-based fallback.`);
+    console.debug(
+      `[Metaprompt Optimizer] LLM draft skipped (${err.message}). Using rule-based fallback.`,
+    );
     logError(cwd, '[Metaprompt Optimizer]', `LLM draft failed - ${err.message}`);
     return ruleBased;
   }

@@ -14,18 +14,18 @@ describe('Option C: Remote Config Extension', () => {
     const server = http.createServer((req, res) => {
       if (req.url === '/v1/models') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          data: [
-            { id: 'test-model-400k', context_window: 400000, max_tokens: 16000 }
-          ]
-        }));
+        res.end(
+          JSON.stringify({
+            data: [{ id: 'test-model-400k', context_window: 400000, max_tokens: 16000 }],
+          }),
+        );
       } else {
         res.writeHead(404);
         res.end();
       }
     });
 
-    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     const port = server.address().port;
 
     // 2. Mock Pi extension API
@@ -35,7 +35,7 @@ describe('Option C: Remote Config Extension', () => {
         if (event === 'before_agent_start') {
           hookFn = fn;
         }
-      }
+      },
     };
 
     remoteConfigExtension(mockPi);
@@ -47,8 +47,8 @@ describe('Option C: Remote Config Extension', () => {
         id: 'test-model-400k',
         baseUrl: `http://127.0.0.1:${port}/v1`,
         contextWindow: 128000,
-        maxTokens: 4096
-      }
+        maxTokens: 4096,
+      },
     };
 
     await hookFn({}, mockCtx);

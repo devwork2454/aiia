@@ -10,16 +10,16 @@
 const CALLOUT_RE = /^(\s*>\s*)\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*(.*)$/i;
 
 const CALLOUT_LABELS = {
-  NOTE: "📝 NOTE",
-  TIP: "💡 TIP",
-  IMPORTANT: "⭐ IMPORTANT",
-  WARNING: "⚠️ WARNING",
-  CAUTION: "⚠️ CAUTION",
+  NOTE: '📝 NOTE',
+  TIP: '💡 TIP',
+  IMPORTANT: '⭐ IMPORTANT',
+  WARNING: '⚠️ WARNING',
+  CAUTION: '⚠️ CAUTION',
 };
 
 export function isMarkdownTransformDisabled(env = process.env) {
   const v = env.AIIA_MARKDOWN_TRANSFORM_DISABLED;
-  return v === "1" || v === "true";
+  return v === '1' || v === 'true';
 }
 
 /**
@@ -32,12 +32,12 @@ export function isMarkdownTransformDisabled(env = process.env) {
  * @returns {string}
  */
 export function transformGitHubCallouts(markdown, env = process.env) {
-  const text = String(markdown ?? "");
+  const text = String(markdown ?? '');
   if (isMarkdownTransformDisabled(env)) return text;
   const FENCE_RE = /^\s*(```|~~~)/;
   let inCode = false;
   return text
-    .split("\n")
+    .split('\n')
     .map((line) => {
       if (FENCE_RE.test(line)) {
         inCode = !inCode;
@@ -51,7 +51,7 @@ export function transformGitHubCallouts(markdown, env = process.env) {
       const tail = rest.trim();
       return tail ? `${prefix}**${head}** ${tail}` : `${prefix}**${head}**`;
     })
-    .join("\n");
+    .join('\n');
 }
 
 /**

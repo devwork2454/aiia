@@ -107,7 +107,11 @@ describe('S1 Quality Gate core', () => {
   test('buildQualityGatePatch appends without dropping prior content', () => {
     const patch = buildQualityGatePatch(
       { content: [{ type: 'text', text: 'ok' }] },
-      { path: '/tmp/x.js', passed: false, failures: [{ name: 'lint', exitCode: 1, output: 'boom' }] },
+      {
+        path: '/tmp/x.js',
+        passed: false,
+        failures: [{ name: 'lint', exitCode: 1, output: 'boom' }],
+      },
     );
     assert.equal(patch.content[0].text, 'ok');
     assert.match(patch.content[1].text, /boom/);
@@ -132,7 +136,10 @@ describe('S1 Quality Gate core', () => {
 
   test('QUALITY_GATE_SKIP_BIOME drops biome runner', () => {
     const runners = defaultPickRunners('/tmp/sample.js', { QUALITY_GATE_SKIP_BIOME: '1' });
-    assert.equal(runners.some((r) => r.name === 'biome lint'), false);
+    assert.equal(
+      runners.some((r) => r.name === 'biome lint'),
+      false,
+    );
     assert.ok(runners.some((r) => r.name === 'node --check'));
   });
 

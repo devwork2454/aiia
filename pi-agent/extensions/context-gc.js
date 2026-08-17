@@ -27,10 +27,10 @@ const THINKING_STUB_CHARS = 240;
 /** Collapse assistant text monologues longer than this when they look like planning loops. */
 const MONOLOGUE_TEXT_CHARS = 1800;
 
-import fs from "node:fs";
-import path from "node:path";
-import { probeProviderPayload } from "../src/tool-pair-probe.js";
-import { hasToolCalls, isToolRole, repairProviderPayload } from "../src/tool-pair-repair.js";
+import fs from 'node:fs';
+import path from 'node:path';
+import { probeProviderPayload } from '../src/tool-pair-probe.js';
+import { hasToolCalls, isToolRole, repairProviderPayload } from '../src/tool-pair-repair.js';
 
 /** @type {{ until: number, reason: string } | null} */
 let llmCircuitOpen = null;
@@ -39,7 +39,7 @@ let lastErrorLogAt = 0;
 let lastGcAt = 0;
 
 function ensureAgentDir(cwd) {
-  const dir = path.join(cwd || process.cwd(), ".agent");
+  const dir = path.join(cwd || process.cwd(), '.agent');
   try {
     fs.mkdirSync(dir, { recursive: true });
   } catch {
@@ -61,7 +61,7 @@ function logGcError(cwd, message, opts = {}) {
   const line = `[AIIA Context GC] ${message}`;
   console.error(line);
   try {
-    const logPath = path.join(ensureAgentDir(cwd), "error.log");
+    const logPath = path.join(ensureAgentDir(cwd), 'error.log');
     fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${line}\n`);
   } catch {
     // Logging must never break the agent loop.
@@ -71,19 +71,19 @@ function logGcError(cwd, message, opts = {}) {
 function estimateTokens(messages) {
   let totalLength = 0;
   for (const msg of messages) {
-    if (typeof msg.content === "string") {
+    if (typeof msg.content === 'string') {
       totalLength += msg.content.length;
     } else if (Array.isArray(msg.content)) {
       for (const part of msg.content) {
-        if (part.type === "text" && part.text) {
+        if (part.type === 'text' && part.text) {
           totalLength += part.text.length;
-        } else if (typeof part === "string") {
+        } else if (typeof part === 'string') {
           totalLength += part.length;
         } else if (part?.text) {
           totalLength += String(part.text).length;
         }
         // OpenAI toolCall shape on assistant content parts
-        if (part?.type === "toolCall" || part?.type === "tool_use") {
+        if (part?.type === 'toolCall' || part?.type === 'tool_use') {
           totalLength += JSON.stringify(part).length;
         }
       }
@@ -105,8 +105,8 @@ function findSafeCutoffIndex(messages, targetIndex) {
       if (isToolRole(messages[i + 1])) continue;
       return i;
     }
-    if (msg.role === "user") return i;
-    if (msg.role === "assistant" && !hasToolCalls(msg)) return i;
+    if (msg.role === 'user') return i;
+    if (msg.role === 'assistant' && !hasToolCalls(msg)) return i;
   }
   return -1;
 }
@@ -118,14 +118,14 @@ function findSafeCutoffIndex(messages, targetIndex) {
  */
 async function resolveSummarizeAuth(ctx) {
   const model = ctx?.model;
-  const modelId = model?.id || "high";
-  const provider = String(model?.provider || "");
+  const modelId = model?.id || 'high';
+  const provider = String(model?.provider || '');
   let apiKey = model?.apiKey || model?.key || process.env.OPENAI_API_KEY;
-  let baseUrl = model?.baseUrl || process.env.OPENAI_BASE_URL || "http://127.0.0.1:4000/v1";
+  let baseUrl = model?.baseUrl || process.env.OPENAI_BASE_URL || 'http://127.0.0.1:4000/v1';
   let headers;
 
   const registry = ctx?.modelRegistry;
-  if (registry && model && typeof registry.getApiKeyAndHeaders === "function") {
+  if (registry && model && typeof registry.getApiKeyAndHeaders === 'function') {
     try {
       const auth = await registry.getApiKeyAndHeaders(model);
       if (auth?.ok) {
@@ -136,7 +136,7 @@ async function resolveSummarizeAuth(ctx) {
     } catch {
       // Fall through to env/model fields.
     }
-  } else if (registry && model && typeof registry.getApiKeyForProvider === "function") {
+  } else if (registry && model && typeof registry.getApiKeyForProvider === 'function') {
     try {
       const key = await registry.getApiKeyForProvider(model.provider);
       if (key) apiKey = key;
@@ -146,7 +146,7 @@ async function resolveSummarizeAuth(ctx) {
   }
 
   // Normalize OpenAI-compatible base (strip trailing slash; ensure /v1 when bare host)
-  baseUrl = String(baseUrl || "").replace(/\/+$/, "");
+  baseUrl = String(baseUrl || '').replace(/\/+$/, '');
   return { modelId, apiKey, baseUrl, provider, headers };
 }
 
@@ -162,13 +162,13 @@ function buildHeuristicSummary(messagesToSummarize) {
   const errRe = /\b(Error|ERROR|FAILED|Exception|E\d{3,}|status\s+[45]\d\d)\b[^\n]{0,120}/g;
 
   for (const msg of messagesToSummarize) {
-    let text = "";
-    if (typeof msg.content === "string") text = msg.content;
+    let text = '';
+    if (typeof msg.content === 'string') text = msg.content;
     else if (Array.isArray(msg.content)) {
       text = msg.content
-        .map((p) => (typeof p === "string" ? p : p?.text || p?.thinking || ""))
+        .map((p) => (typeof p === 'string' ? p : p?.text || p?.thinking || ''))
         .filter(Boolean)
-        .join("\n");
+        .join('\n');
     }
     if (!text) continue;
 
@@ -178,22 +178,22 @@ function buildHeuristicSummary(messagesToSummarize) {
     for (const m of text.matchAll(errRe)) {
       if (errors.length < 8) errors.push(m[0].trim());
     }
-    if (msg.role === "user" && userSnips.length < 3) {
-      userSnips.push(text.replace(/\s+/g, " ").slice(0, 160));
+    if (msg.role === 'user' && userSnips.length < 3) {
+      userSnips.push(text.replace(/\s+/g, ' ').slice(0, 160));
     }
   }
 
   const lines = [
     `Folded ${messagesToSummarize.length} intermediate messages (heuristic; LLM summarize unavailable).`,
   ];
-  if (userSnips.length) lines.push(`Recent user intents: ${userSnips.join(" | ")}`);
+  if (userSnips.length) lines.push(`Recent user intents: ${userSnips.join(' | ')}`);
   if (paths.size) {
-    lines.push(`Paths: ${[...paths].slice(0, 20).join(", ")}`);
+    lines.push(`Paths: ${[...paths].slice(0, 20).join(', ')}`);
   }
   if (errors.length) {
-    lines.push(`Errors: ${errors.slice(0, 5).join(" || ")}`);
+    lines.push(`Errors: ${errors.slice(0, 5).join(' || ')}`);
   }
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 async function summarizeWithLLM(messagesToSummarize, ctx) {
@@ -203,32 +203,35 @@ async function summarizeWithLLM(messagesToSummarize, ctx) {
 
   const { modelId, apiKey, baseUrl, provider, headers } = await resolveSummarizeAuth(ctx);
   if (!apiKey) {
-    openCircuit("no API key for summarization");
-    logGcError(ctx?.cwd, "Summarization skipped: no API key (using heuristic). Resolve auth via modelRegistry.");
+    openCircuit('no API key for summarization');
+    logGcError(
+      ctx?.cwd,
+      'Summarization skipped: no API key (using heuristic). Resolve auth via modelRegistry.',
+    );
     return null;
   }
 
   const systemPrompt =
-    "You are an AI Context GC module. Summarize the following execution process, tool calls, and results into a condensed state update. \nCRITICAL RULE (Lossless Entity Extraction): You MUST extract and retain all absolute file paths, configuration keys, environment variables, git commits, and precise error codes/messages. \nDo NOT output markdown formatting like JSON blocks, just pure text, but ensure technical entities are preserved perfectly.";
+    'You are an AI Context GC module. Summarize the following execution process, tool calls, and results into a condensed state update. \nCRITICAL RULE (Lossless Entity Extraction): You MUST extract and retain all absolute file paths, configuration keys, environment variables, git commits, and precise error codes/messages. \nDo NOT output markdown formatting like JSON blocks, just pure text, but ensure technical entities are preserved perfectly.';
   const userText = JSON.stringify(messagesToSummarize);
 
   try {
     let res;
     // 1. Google Gemini (Native)
     if (
-      baseUrl.includes("generativelanguage.googleapis.com") ||
-      provider === "google" ||
-      (apiKey && apiKey.startsWith("AIza"))
+      baseUrl.includes('generativelanguage.googleapis.com') ||
+      provider === 'google' ||
+      (apiKey && apiKey.startsWith('AIza'))
     ) {
-      const geminiModel = modelId.replace("models/", "");
+      const geminiModel = modelId.replace('models/', '');
       res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...(headers || {}) },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(headers || {}) },
           body: JSON.stringify({
             system_instruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: "user", parts: [{ text: userText }] }],
+            contents: [{ role: 'user', parts: [{ text: userText }] }],
             generationConfig: { maxOutputTokens: 800, temperature: 0.1 },
           }),
         },
@@ -236,27 +239,27 @@ async function summarizeWithLLM(messagesToSummarize, ctx) {
       if (res.ok) {
         clearCircuit();
         const data = await res.json();
-        return data?.candidates?.[0]?.content?.parts?.[0]?.text || "[GC Summarization empty]";
+        return data?.candidates?.[0]?.content?.parts?.[0]?.text || '[GC Summarization empty]';
       }
     }
     // 2. Anthropic Claude (Native)
     else if (
-      baseUrl.includes("api.anthropic.com") ||
-      provider === "anthropic" ||
-      (apiKey && apiKey.startsWith("sk-ant-"))
+      baseUrl.includes('api.anthropic.com') ||
+      provider === 'anthropic' ||
+      (apiKey && apiKey.startsWith('sk-ant-'))
     ) {
-      res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
+      res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
           ...(headers || {}),
         },
         body: JSON.stringify({
           model: modelId,
           system: systemPrompt,
-          messages: [{ role: "user", content: userText }],
+          messages: [{ role: 'user', content: userText }],
           max_tokens: 800,
           temperature: 0.1,
         }),
@@ -264,26 +267,24 @@ async function summarizeWithLLM(messagesToSummarize, ctx) {
       if (res.ok) {
         clearCircuit();
         const data = await res.json();
-        return data?.content?.[0]?.text || "[GC Summarization empty]";
+        return data?.content?.[0]?.text || '[GC Summarization empty]';
       }
     }
     // 3. OpenAI / Charon / 1api / LiteLLM
     else {
-      const url = baseUrl.endsWith("/chat/completions")
-        ? baseUrl
-        : `${baseUrl}/chat/completions`;
+      const url = baseUrl.endsWith('/chat/completions') ? baseUrl : `${baseUrl}/chat/completions`;
       res = await fetch(url, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
           ...(headers || {}),
         },
         body: JSON.stringify({
           model: modelId,
           messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userText },
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userText },
           ],
           max_tokens: 800,
           temperature: 0.1,
@@ -292,7 +293,7 @@ async function summarizeWithLLM(messagesToSummarize, ctx) {
       if (res.ok) {
         clearCircuit();
         const data = await res.json();
-        return data?.choices?.[0]?.message?.content || "[GC Summarization empty]";
+        return data?.choices?.[0]?.message?.content || '[GC Summarization empty]';
       }
     }
 
@@ -314,7 +315,7 @@ async function summarizeWithLLM(messagesToSummarize, ctx) {
 }
 
 function openCircuit(reason) {
-  llmCircuitOpen = { until: Date.now() + GC_FAIL_COOLDOWN_MS, reason: String(reason || "") };
+  llmCircuitOpen = { until: Date.now() + GC_FAIL_COOLDOWN_MS, reason: String(reason || '') };
 }
 
 function clearCircuit() {
@@ -326,16 +327,15 @@ function clearCircuit() {
  * Pi fires before_provider_request with { type, payload } only (no event.req).
  */
 function getRequestPayload(event) {
-  if (event?.payload && typeof event.payload === "object") return event.payload;
-  if (event?.req && typeof event.req === "object") return event.req;
+  if (event?.payload && typeof event.payload === 'object') return event.payload;
+  if (event?.req && typeof event.req === 'object') return event.req;
   return null;
 }
 
 function isPlanningMonologue(text) {
   if (!text || text.length < MONOLOGUE_TEXT_CHARS) return false;
   const letMe = (text.match(/\bLet me\b/gi) || []).length;
-  const planish =
-    (text.match(/\b(batch|grep|read|check|look at|also check)\b/gi) || []).length;
+  const planish = (text.match(/\b(batch|grep|read|check|look at|also check)\b/gi) || []).length;
   // Real cliproxyapi incident: ~10k chars of "Let me batch/grep/read" with 0 tool calls.
   return letMe >= 6 || (letMe >= 3 && planish >= 8);
 }
@@ -357,24 +357,21 @@ function sanitizeMessages(messages) {
   let fullThinkingLeft = KEEP_FULL_THINKING;
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
-    if (!msg || msg.role !== "assistant") continue;
+    if (!msg || msg.role !== 'assistant') continue;
 
     if (Array.isArray(msg.content)) {
       const parts = msg.content;
       const hasToolCall = parts.some(
-        (p) =>
-          p?.type === "toolCall" ||
-          p?.type === "tool_use" ||
-          p?.type === "functionCall",
+        (p) => p?.type === 'toolCall' || p?.type === 'tool_use' || p?.type === 'functionCall',
       );
       let changed = false;
       let next = parts;
       for (let k = 0; k < parts.length; k++) {
         const part = parts[k];
-        if (!part || typeof part !== "object") continue;
+        if (!part || typeof part !== 'object') continue;
         let replacement = null;
 
-        if (part.type === "thinking" && typeof part.thinking === "string") {
+        if (part.type === 'thinking' && typeof part.thinking === 'string') {
           if (fullThinkingLeft > 0) {
             fullThinkingLeft -= 1;
           } else if (part.thinking.length > THINKING_STUB_CHARS) {
@@ -385,8 +382,8 @@ function sanitizeMessages(messages) {
             };
           }
         } else if (
-          part.type === "text" &&
-          typeof part.text === "string" &&
+          part.type === 'text' &&
+          typeof part.text === 'string' &&
           !hasToolCall &&
           isPlanningMonologue(part.text)
         ) {
@@ -394,8 +391,8 @@ function sanitizeMessages(messages) {
           replacement = {
             ...part,
             text:
-              "[AIIA] Prior planning monologue collapsed (no tool calls). " +
-              "Continue by calling tools; do not re-narrate investigation plans.",
+              '[AIIA] Prior planning monologue collapsed (no tool calls). ' +
+              'Continue by calling tools; do not re-narrate investigation plans.',
           };
         }
         if (replacement) {
@@ -408,14 +405,14 @@ function sanitizeMessages(messages) {
       }
       if (changed) msg.content = next;
     } else if (
-      typeof msg.content === "string" &&
+      typeof msg.content === 'string' &&
       !msg.tool_calls?.length &&
       isPlanningMonologue(msg.content)
     ) {
       monologueCollapsed += 1;
       msg.content =
-        "[AIIA] Prior planning monologue collapsed (no tool calls). " +
-        "Continue by calling tools; do not re-narrate investigation plans.";
+        '[AIIA] Prior planning monologue collapsed (no tool calls). ' +
+        'Continue by calling tools; do not re-narrate investigation plans.';
     }
   }
 
@@ -429,27 +426,26 @@ function applyToolPairRepair(req, cwd) {
   }
   const probe = probeProviderPayload(req);
   if (!probe.ok) {
-    const codes = probe.violations.map((v) => v.code).join(",");
+    const codes = probe.violations.map((v) => v.code).join(',');
     logGcError(cwd, `tool-pair probe still dirty after repair: ${codes}`);
   }
 }
 
 export default function contextGCExtension(pi) {
-  pi.on("before_provider_request", async (event, ctx) => {
+  pi.on('before_provider_request', async (event, ctx) => {
     const req = getRequestPayload(event);
     if (!req) return;
 
     const hasMessages = Array.isArray(req.messages);
 
     // Hygiene always on: cut thinking bloat + planning monologues (UI noise + loop fuel).
-    if (hasMessages && process.env.AIIA_DISABLE_CONTEXT_HYGIENE !== "1") {
+    if (hasMessages && process.env.AIIA_DISABLE_CONTEXT_HYGIENE !== '1') {
       sanitizeMessages(req.messages);
     }
 
-    if (hasMessages && process.env.AIIA_DISABLE_GC !== "1") {
+    if (hasMessages && process.env.AIIA_DISABLE_GC !== '1') {
       const currentTokens = estimateTokens(req.messages);
-      const overSoft =
-        currentTokens > GC_TOKEN_THRESHOLD || req.messages.length > GC_MSG_THRESHOLD;
+      const overSoft = currentTokens > GC_TOKEN_THRESHOLD || req.messages.length > GC_MSG_THRESHOLD;
       const emergency = currentTokens > GC_EMERGENCY_TOKEN_THRESHOLD;
       const intervalOk = Date.now() - lastGcAt >= GC_MIN_INTERVAL_MS;
 
@@ -470,17 +466,13 @@ export default function contextGCExtension(pi) {
           const systemMsg = req.messages[0];
           const survivorBlock = `[AIIA GC Survivor Memory]\n${summaryText}`;
           const tail = req.messages.slice(cutoff + 1);
-          if (systemMsg?.role === "system" && typeof systemMsg.content === "string") {
+          if (systemMsg?.role === 'system' && typeof systemMsg.content === 'string') {
             req.messages = [
               { ...systemMsg, content: `${systemMsg.content}\n\n${survivorBlock}` },
               ...tail,
             ];
           } else {
-            req.messages = [
-              systemMsg,
-              { role: "user", content: survivorBlock },
-              ...tail,
-            ];
+            req.messages = [systemMsg, { role: 'user', content: survivorBlock }, ...tail];
           }
           lastGcAt = Date.now();
         }

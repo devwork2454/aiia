@@ -10,8 +10,8 @@ const handlers = new Map();
  * @param {(args: string, ctx: any) => Promise<void>|void} handler
  */
 export function registerAiiaHandler(name, handler) {
-  if (!name || typeof handler !== "function") {
-    throw new Error("registerAiiaHandler requires name + function");
+  if (!name || typeof handler !== 'function') {
+    throw new Error('registerAiiaHandler requires name + function');
   }
   handlers.set(String(name), handler);
 }

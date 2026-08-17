@@ -3,9 +3,9 @@
  * Replaces the split Python memory.py so the SQLite read/write and the Pi
  * context-injection hook live in the same process (no cross-stack gap).
  */
-import Database from "better-sqlite3";
-import { existsSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import Database from 'better-sqlite3';
+import { existsSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 const SCHEMA = `
 PRAGMA journal_mode=WAL;
@@ -36,21 +36,21 @@ export class MemoryStore {
    * @param {{content:string, category?:string, tags?:string, initialStrength?:number}} m
    * @returns {number} 记忆条目的 id
    */
-  add({ content, category = "user_preference", tags = "", initialStrength = 1.0 }) {
+  add({ content, category = 'user_preference', tags = '', initialStrength = 1.0 }) {
     const now = Date.now();
-    const cleanContent = String(content || "").trim();
+    const cleanContent = String(content || '').trim();
     if (!cleanContent) return 0;
 
     // 查重逻辑：如果相同内容已存在，增强强度并更新访问计数
     const existing = this.db
-      .prepare("SELECT id, initial_strength, access_count FROM memories WHERE content = ? LIMIT 1")
+      .prepare('SELECT id, initial_strength, access_count FROM memories WHERE content = ? LIMIT 1')
       .get(cleanContent);
 
     if (existing) {
       const newStrength = Math.min(5.0, Number(existing.initial_strength) + 0.5);
       this.db
         .prepare(
-          "UPDATE memories SET initial_strength = ?, access_count = access_count + 1, last_accessed_at = ? WHERE id = ?"
+          'UPDATE memories SET initial_strength = ?, access_count = access_count + 1, last_accessed_at = ? WHERE id = ?',
         )
         .run(newStrength, now, existing.id);
       return existing.id;
@@ -59,7 +59,7 @@ export class MemoryStore {
     const info = this.db
       .prepare(
         `INSERT INTO memories(category, content, tags, initial_strength, access_count, created_at, last_accessed_at)
-         VALUES (?, ?, ?, ?, 0, ?, ?)`
+         VALUES (?, ?, ?, ?, 0, ?, ?)`,
       )
       .run(category, cleanContent, tags, initialStrength, now, now);
     return Number(info.lastInsertRowid);
@@ -78,14 +78,14 @@ export class MemoryStore {
   /**
    * 计算上下文 Query 与记忆内容的关联系数得分
    */
-  calculateRelevance(query = "", content = "", tags = "") {
+  calculateRelevance(query = '', content = '', tags = '') {
     if (!query) return 0;
     const cleanQuery = query.toLowerCase();
     const targetContent = content.toLowerCase();
     const targetTags = tags.toLowerCase();
 
     // 简单词块匹配加权
-    const words = cleanQuery.split(/[\s,._\-/]+/).filter(w => w.length > 1);
+    const words = cleanQuery.split(/[\s,._\-/]+/).filter((w) => w.length > 1);
     if (words.length === 0) return 0;
 
     let hits = 0;
@@ -101,15 +101,15 @@ export class MemoryStore {
    * @param {{query?:string, category?:string, threshold?:number, limit?:number}} opts
    * @returns {string[]}
    */
-  active({ query = "", category = "", threshold = 0.2, limit = 20 } = {}) {
+  active({ query = '', category = '', threshold = 0.2, limit = 20 } = {}) {
     const now = Date.now();
-    let sql = "SELECT * FROM memories";
+    let sql = 'SELECT * FROM memories';
     const params = [];
     if (category) {
-      sql += " WHERE category = ?";
+      sql += ' WHERE category = ?';
       params.push(category);
     }
-    sql += " ORDER BY last_accessed_at DESC LIMIT 5000";
+    sql += ' ORDER BY last_accessed_at DESC LIMIT 5000';
 
     const rows = this.db.prepare(sql).all(...params);
     const scored = rows
@@ -123,7 +123,7 @@ export class MemoryStore {
       .slice(0, limit);
 
     const bump = this.db.prepare(
-      "UPDATE memories SET access_count = access_count + 1, last_accessed_at = ? WHERE id = ?"
+      'UPDATE memories SET access_count = access_count + 1, last_accessed_at = ? WHERE id = ?',
     );
     const out = [];
     const tx = this.db.transaction((items) => {
@@ -141,28 +141,28 @@ export class MemoryStore {
   /**
    * 搜索记忆列表并附带评分
    */
-  search({ query = "", category = "", limit = 20 } = {}) {
+  search({ query = '', category = '', limit = 20 } = {}) {
     const now = Date.now();
-    let sql = "SELECT * FROM memories";
+    let sql = 'SELECT * FROM memories';
     const params = [];
     if (category) {
-      sql += " WHERE category = ?";
+      sql += ' WHERE category = ?';
       params.push(category);
     }
-    sql += " ORDER BY id DESC LIMIT 500";
+    sql += ' ORDER BY id DESC LIMIT 500';
 
     const rows = this.db.prepare(sql).all(...params);
     return rows
-      .map(r => ({
+      .map((r) => ({
         id: r.id,
         category: r.category,
         content: r.content,
         tags: r.tags,
         weight: this.weight(r, now),
         relevance: this.calculateRelevance(query, r.content, r.tags),
-        score: this.weight(r, now) + this.calculateRelevance(query, r.content, r.tags)
+        score: this.weight(r, now) + this.calculateRelevance(query, r.content, r.tags),
       }))
-      .filter(m => !query || m.relevance > 0)
+      .filter((m) => !query || m.relevance > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
   }
@@ -170,13 +170,13 @@ export class MemoryStore {
   /** @returns {{id:number,category:string,content:string}[]} */
   list({ limit = 50 } = {}) {
     return this.db
-      .prepare("SELECT id, category, content FROM memories ORDER BY id DESC LIMIT ?")
+      .prepare('SELECT id, category, content FROM memories ORDER BY id DESC LIMIT ?')
       .all(limit);
   }
 
   /** @param {number} id @returns {boolean} */
   remove(id) {
-    return this.db.prepare("DELETE FROM memories WHERE id=?").run(id).changes > 0;
+    return this.db.prepare('DELETE FROM memories WHERE id=?').run(id).changes > 0;
   }
 
   close() {

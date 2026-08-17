@@ -2,27 +2,24 @@
  * Secret redaction for tool_result content.
  * Pi's tool_result event uses `content` (not `result`).
  */
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
-export const DEFAULT_SECRETS_FILE = path.join(os.homedir(), ".secrets", "env");
+export const DEFAULT_SECRETS_FILE = path.join(os.homedir(), '.secrets', 'env');
 
 export function loadSecretPairs(filePath = DEFAULT_SECRETS_FILE) {
   if (!fs.existsSync(filePath)) return {};
   const pairs = {};
-  const content = fs.readFileSync(filePath, "utf8");
-  for (const line of content.split("\n")) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  for (const line of content.split('\n')) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eqIdx = trimmed.indexOf("=");
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
     if (eqIdx <= 0) continue;
     const key = trimmed.slice(0, eqIdx).trim();
     let val = trimmed.slice(eqIdx + 1).trim();
-    if (
-      (val.startsWith('"') && val.endsWith('"')) ||
-      (val.startsWith("'") && val.endsWith("'"))
-    ) {
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
       val = val.slice(1, -1);
     }
     if (key && val && val.length >= 8) {
@@ -33,18 +30,18 @@ export function loadSecretPairs(filePath = DEFAULT_SECRETS_FILE) {
 }
 
 export function formatSecretNamesPrompt(keys) {
-  const names = (keys || []).map((k) => String(k || "").trim()).filter(Boolean);
-  if (names.length === 0) return "";
+  const names = (keys || []).map((k) => String(k || '').trim()).filter(Boolean);
+  if (names.length === 0) return '';
   return [
-    "[AIIA Security Gate]",
-    "已在系统环境凭据中检测到以下可用的 Secret Key 变量名：",
+    '[AIIA Security Gate]',
+    '已在系统环境凭据中检测到以下可用的 Secret Key 变量名：',
     ...names.map((key) => `  - ${key}`),
-    "【安全约束】：严禁在回复中输出这些变量的明文值。若需在命令中引用，请确保不直接打印它们。",
-  ].join("\n");
+    '【安全约束】：严禁在回复中输出这些变量的明文值。若需在命令中引用，请确保不直接打印它们。',
+  ].join('\n');
 }
 
 export function redactText(text, secretPairs) {
-  let resultStr = String(text ?? "");
+  let resultStr = String(text ?? '');
   let redacted = false;
   for (const [key, val] of Object.entries(secretPairs || {})) {
     if (!val || val.length < 8) continue;
@@ -61,7 +58,7 @@ export function redactText(text, secretPairs) {
 }
 
 function mapContentParts(content, secretPairs) {
-  if (typeof content === "string") {
+  if (typeof content === 'string') {
     const { text, redacted } = redactText(content, secretPairs);
     return { content: text, redacted };
   }
@@ -70,12 +67,12 @@ function mapContentParts(content, secretPairs) {
   }
   let any = false;
   const next = content.map((part) => {
-    if (typeof part === "string") {
+    if (typeof part === 'string') {
       const { text, redacted } = redactText(part, secretPairs);
       any = any || redacted;
       return text;
     }
-    if (part && typeof part === "object" && typeof part.text === "string") {
+    if (part && typeof part === 'object' && typeof part.text === 'string') {
       const { text, redacted } = redactText(part.text, secretPairs);
       any = any || redacted;
       return { ...part, text };
@@ -101,7 +98,7 @@ export function redactToolResultEvent(event, secretPairs) {
     }
   }
   if (event.result != null) {
-    if (typeof event.result === "string") {
+    if (typeof event.result === 'string') {
       const { text, redacted } = redactText(event.result, secretPairs);
       if (redacted) {
         event.result = text;

@@ -1,13 +1,13 @@
 /**
  * AIIA Autonomous Router Extension
- * Injects a global directive to empower the Main Agent to proactively use Subagents 
+ * Injects a global directive to empower the Main Agent to proactively use Subagents
  * for complex tasks, effectively transforming it into an autonomous dispatcher.
  */
 
-import { isExtensionEnabled } from "../src/extension-profile.js";
+import { isExtensionEnabled } from '../src/extension-profile.js';
 
 export default function autoRouterExtension(pi) {
-  if (!isExtensionEnabled("auto-router")) return;
+  if (!isExtensionEnabled('auto-router')) return;
   pi.on('context', async (event) => {
     const messages = event?.messages ?? [];
     if (!messages.length) return;
@@ -29,17 +29,17 @@ If the user requests a complex engineering task (e.g., refactor a module, build 
 
     // Ensure we mutate a copy so we don't accidentally freeze the original reference
     const newMessages = [...messages];
-    let systemMsgIndex = newMessages.findIndex(m => m.role === 'system');
-    
+    const systemMsgIndex = newMessages.findIndex((m) => m.role === 'system');
+
     if (systemMsgIndex !== -1) {
       newMessages[systemMsgIndex] = {
         ...newMessages[systemMsgIndex],
-        content: `${newMessages[systemMsgIndex].content}\n\n${routerDirective}`
+        content: `${newMessages[systemMsgIndex].content}\n\n${routerDirective}`,
       };
     } else {
       newMessages.unshift({
         role: 'system',
-        content: routerDirective
+        content: routerDirective,
       });
     }
 

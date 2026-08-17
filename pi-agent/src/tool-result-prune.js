@@ -7,24 +7,24 @@
  *   AIIA_TOOL_RESULT_HEAD_CHARS=4096
  *   AIIA_TOOL_RESULT_TAIL_CHARS=1024
  */
-import fs from "node:fs";
-import path from "node:path";
-import { loadSecretPairs, redactText as redactSecrets } from "./secret-redact.js";
-import { redactText as redactPatterns } from "./trajectory-store.js";
+import fs from 'node:fs';
+import path from 'node:path';
+import { loadSecretPairs, redactText as redactSecrets } from './secret-redact.js';
+import { redactText as redactPatterns } from './trajectory-store.js';
 
-export const SPILL_MARKER = "[AIIA tool-result spill";
+export const SPILL_MARKER = '[AIIA tool-result spill';
 export const DEFAULT_MAX_CHARS = 8192;
 export const DEFAULT_HEAD_CHARS = 4096;
 export const DEFAULT_TAIL_CHARS = 1024;
-export const SPILL_DIRNAME = path.join(".agent", "spill");
+export const SPILL_DIRNAME = path.join('.agent', 'spill');
 
 export function isPruneDisabled(env = process.env) {
   const v = env.AIIA_TOOL_RESULT_PRUNE_DISABLED;
-  return v === "1" || v === "true";
+  return v === '1' || v === 'true';
 }
 
 function positiveInt(raw, fallback) {
-  const n = Number.parseInt(String(raw ?? ""), 10);
+  const n = Number.parseInt(String(raw ?? ''), 10);
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
@@ -40,18 +40,19 @@ export function resolvePruneLimits(env = process.env) {
 }
 
 export function contentToText(content) {
-  if (typeof content === "string") return content;
-  if (!Array.isArray(content)) return "";
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
   const parts = [];
   for (const part of content) {
-    if (typeof part === "string") parts.push(part);
-    else if (part && typeof part === "object" && typeof part.text === "string") parts.push(part.text);
+    if (typeof part === 'string') parts.push(part);
+    else if (part && typeof part === 'object' && typeof part.text === 'string')
+      parts.push(part.text);
   }
-  return parts.join("\n");
+  return parts.join('\n');
 }
 
 export function shouldPrune(text, limits) {
-  if (typeof text !== "string" || !text) return false;
+  if (typeof text !== 'string' || !text) return false;
   if (text.includes(SPILL_MARKER)) return false;
   const maxChars = limits?.maxChars ?? DEFAULT_MAX_CHARS;
   const headChars = limits?.headChars ?? DEFAULT_HEAD_CHARS;
@@ -76,24 +77,27 @@ export function rebuildContent(content, previewText) {
   const images = [];
   if (Array.isArray(content)) {
     for (const part of content) {
-      if (part && typeof part === "object" && part.type === "image") images.push(part);
+      if (part && typeof part === 'object' && part.type === 'image') images.push(part);
     }
   }
-  return [{ type: "text", text: previewText }, ...images];
+  return [{ type: 'text', text: previewText }, ...images];
 }
 
 export function sanitizeSpillText(text, secretPairs) {
-  const patterned = redactPatterns(String(text ?? ""));
+  const patterned = redactPatterns(String(text ?? ''));
   return redactSecrets(patterned, secretPairs || {}).text;
 }
 
 export function spillFileName({ toolCallId, toolName, now = Date.now() } = {}) {
-  const stamp = new Date(now).toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
-  const id = String(toolCallId || "unknown")
-    .replace(/[^A-Za-z0-9._-]+/g, "_")
+  const stamp = new Date(now)
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d+Z$/, 'Z');
+  const id = String(toolCallId || 'unknown')
+    .replace(/[^A-Za-z0-9._-]+/g, '_')
     .slice(0, 40);
-  const name = String(toolName || "tool")
-    .replace(/[^A-Za-z0-9._-]+/g, "_")
+  const name = String(toolName || 'tool')
+    .replace(/[^A-Za-z0-9._-]+/g, '_')
     .slice(0, 24);
   return `${stamp}-${name}-${id}.txt`;
 }
@@ -112,13 +116,14 @@ export function writeSpillFile(opts) {
   });
   const abs = path.join(dir, base);
   const body = sanitizeSpillText(opts.text, opts.secretPairs);
-  writeFile(abs, body, { encoding: "utf8", mode: 0o600 });
+  writeFile(abs, body, { encoding: 'utf8', mode: 0o600 });
   try {
     chmod(abs, 0o600);
     // GC old spills to prevent disk exhaustion (keep last 15)
-    const files = fs.readdirSync(dir)
-      .filter(f => f.endsWith('.txt'))
-      .map(f => ({ name: f, time: fs.statSync(path.join(dir, f)).mtimeMs }))
+    const files = fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith('.txt'))
+      .map((f) => ({ name: f, time: fs.statSync(path.join(dir, f)).mtimeMs }))
       .sort((a, b) => b.time - a.time);
     if (files.length > 15) {
       for (let i = 15; i < files.length; i++) {

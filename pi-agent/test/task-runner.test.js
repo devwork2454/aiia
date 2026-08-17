@@ -73,7 +73,9 @@ describe('Phase 2 P5: Task DAG Runner Core & Extension Tests', () => {
   test('Extension tools register and execute correctly', async () => {
     const tools = {};
     const mockPi = {
-      registerTool: (t) => { tools[t.name] = t; }
+      registerTool: (t) => {
+        tools[t.name] = t;
+      },
     };
     taskRunnerExtension(mockPi);
 
@@ -82,17 +84,29 @@ describe('Phase 2 P5: Task DAG Runner Core & Extension Tests', () => {
     assert.equal(typeof tools.get_dag_task_status?.execute, 'function');
 
     const ctx = { cwd: tmpDir };
-    const createRes = await tools.create_dag_task.execute('t1', {
-      dagId: 'ext_dag',
-      nodes: [
-        { id: 'n1', command: 'echo "n1"' },
-        { id: 'n2', command: 'echo "n2"', dependsOn: ['n1'] }
-      ]
-    }, undefined, undefined, ctx);
+    const createRes = await tools.create_dag_task.execute(
+      't1',
+      {
+        dagId: 'ext_dag',
+        nodes: [
+          { id: 'n1', command: 'echo "n1"' },
+          { id: 'n2', command: 'echo "n2"', dependsOn: ['n1'] },
+        ],
+      },
+      undefined,
+      undefined,
+      ctx,
+    );
 
     assert.equal(createRes.status, 'success');
 
-    const statusRes = await tools.get_dag_task_status.execute('t2', { dagId: 'ext_dag' }, undefined, undefined, ctx);
+    const statusRes = await tools.get_dag_task_status.execute(
+      't2',
+      { dagId: 'ext_dag' },
+      undefined,
+      undefined,
+      ctx,
+    );
     assert.equal(statusRes.status, 'success');
     assert.equal(statusRes.summary.stats.total, 2);
   });
@@ -100,9 +114,19 @@ describe('Phase 2 P5: Task DAG Runner Core & Extension Tests', () => {
     const runner = new TaskDAGRunner({ dagId: 'test_sm_pass', storageDir: tmpDir });
     runner.addNode({ id: 'plan', type: 'PLANNING', command: 'echo "plan"' });
     runner.addNode({ id: 'exec', type: 'EXECUTION', command: 'echo "exec"', dependsOn: ['plan'] });
-    runner.addNode({ id: 'assert', type: 'ASSERTION', command: 'echo "PASS"', dependsOn: ['exec'] });
+    runner.addNode({
+      id: 'assert',
+      type: 'ASSERTION',
+      command: 'echo "PASS"',
+      dependsOn: ['exec'],
+    });
     runner.addNode({ id: 'merge', type: 'MERGE', command: 'echo "merged"', dependsOn: ['assert'] });
-    runner.addNode({ id: 'rollback', type: 'ROLLBACK', command: 'echo "rollback"', dependsOn: ['assert'] });
+    runner.addNode({
+      id: 'rollback',
+      type: 'ROLLBACK',
+      command: 'echo "rollback"',
+      dependsOn: ['assert'],
+    });
 
     const executionOrder = [];
     const customExecutor = async (node) => {

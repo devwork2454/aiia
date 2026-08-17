@@ -12,15 +12,15 @@ import {
   STATUS_KEY,
   TICK_MS,
   WIDGET_KEY,
-} from "../src/compact-progress.js";
+} from '../src/compact-progress.js';
 
 /**
  * @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi
  */
-import { isExtensionEnabled } from "../src/extension-profile.js";
+import { isExtensionEnabled } from '../src/extension-profile.js';
 
 export default function compactProgressExtension(pi) {
-  if (!isExtensionEnabled("compact-progress")) return;
+  if (!isExtensionEnabled('compact-progress')) return;
   /** @type {ReturnType<typeof setInterval> | null} */
   let timer = null;
   let pct = 0;
@@ -66,7 +66,7 @@ export default function compactProgressExtension(pi) {
     });
     try {
       ui.setStatus?.(STATUS_KEY, line);
-      ui.setWidget?.(WIDGET_KEY, [line], { placement: "aboveEditor" });
+      ui.setWidget?.(WIDGET_KEY, [line], { placement: 'aboveEditor' });
     } catch {
       // ignore
     }
@@ -76,7 +76,7 @@ export default function compactProgressExtension(pi) {
     clearUi(ctx);
     activeCtx = ctx;
     pct = 6;
-    reason = event?.reason || "manual";
+    reason = event?.reason || 'manual';
     tokensBefore = event?.preparation?.tokensBefore;
     paint(ctx, false);
 
@@ -86,12 +86,12 @@ export default function compactProgressExtension(pi) {
     }, TICK_MS);
 
     const signal = event?.signal;
-    if (signal && typeof signal.addEventListener === "function") {
+    if (signal && typeof signal.addEventListener === 'function') {
       const onAbort = () => clearUi(ctx);
-      signal.addEventListener("abort", onAbort, { once: true });
+      signal.addEventListener('abort', onAbort, { once: true });
       abortUnsub = () => {
         try {
-          signal.removeEventListener("abort", onAbort);
+          signal.removeEventListener('abort', onAbort);
         } catch {
           // ignore
         }
@@ -112,19 +112,19 @@ export default function compactProgressExtension(pi) {
     setTimeout(() => clearUi(snap), 450);
   }
 
-  pi.on("session_before_compact", async (event, ctx) => {
-    if (process.env.AIIA_DISABLE_COMPACT_PROGRESS === "1") return;
+  pi.on('session_before_compact', async (event, ctx) => {
+    if (process.env.AIIA_DISABLE_COMPACT_PROGRESS === '1') return;
     if (!ctx?.ui) return;
     start(ctx, event);
     // Do not return compaction result — leave default Pi compact to run.
   });
 
-  pi.on("session_compact", (_event, ctx) => {
-    if (process.env.AIIA_DISABLE_COMPACT_PROGRESS === "1") return;
+  pi.on('session_compact', (_event, ctx) => {
+    if (process.env.AIIA_DISABLE_COMPACT_PROGRESS === '1') return;
     finish(ctx);
   });
 
-  pi.on("session_shutdown", (_event, ctx) => {
+  pi.on('session_shutdown', (_event, ctx) => {
     clearUi(ctx);
   });
 }

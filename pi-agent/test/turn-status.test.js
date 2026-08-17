@@ -1,5 +1,5 @@
-import { describe, it, before } from "node:test";
-import assert from "node:assert/strict";
+import { describe, it, before } from 'node:test';
+import assert from 'node:assert/strict';
 import {
   addUsageTotals,
   applyTurnStatusEvent,
@@ -11,112 +11,119 @@ import {
   formatTurnStatusLine,
   formatWorkingMessage,
   summarizeTool,
-} from "../src/turn-status.js";
-import turnStatusExtension from "../extensions/turn-status.js";
+} from '../src/turn-status.js';
+import turnStatusExtension from '../extensions/turn-status.js';
 
-describe("turn-status helpers", () => {
-  it("formatDuration uses ms / tenths / seconds / minutes", () => {
-    assert.equal(formatDuration(0), "0ms");
-    assert.equal(formatDuration(420), "420ms");
-    assert.equal(formatDuration(2400), "2.4s");
-    assert.equal(formatDuration(12_400), "12s");
-    assert.equal(formatDuration(125_000), "2m 05s");
+describe('turn-status helpers', () => {
+  it('formatDuration uses ms / tenths / seconds / minutes', () => {
+    assert.equal(formatDuration(0), '0ms');
+    assert.equal(formatDuration(420), '420ms');
+    assert.equal(formatDuration(2400), '2.4s');
+    assert.equal(formatDuration(12_400), '12s');
+    assert.equal(formatDuration(125_000), '2m 05s');
   });
 
-  it("summarizeTool prefers command then basename", () => {
-    assert.equal(summarizeTool("bash", { command: "npm  test" }), "bash npm test");
-    assert.equal(summarizeTool("edit", { path: "/tmp/src/foo.js" }), "edit foo.js");
-    assert.equal(summarizeTool("remember", {}), "remember");
+  it('summarizeTool prefers command then basename', () => {
+    assert.equal(summarizeTool('bash', { command: 'npm  test' }), 'bash npm test');
+    assert.equal(summarizeTool('edit', { path: '/tmp/src/foo.js' }), 'edit foo.js');
+    assert.equal(summarizeTool('remember', {}), 'remember');
   });
 
-  it("extractUsage and cacheHitPct read Pi usage buckets", () => {
+  it('extractUsage and cacheHitPct read Pi usage buckets', () => {
     const usage = extractUsage({
       usage: { input: 20, output: 5, cacheRead: 80, cacheWrite: 0 },
     });
     assert.deepEqual(usage, { input: 20, output: 5, cacheRead: 80, cacheWrite: 0 });
     assert.equal(cacheHitPct(usage), 80);
-    assert.equal(extractUsage({ role: "assistant" }), null);
+    assert.equal(extractUsage({ role: 'assistant' }), null);
     assert.equal(cacheHitPct(null), null);
   });
 
-  it("formatTurnStatusLine covers idle / thinking / tool / done", () => {
-    assert.equal(formatTurnStatusLine(createTurnStatusState()), "[Ready]");
+  it('formatTurnStatusLine covers idle / thinking / tool / done', () => {
+    assert.equal(formatTurnStatusLine(createTurnStatusState()), '[Ready]');
     assert.equal(
-      formatTurnStatusLine({ phase: "thinking", startedAt: 0, now: 2400 }),
-      "⠋ [2.4s] 正在思考...",
+      formatTurnStatusLine({ phase: 'thinking', startedAt: 0, now: 2400 }),
+      '⠋ [2.4s] 正在思考...',
     );
     assert.equal(
       formatTurnStatusLine({
-        phase: "tool",
+        phase: 'tool',
         startedAt: 0,
         now: 8100,
-        toolSummary: "bash npm test",
+        toolSummary: 'bash npm test',
         toolCount: 3,
       }),
-      "⠋ [8.1s] 运行中: bash npm test | 累计执行: 3 个工具",
+      '⠋ [8.1s] 运行中: bash npm test | 累计执行: 3 个工具',
     );
     assert.equal(
       formatTurnStatusLine({
-        phase: "done",
+        phase: 'done',
         startedAt: 0,
         now: 12_300,
         usage: { input: 20, cacheRead: 80, cacheWrite: 0 },
         toolCount: 2,
       }),
-      "✓ [12s] 完成 | 缓存: 80% | 共调用 2 次工具",
+      '✓ [12s] 完成 | 缓存: 80% | 共调用 2 次工具',
     );
-    assert.equal(formatWorkingMessage({ phase: "tool", toolSummary: "bash ls" }), "bash ls");
-    assert.equal(formatWorkingMessage({ phase: "thinking" }), "思考中…");
+    assert.equal(formatWorkingMessage({ phase: 'tool', toolSummary: 'bash ls' }), 'bash ls');
+    assert.equal(formatWorkingMessage({ phase: 'thinking' }), '思考中…');
   });
 
-  it("applyTurnStatusEvent walks a turn then keeps the done line", () => {
+  it('applyTurnStatusEvent walks a turn then keeps the done line', () => {
     let state = createTurnStatusState();
-    state = applyTurnStatusEvent(state, { type: "session_start" }, 0);
-    assert.equal(formatTurnStatusLine(state), "[Ready]");
+    state = applyTurnStatusEvent(state, { type: 'session_start' }, 0);
+    assert.equal(formatTurnStatusLine(state), '[Ready]');
 
-    state = applyTurnStatusEvent(state, { type: "turn_start", turnIndex: 1, timestamp: 1000 }, 1000);
+    state = applyTurnStatusEvent(
+      state,
+      { type: 'turn_start', turnIndex: 1, timestamp: 1000 },
+      1000,
+    );
     assert.match(formatTurnStatusLine(state), /正在思考.../);
 
     state = applyTurnStatusEvent(
       state,
-      { type: "tool_execution_start", toolName: "bash", args: { command: "ls" } },
+      { type: 'tool_execution_start', toolName: 'bash', args: { command: 'ls' } },
       2500,
     );
-    assert.equal(formatTurnStatusLine(state), "⠋ [1.5s] 运行中: bash ls");
-    assert.equal(formatWorkingMessage(state), "bash ls");
+    assert.equal(formatTurnStatusLine(state), '⠋ [1.5s] 运行中: bash ls');
+    assert.equal(formatWorkingMessage(state), 'bash ls');
 
-    state = applyTurnStatusEvent(state, { type: "tool_execution_end", toolName: "bash" }, 4000);
-    assert.equal(state.phase, "thinking");
+    state = applyTurnStatusEvent(state, { type: 'tool_execution_end', toolName: 'bash' }, 4000);
+    assert.equal(state.phase, 'thinking');
 
     state = applyTurnStatusEvent(
       state,
       {
-        type: "message_end",
+        type: 'message_end',
         message: { usage: { input: 10, output: 2, cacheRead: 90, cacheWrite: 0 } },
       },
       5000,
     );
-    state = applyTurnStatusEvent(state, { type: "turn_end" }, 5000);
-    assert.equal(formatTurnStatusLine(state), "✓ [4.0s] 完成 | 缓存: 90% | 共调用 1 次工具 | 消耗: Σ102");
+    state = applyTurnStatusEvent(state, { type: 'turn_end' }, 5000);
+    assert.equal(
+      formatTurnStatusLine(state),
+      '✓ [4.0s] 完成 | 缓存: 90% | 共调用 1 次工具 | 消耗: Σ102',
+    );
   });
 
-  it("formatTotalTokens renders compact Σ label and null when empty", () => {
+  it('formatTotalTokens renders compact Σ label and null when empty', () => {
     assert.equal(formatTotalTokens(null), null);
     assert.equal(formatTotalTokens({}), null);
-    assert.equal(formatTotalTokens({ input: 500 }), "Σ500");
+    assert.equal(formatTotalTokens({ input: 500 }), 'Σ500');
     assert.equal(
       formatTotalTokens({ input: 2000, output: 3000, cacheRead: 400, cacheWrite: 200 }),
-      "Σ5.6k",
+      'Σ5.6k',
     );
-    assert.equal(formatTotalTokens({ input: 12_000 }), "Σ12k");
-    assert.equal(formatTotalTokens({ input: 1_200_000 }), "Σ1.2M");
-    assert.equal(formatTotalTokens({ input: 9999 }), "Σ10k");
-    assert.equal(formatTotalTokens({ input: 999_999 }), "Σ1.0M");
-    assert.equal(formatTotalTokens({ input: 100_000_000 }), "Σ100M");
-    assert.equal(formatTotalTokens({ input: 9_999_999_999 }), "Σ10G");
+    assert.equal(formatTotalTokens({ input: 12_000 }), 'Σ12k');
+    assert.equal(formatTotalTokens({ input: 1_200_000 }), 'Σ1.2M');
+    assert.equal(formatTotalTokens({ input: 9999 }), 'Σ10k');
+    assert.equal(formatTotalTokens({ input: 999_999 }), 'Σ1.0M');
+    assert.equal(formatTotalTokens({ input: 100_000_000 }), 'Σ100M');
+    assert.equal(formatTotalTokens({ input: 9_999_999_999 }), 'Σ10G');
   });
 
-  it("addUsageTotals accumulates across buckets and ignores null", () => {
+  it('addUsageTotals accumulates across buckets and ignores null', () => {
     const u = { input: 1, output: 2, cacheRead: 3, cacheWrite: 4 };
     const t1 = addUsageTotals(null, u);
     assert.deepEqual(t1, u);
@@ -129,54 +136,57 @@ describe("turn-status helpers", () => {
     assert.equal(addUsageTotals(t1, null), t1);
   });
 
-  it("formatTurnStatusLine appends | 消耗: Σ when session totals exist", () => {
+  it('formatTurnStatusLine appends | 消耗: Σ when session totals exist', () => {
     const totals = { input: 4000, output: 1600, cacheRead: 0, cacheWrite: 0 };
     assert.equal(
-      formatTurnStatusLine({ phase: "done", startedAt: 0, now: 5000, totals }),
-      "✓ [5.0s] 完成 | 消耗: Σ5.6k",
+      formatTurnStatusLine({ phase: 'done', startedAt: 0, now: 5000, totals }),
+      '✓ [5.0s] 完成 | 消耗: Σ5.6k',
     );
-    assert.equal(
-      formatTurnStatusLine({ phase: "idle", totals }),
-      "[Ready] | 消耗: Σ5.6k",
-    );
+    assert.equal(formatTurnStatusLine({ phase: 'idle', totals }), '[Ready] | 消耗: Σ5.6k');
   });
 
-  it("message_end accumulates totals, turn_start keeps them, session_start resets", () => {
+  it('message_end accumulates totals, turn_start keeps them, session_start resets', () => {
     let state = applyTurnStatusEvent(
       createTurnStatusState(),
-      { type: "turn_start", timestamp: 0, turnIndex: 1 },
+      { type: 'turn_start', timestamp: 0, turnIndex: 1 },
       0,
     );
     state = applyTurnStatusEvent(
       state,
-      { type: "message_end", message: { usage: { input: 1000, output: 500, cacheRead: 0, cacheWrite: 0 } } },
+      {
+        type: 'message_end',
+        message: { usage: { input: 1000, output: 500, cacheRead: 0, cacheWrite: 0 } },
+      },
       100,
     );
-    assert.equal(formatTotalTokens(state.totals), "Σ1.5k");
+    assert.equal(formatTotalTokens(state.totals), 'Σ1.5k');
     // second message in same turn keeps accumulating
     state = applyTurnStatusEvent(
       state,
-      { type: "message_end", message: { usage: { input: 1000, output: 0, cacheRead: 0, cacheWrite: 0 } } },
+      {
+        type: 'message_end',
+        message: { usage: { input: 1000, output: 0, cacheRead: 0, cacheWrite: 0 } },
+      },
       200,
     );
-    assert.equal(formatTotalTokens(state.totals), "Σ2.5k");
+    assert.equal(formatTotalTokens(state.totals), 'Σ2.5k');
     // next turn keeps the running total
-    state = applyTurnStatusEvent(state, { type: "turn_end" }, 300);
-    state = applyTurnStatusEvent(state, { type: "turn_start", timestamp: 400, turnIndex: 2 }, 400);
-    assert.equal(formatTotalTokens(state.totals), "Σ2.5k");
+    state = applyTurnStatusEvent(state, { type: 'turn_end' }, 300);
+    state = applyTurnStatusEvent(state, { type: 'turn_start', timestamp: 400, turnIndex: 2 }, 400);
+    assert.equal(formatTotalTokens(state.totals), 'Σ2.5k');
     // new session resets totals
-    state = applyTurnStatusEvent(state, { type: "session_start" }, 500);
+    state = applyTurnStatusEvent(state, { type: 'session_start' }, 500);
     assert.equal(state.totals, null);
   });
 });
 
-describe("turn-status extension", () => {
+describe('turn-status extension', () => {
   before(() => {
     delete process.env.AIIA_VISUAL_DISABLED;
     delete process.env.AIIA_DISABLE_TURN_STATUS;
   });
 
-  it("paints footer on turn/tool events and restores working message", async () => {
+  it('paints footer on turn/tool events and restores working message', async () => {
     /** @type {Record<string, Function[]>} */
     const handlers = {};
     const statuses = new Map();
@@ -196,44 +206,44 @@ describe("turn-status extension", () => {
           else statuses.set(key, text);
         },
         setWorkingMessage(message) {
-          working.push(message === undefined ? "(default)" : message);
+          working.push(message === undefined ? '(default)' : message);
         },
       },
     };
 
-    await handlers.session_start[0]({ type: "session_start" }, ctx);
-    assert.equal(statuses.get("turn-status"), "[Ready]");
+    await handlers.session_start[0]({ type: 'session_start' }, ctx);
+    assert.equal(statuses.get('turn-status'), '[Ready]');
 
-    await handlers.turn_start[0]({ type: "turn_start", turnIndex: 1, timestamp: Date.now() }, ctx);
-    assert.match(statuses.get("turn-status") || "", /正在思考.../);
+    await handlers.turn_start[0]({ type: 'turn_start', turnIndex: 1, timestamp: Date.now() }, ctx);
+    assert.match(statuses.get('turn-status') || '', /正在思考.../);
 
     await handlers.tool_execution_start[0](
-      { type: "tool_execution_start", toolName: "bash", args: { command: "npm test" } },
+      { type: 'tool_execution_start', toolName: 'bash', args: { command: 'npm test' } },
       ctx,
     );
-    assert.match(statuses.get("turn-status") || "", /bash npm test/);
-    assert.equal(working.at(-1), "bash npm test");
+    assert.match(statuses.get('turn-status') || '', /bash npm test/);
+    assert.equal(working.at(-1), 'bash npm test');
 
-    await handlers.tool_execution_end[0]({ type: "tool_execution_end", toolName: "bash" }, ctx);
-    assert.equal(working.at(-1), "思考中…");
+    await handlers.tool_execution_end[0]({ type: 'tool_execution_end', toolName: 'bash' }, ctx);
+    assert.equal(working.at(-1), '思考中…');
 
     await handlers.turn_end[0](
       {
-        type: "turn_end",
+        type: 'turn_end',
         message: { usage: { input: 25, output: 4, cacheRead: 75, cacheWrite: 0 } },
       },
       ctx,
     );
-    assert.match(statuses.get("turn-status") || "", /✓/);
-    assert.match(statuses.get("turn-status") || "", /缓存: 75%/);
+    assert.match(statuses.get('turn-status') || '', /✓/);
+    assert.match(statuses.get('turn-status') || '', /缓存: 75%/);
 
-    await handlers.session_shutdown[0]({ type: "session_shutdown" }, ctx);
-    assert.equal(statuses.has("turn-status"), false);
+    await handlers.session_shutdown[0]({ type: 'session_shutdown' }, ctx);
+    assert.equal(statuses.has('turn-status'), false);
   });
 
-  it("factory is a no-op when AIIA_VISUAL_DISABLED=1", () => {
+  it('factory is a no-op when AIIA_VISUAL_DISABLED=1', () => {
     const prev = process.env.AIIA_VISUAL_DISABLED;
-    process.env.AIIA_VISUAL_DISABLED = "1";
+    process.env.AIIA_VISUAL_DISABLED = '1';
     try {
       const handlers = {};
       turnStatusExtension({

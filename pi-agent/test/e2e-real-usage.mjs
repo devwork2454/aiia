@@ -10,20 +10,20 @@ process.env.AIIA_EXTENSIONS = process.env.AIIA_EXTENSIONS || 'all';
 console.log('[E2E Test] 1. Starting AGY Bridge Server on port 8790...');
 const server = startAgyBridgeServer(8790);
 
-await new Promise(r => setTimeout(r, 300));
+await new Promise((r) => setTimeout(r, 300));
 
 console.log('[E2E Test] 2. Sending GET /v1/models...');
 const modelsRes = await fetch('http://127.0.0.1:8790/v1/models');
 assert.equal(modelsRes.status, 200);
 const modelsData = await modelsRes.json();
-console.log('[E2E Test] Models response OK:', modelsData.data.map(m => m.id).join(', '));
+console.log('[E2E Test] Models response OK:', modelsData.data.map((m) => m.id).join(', '));
 
 console.log('[E2E Test] 3. Testing Web Search Proxy Extension hook dispatch...');
 let registeredHandler = null;
 const mockPi = {
   on: (event, handler) => {
     if (event === 'before_provider_request') registeredHandler = handler;
-  }
+  },
 };
 
 webSearchProxyExtension(mockPi);
@@ -33,10 +33,8 @@ const eventPayload = {
   req: {
     model: 'gpt-4o',
     baseUrl: 'http://127.0.0.1:4000/v1',
-    messages: [
-      { role: 'user', content: '请帮我搜索 2026 年开源 AI Agent 框架最新进展' }
-    ]
-  }
+    messages: [{ role: 'user', content: '请帮我搜索 2026 年开源 AI Agent 框架最新进展' }],
+  },
 };
 
 process.env.SEARCH_MODEL_OVERRIDE = 'high-search';

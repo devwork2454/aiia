@@ -6,18 +6,20 @@ function fetchModels(baseUrl) {
       const url = new URL(baseUrl);
       // fallback if /v1/chat/completions is in url
       const modelsUrl = baseUrl.replace(/\/chat\/completions$/, '').replace(/\/$/, '') + '/models';
-      
-      http.get(modelsUrl, (res) => {
-        let body = '';
-        res.on('data', chunk => body += chunk);
-        res.on('end', () => {
-          try {
-            resolve(JSON.parse(body));
-          } catch {
-            resolve(null);
-          }
-        });
-      }).on('error', () => resolve(null));
+
+      http
+        .get(modelsUrl, (res) => {
+          let body = '';
+          res.on('data', (chunk) => (body += chunk));
+          res.on('end', () => {
+            try {
+              resolve(JSON.parse(body));
+            } catch {
+              resolve(null);
+            }
+          });
+        })
+        .on('error', () => resolve(null));
     } catch {
       resolve(null);
     }
@@ -25,15 +27,15 @@ function fetchModels(baseUrl) {
 }
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
-import { isExtensionEnabled } from "../src/extension-profile.js";
+import { isExtensionEnabled } from '../src/extension-profile.js';
 
 export default function remoteConfigExtension(pi) {
-  if (!isExtensionEnabled("remote-config")) return;
+  if (!isExtensionEnabled('remote-config')) return;
   pi.on('before_agent_start', async (event, ctx) => {
     if (!ctx || !ctx.model) return;
-    
+
     const baseUrl = ctx.model.baseUrl;
-    if (!baseUrl || !baseUrl.includes('http://127.0.0.1') && !baseUrl.includes('localhost')) {
+    if (!baseUrl || (!baseUrl.includes('http://127.0.0.1') && !baseUrl.includes('localhost'))) {
       // For safety, only auto-fetch from local proxies unless configured otherwise
       if (process.env.AIIA_REMOTE_CONFIG_ENABLED !== '1') {
         return;
@@ -45,7 +47,7 @@ export default function remoteConfigExtension(pi) {
 
     // Find current model (before router rewrites it, or after depending on timing)
     const targetId = ctx.model.id;
-    const remoteModel = modelsData.data.find(m => m.id === targetId || targetId.includes(m.id));
+    const remoteModel = modelsData.data.find((m) => m.id === targetId || targetId.includes(m.id));
 
     if (remoteModel) {
       // Silent sync — no console chatter on happy path

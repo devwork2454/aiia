@@ -16,11 +16,11 @@ export function matchCronField(expr, val) {
     return !isNaN(step) && step > 0 && val % step === 0;
   }
   if (expr.includes(',')) {
-    const list = expr.split(',').map(s => parseInt(s.trim(), 10));
+    const list = expr.split(',').map((s) => parseInt(s.trim(), 10));
     return list.includes(val);
   }
   if (expr.includes('-')) {
-    const [start, end] = expr.split('-').map(s => parseInt(s.trim(), 10));
+    const [start, end] = expr.split('-').map((s) => parseInt(s.trim(), 10));
     return val >= start && val <= end;
   }
   return parseInt(expr, 10) === val;
@@ -90,7 +90,7 @@ export class CronScheduler {
       enabled: Boolean(enabled),
       createdAt: new Date().toISOString(),
       lastRunAt: null,
-      runCount: 0
+      runCount: 0,
     };
     this.tasks.set(id, task);
     this.save();
@@ -177,7 +177,7 @@ export function startCronTicker({
 } = {}) {
   const tick = () => {
     const scheduler = new CronScheduler({ storageDir });
-    const at = typeof now === 'function' ? now() : (now || new Date());
+    const at = typeof now === 'function' ? now() : now || new Date();
     return runDueCommands(scheduler, at, { exec });
   };
   const timer = setIntervalFn(tick, intervalMs);

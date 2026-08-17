@@ -35,10 +35,10 @@ function isPidAlive(pid) {
 }
 
 /** @param {import('@earendil-works/pi-coding-agent').ExtensionAPI} pi */
-import { isExtensionEnabled } from "../src/extension-profile.js";
+import { isExtensionEnabled } from '../src/extension-profile.js';
 
 export default function subagentWorktreeExtension(pi) {
-  if (!isExtensionEnabled("subagent-worktree")) return;
+  if (!isExtensionEnabled('subagent-worktree')) return;
   // 1. spawn_worktree_subagent
   pi.registerTool({
     name: 'spawn_worktree_subagent',
@@ -47,9 +47,12 @@ export default function subagentWorktreeExtension(pi) {
       type: 'object',
       properties: {
         task: { type: 'string', description: '分配给子 Agent 的明确开发或分析任务描述' },
-        branchName: { type: 'string', description: '新建或使用的 Git 工作分支名称 (例如: feat/api-refactor)' }
+        branchName: {
+          type: 'string',
+          description: '新建或使用的 Git 工作分支名称 (例如: feat/api-refactor)',
+        },
       },
-      required: ['task', 'branchName']
+      required: ['task', 'branchName'],
     },
     async execute(_id, params, _signal, _onUpdate, ctx) {
       const cwd = ctx?.cwd || process.cwd();
@@ -77,7 +80,7 @@ export default function subagentWorktreeExtension(pi) {
             }
           }
           isNewWorktree = true;
-          
+
           // Environment Symlink Share (zero-copy dependency sharing)
           for (const envDir of ['.venv', 'node_modules']) {
             const rootEnvPath = path.join(cwd, envDir);
@@ -100,7 +103,7 @@ export default function subagentWorktreeExtension(pi) {
         const subagent = spawn('pi', ['-p', String(params.task || '')], {
           cwd: worktreeDir,
           detached: true,
-          stdio: ['ignore', outFd, outFd]
+          stdio: ['ignore', outFd, outFd],
         });
         subagent.unref();
 
@@ -110,29 +113,35 @@ export default function subagentWorktreeExtension(pi) {
           pid: subagent.pid,
           spawnedAt: new Date().toISOString(),
           status: 'running',
-          worktreePath: worktreeDir
+          worktreePath: worktreeDir,
         };
         fs.writeFileSync(taskInfoFile, JSON.stringify(taskMeta, null, 2));
 
         const statusOutput = runGit('git status --short', worktreeDir);
 
-        return {
-          status: 'success',
-          pid: subagent.pid,
-          worktreePath: worktreeDir,
-          branch,
-          isNewWorktree,
-          message: `✅ 子工作区已拉起并执行中: ${worktreeDir} (PID: ${subagent.pid}, 分支: ${branch})`,
-          gitStatus: statusOutput || '未发生代码变更'
-        };
+        return (() => {
+          const _res = {
+            status: 'success',
+            pid: subagent.pid,
+            worktreePath: worktreeDir,
+            branch,
+            isNewWorktree,
+            message: `✅ 子工作区已拉起并执行中: ${worktreeDir} (PID: ${subagent.pid}, 分支: ${branch})`,
+            gitStatus: statusOutput || '未发生代码变更',
+          };
+          return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+        })();
       } catch (e) {
-        return {
-          status: 'error',
-          branch,
-          message: `❌ 创建/调度 Worktree 失败: ${e.message}`
-        };
+        return (() => {
+          const _res = {
+            status: 'error',
+            branch,
+            message: `❌ 创建/调度 Worktree 失败: ${e.message}`,
+          };
+          return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+        })();
       }
-    }
+    },
   });
 
   // 2. list_worktree_subagents
@@ -141,7 +150,7 @@ export default function subagentWorktreeExtension(pi) {
     description: '扫描并列出所有活动及历史 Git Worktree 子工作区、并发任务状态与日志摘要',
     parameters: {
       type: 'object',
-      properties: {}
+      properties: {},
     },
     async execute(_id, params, _signal, _onUpdate, ctx) {
       const cwd = ctx?.cwd || process.cwd();
@@ -177,15 +186,15 @@ export default function subagentWorktreeExtension(pi) {
         }
 
         let handoffOutput = undefined;
-        const handoffFileJson = path.join(fullPath, ".subagent_handoff.json");
-        const handoffFileMd = path.join(fullPath, ".subagent_output.md");
+        const handoffFileJson = path.join(fullPath, '.subagent_handoff.json');
+        const handoffFileMd = path.join(fullPath, '.subagent_output.md');
         if (fs.existsSync(handoffFileJson)) {
           try {
-             const data = JSON.parse(fs.readFileSync(handoffFileJson, "utf8"));
-             handoffOutput = data.payload || JSON.stringify(data);
+            const data = JSON.parse(fs.readFileSync(handoffFileJson, 'utf8'));
+            handoffOutput = data.payload || JSON.stringify(data);
           } catch {}
         } else if (fs.existsSync(handoffFileMd)) {
-          handoffOutput = fs.readFileSync(handoffFileMd, "utf8").trim();
+          handoffOutput = fs.readFileSync(handoffFileMd, 'utf8').trim();
         }
 
         let gitStatus = '';
@@ -204,16 +213,13 @@ export default function subagentWorktreeExtension(pi) {
           spawnedAt: meta.spawnedAt || null,
           gitStatus: gitStatus || 'clean',
           logTail: logTail || '(无日志输出)',
-          handoffOutput
+          handoffOutput,
         });
       }
 
-      const _res = { status: 'success',
-        count: list.length,
-        worktrees: list
-      };
-        return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
-    }
+      const _res = { status: 'success', count: list.length, worktrees: list };
+      return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+    },
   });
 
   // 3. merge_worktree_subagent
@@ -224,9 +230,12 @@ export default function subagentWorktreeExtension(pi) {
       type: 'object',
       properties: {
         branchName: { type: 'string', description: '要合并的 Worktree 分支名称' },
-        deleteAfterMerge: { type: 'boolean', description: '合并成功后是否自动删除 Worktree 及临时分支 (默认: true)' }
+        deleteAfterMerge: {
+          type: 'boolean',
+          description: '合并成功后是否自动删除 Worktree 及临时分支 (默认: true)',
+        },
       },
-      required: ['branchName']
+      required: ['branchName'],
     },
     async execute(_id, params, _signal, _onUpdate, ctx) {
       const cwd = ctx?.cwd || process.cwd();
@@ -240,7 +249,9 @@ export default function subagentWorktreeExtension(pi) {
         }
 
         // 1. 确保 Worktree 工作区改动已提交 (若有未提交的改动自动进行 WIP commit)
-        const uncommitted = runGit('git status --short --ignored=no', worktreeDir) || runGit('git status --short', worktreeDir);
+        const uncommitted =
+          runGit('git status --short --ignored=no', worktreeDir) ||
+          runGit('git status --short', worktreeDir);
         if (uncommitted) {
           runGit('git add -A -f', worktreeDir);
           runGit(`git commit -m "wip: subagent worktree auto commit for ${branch}"`, worktreeDir);
@@ -259,30 +270,36 @@ export default function subagentWorktreeExtension(pi) {
         // 执行合并
         let mergeResult = '';
         try {
-          mergeResult = runGit(`git merge "${branch}" --no-ff -m "merge(subagent): merge worktree branch ${branch} into ${currentBranch}"`, cwd);
+          mergeResult = runGit(
+            `git merge "${branch}" --no-ff -m "merge(subagent): merge worktree branch ${branch} into ${currentBranch}"`,
+            cwd,
+          );
         } catch (mergeErr) {
           // 如果合并冲突退回；无 MERGE_HEAD 时 abort 会失败，忽略即可
           try {
             runGit('git merge --abort', cwd);
           } catch {}
-          return {
-            status: 'conflict',
-            branch,
-            message: `❌ 合并遇到代码冲突或失败，已中断合并。请前往 ${worktreeDir} 手动解决。详情: ${mergeErr.message}`
-          };
+          return (() => {
+            const _res = {
+              status: 'conflict',
+              branch,
+              message: `❌ 合并遇到代码冲突或失败，已中断合并。请前往 ${worktreeDir} 手动解决。详情: ${mergeErr.message}`,
+            };
+            return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+          })();
         }
 
         // 4. 更新 task meta
         const taskInfoFile = path.join(worktreeDir, '.subagent_task.json');
-        
+
         // 5. Read handoff output before deleting the worktree
         let handoffOutput;
         const handoffFileJson = path.join(worktreeDir, '.subagent_handoff.json');
         const handoffFileMd = path.join(worktreeDir, '.subagent_output.md');
         if (fs.existsSync(handoffFileJson)) {
           try {
-             const data = JSON.parse(fs.readFileSync(handoffFileJson, 'utf8'));
-             handoffOutput = data.payload || JSON.stringify(data);
+            const data = JSON.parse(fs.readFileSync(handoffFileJson, 'utf8'));
+            handoffOutput = data.payload || JSON.stringify(data);
           } catch {}
         } else if (fs.existsSync(handoffFileMd)) {
           handoffOutput = fs.readFileSync(handoffFileMd, 'utf8').trim();
@@ -311,17 +328,20 @@ export default function subagentWorktreeExtension(pi) {
           targetBranch: currentBranch,
           message: `✅ 成功将分支 ${branch} 合并到 ${currentBranch}`,
           mergeLog: mergeResult,
-          handoffOutput
+          handoffOutput,
         };
         return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
       } catch (e) {
-        return {
-          status: 'error',
-          branch,
-          message: `❌ 合并 Worktree 失败: ${e.message}`
-        };
+        return (() => {
+          const _res = {
+            status: 'error',
+            branch,
+            message: `❌ 合并 Worktree 失败: ${e.message}`,
+          };
+          return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+        })();
       }
-    }
+    },
   });
 
   // 4. cleanup_worktree_subagent
@@ -331,9 +351,9 @@ export default function subagentWorktreeExtension(pi) {
     parameters: {
       type: 'object',
       properties: {
-        branchName: { type: 'string', description: '要强行清理的 Worktree 分支名称' }
+        branchName: { type: 'string', description: '要强行清理的 Worktree 分支名称' },
       },
-      required: ['branchName']
+      required: ['branchName'],
     },
     async execute(_id, params, _signal, _onUpdate, ctx) {
       const cwd = ctx?.cwd || process.cwd();
@@ -351,18 +371,24 @@ export default function subagentWorktreeExtension(pi) {
           runGit(`git branch -D "${branch}"`, cwd);
         } catch {}
 
-        return {
-          status: 'success',
-          branch,
-          message: `✅ 已成功强行清理 Worktree 及分支 ${branch}`
-        };
+        return (() => {
+          const _res = {
+            status: 'success',
+            branch,
+            message: `✅ 已成功强行清理 Worktree 及分支 ${branch}`,
+          };
+          return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+        })();
       } catch (e) {
-        return {
-          status: 'error',
-          branch,
-          message: `❌ 清理失败: ${e.message}`
-        };
+        return (() => {
+          const _res = {
+            status: 'error',
+            branch,
+            message: `❌ 清理失败: ${e.message}`,
+          };
+          return { ..._res, content: [{ type: 'text', text: JSON.stringify(_res, null, 2) }] };
+        })();
       }
-    }
+    },
   });
 }

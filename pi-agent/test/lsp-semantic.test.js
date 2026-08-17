@@ -11,7 +11,11 @@ describe('LSP and semantic tools register via pi.registerTool', () => {
 
   test('lsp_extension registers official tools', () => {
     const tools = {};
-    lspExtension({ registerTool: (t) => { tools[t.name] = t; } });
+    lspExtension({
+      registerTool: (t) => {
+        tools[t.name] = t;
+      },
+    });
     assert.equal(typeof tools.lsp_start?.execute, 'function');
     assert.equal(typeof tools.lsp_goto_definition?.execute, 'function');
     assert.equal(typeof tools.lsp_find_references?.execute, 'function');
@@ -20,7 +24,11 @@ describe('LSP and semantic tools register via pi.registerTool', () => {
 
   test('semantic_search registers official tools', () => {
     const tools = {};
-    semanticSearchExtension({ registerTool: (t) => { tools[t.name] = t; } });
+    semanticSearchExtension({
+      registerTool: (t) => {
+        tools[t.name] = t;
+      },
+    });
     assert.equal(typeof tools.semantic_index_workspace?.execute, 'function');
     assert.equal(typeof tools.semantic_search?.execute, 'function');
     assert.equal(tools.semantic_search.execute.length >= 2, true);

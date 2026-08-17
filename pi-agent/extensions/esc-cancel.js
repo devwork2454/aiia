@@ -1,10 +1,9 @@
 import readline from 'node:readline';
 
 export default function escCancelExtension(pi) {
-  pi.on("session_start", (event, ctx) => {
-    
+  pi.on('session_start', (event, ctx) => {
     const cancelTasks = (source) => {
-      ctx?.ui?.notify?.(`⚠️ [${source}] 拦截指令：正在中断请求与任务...`, "warning");
+      ctx?.ui?.notify?.(`⚠️ [${source}] 拦截指令：正在中断请求与任务...`, 'warning');
       if (ctx?.session && typeof ctx.session.abort === 'function') {
         ctx.session.abort();
       }
@@ -26,7 +25,7 @@ export default function escCancelExtension(pi) {
         }
       };
       process.stdin.on('keypress', onKeypress);
-      pi.on("session_shutdown", () => process.stdin.off('keypress', onKeypress));
+      pi.on('session_shutdown', () => process.stdin.off('keypress', onKeypress));
     }
 
     // 2. 监听 Ctrl+C (SIGINT)
@@ -34,8 +33,8 @@ export default function escCancelExtension(pi) {
       cancelTasks('Ctrl+C');
     };
     process.on('SIGINT', onSigint);
-    
-    pi.on("session_shutdown", () => {
+
+    pi.on('session_shutdown', () => {
       process.off('SIGINT', onSigint);
     });
   });

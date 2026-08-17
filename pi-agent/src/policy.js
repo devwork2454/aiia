@@ -1,9 +1,9 @@
 /** Shared high-risk shell policy (used by safety extension + unit tests). */
 
 export const DANGEROUS =
-  /(\brm\s+-[A-Za-z]*[rR][A-Za-z]*f\s+[\/~]|\brm\s+-[A-Za-z]*f[A-Za-z]*[rR]\s+[\/~]|\bsudo\b|\bgit\s+push\s+--force\b|\bmkfs\b|\bdd\s+if=|:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;|\bchmod\s+-R\s+777\s+\/|>\s*\/dev\/sd[a-z])/i;
+  /(\brm\s+-[A-Za-z]*[rR][A-Za-z]*f\s+[/~]|\brm\s+-[A-Za-z]*f[A-Za-z]*[rR]\s+[/~]|\bsudo\b|\bgit\s+push\s+--force\b|\bmkfs\b|\bdd\s+if=|:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;|\bchmod\s+-R\s+777\s+\/|>\s*\/dev\/sd[a-z])/i;
 
-const SHELL_TOOLS = new Set(["bash", "shell", "run_shell_command"]);
+const SHELL_TOOLS = new Set(['bash', 'shell', 'run_shell_command']);
 
 /**
  * Extract the shell command from a Pi tool_call event.
@@ -14,7 +14,7 @@ const SHELL_TOOLS = new Set(["bash", "shell", "run_shell_command"]);
  */
 export function extractCommand(event) {
   const src = event?.input ?? event?.args ?? {};
-  return String(src.command ?? src.cmd ?? "");
+  return String(src.command ?? src.cmd ?? '');
 }
 
 /**
@@ -23,7 +23,7 @@ export function extractCommand(event) {
  * @returns {{ block: boolean, reason?: string }}
  */
 export function evaluateToolCallEvent(event) {
-  const name = String(event?.toolName || "").toLowerCase();
+  const name = String(event?.toolName || '').toLowerCase();
   if (!SHELL_TOOLS.has(name)) return { block: false };
   const command = extractCommand(event);
   if (DANGEROUS.test(command)) {

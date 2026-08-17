@@ -5,7 +5,7 @@ import path from 'node:path';
 export function runBatchOptimization(opts = {}) {
   const cwd = opts.cwd || process.cwd();
   const spawnFn = opts.spawn || spawnSync;
-  
+
   const trajFile = path.join(cwd, '.agent', 'trajectories.jsonl');
   if (!fs.existsSync(trajFile)) {
     return { status: 'skipped', message: 'No trajectories found' };
@@ -31,9 +31,9 @@ Do not explain, just execute the file modifications.`;
     timeout: 60000,
   });
 
-  return { 
-    status: 'success', 
+  return {
+    status: 'success',
     exitCode: res.status,
-    message: 'Batch optimization triggered'
+    message: 'Batch optimization triggered',
   };
 }

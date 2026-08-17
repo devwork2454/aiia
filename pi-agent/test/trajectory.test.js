@@ -24,10 +24,7 @@ function tmpDir() {
 describe('S2 Trajectory store', () => {
   test('resolveTrajectoryPath defaults to .agent/trajectories.jsonl', () => {
     const cwd = '/tmp/proj';
-    assert.equal(
-      resolveTrajectoryPath(cwd, {}),
-      path.resolve(cwd, '.agent', 'trajectories.jsonl'),
-    );
+    assert.equal(resolveTrajectoryPath(cwd, {}), path.resolve(cwd, '.agent', 'trajectories.jsonl'));
     assert.equal(
       resolveTrajectoryPath(cwd, { TRAJECTORY_PATH: 'logs/t.jsonl' }),
       path.resolve(cwd, 'logs/t.jsonl'),
@@ -35,7 +32,9 @@ describe('S2 Trajectory store', () => {
   });
 
   test('redactText masks common secret shapes', () => {
-    const s = redactText('key=sk-abcdefghijklmnopqrstuv wx Bearer abcdefghijklmnop qr api_key=supersecretvalue');
+    const s = redactText(
+      'key=sk-abcdefghijklmnopqrstuv wx Bearer abcdefghijklmnop qr api_key=supersecretvalue',
+    );
     assert.match(s, /\*\*\*REDACTED\*\*\*/);
     assert.doesNotMatch(s, /sk-abcdefghijklmnopqrstuv/);
     assert.doesNotMatch(s, /supersecretvalue/);
@@ -126,10 +125,7 @@ describe('S2 Trajectory store', () => {
       { messages: [{ role: 'user', content: 'hi' }] },
       { cwd: dir, path: file, env: {}, hostname: 'h' },
     );
-    recordSessionShutdown(
-      { reason: 'reload' },
-      { cwd: dir, path: file, env: {}, hostname: 'h' },
-    );
+    recordSessionShutdown({ reason: 'reload' }, { cwd: dir, path: file, env: {}, hostname: 'h' });
     const lines = fs.readFileSync(file, 'utf8').trim().split('\n');
     assert.equal(lines.length, 2);
     assert.equal(JSON.parse(lines[1]).reason, 'reload');
@@ -185,14 +181,21 @@ describe('S2 Trajectory extension', () => {
 
   test('session_shutdown writes project-card draft only (no apply)', async () => {
     const hooks = {};
-    trajectoryExtension({ on: (event, fn) => { hooks[event] = fn; } });
+    trajectoryExtension({
+      on: (event, fn) => {
+        hooks[event] = fn;
+      },
+    });
     const dir = tmpDir();
     const prev = process.env.AIIA_DISABLE_AUTO_PROFILE;
     const prevTraj = process.env.TRAJECTORY_DISABLED;
     delete process.env.AIIA_DISABLE_AUTO_PROFILE;
     process.env.TRAJECTORY_DISABLED = '1';
     try {
-      await hooks.session_shutdown({ type: 'session_shutdown', reason: 'quit' }, { cwd: dir, model: {} });
+      await hooks.session_shutdown(
+        { type: 'session_shutdown', reason: 'quit' },
+        { cwd: dir, model: {} },
+      );
     } finally {
       if (prev === undefined) delete process.env.AIIA_DISABLE_AUTO_PROFILE;
       else process.env.AIIA_DISABLE_AUTO_PROFILE = prev;

@@ -2,29 +2,23 @@
  * Slash menu visibility + /aiia routing helpers.
  */
 
-export const DEFAULT_SLASH_ALLOWLIST = Object.freeze([
-  "goal",
-  "steer",
-  "config",
-  "vault",
-  "aiia",
-]);
+export const DEFAULT_SLASH_ALLOWLIST = Object.freeze(['goal', 'steer', 'config', 'vault', 'aiia']);
 
 /** Commands owned by AIIA that may be hidden from autocomplete. */
 export const AIIA_MANAGED_SLASH_COMMANDS = Object.freeze([
-  "goal",
-  "imp",
-  "reply",
-  "add-dir",
-  "rm-dir",
-  "list-dirs",
-  "memory",
-  "vault",
-  "profile",
-  "config",
-  "steer",
-  "sync",
-  "aiia",
+  'goal',
+  'imp',
+  'reply',
+  'add-dir',
+  'rm-dir',
+  'list-dirs',
+  'memory',
+  'vault',
+  'profile',
+  'config',
+  'steer',
+  'sync',
+  'aiia',
 ]);
 
 /**
@@ -33,32 +27,32 @@ export const AIIA_MANAGED_SLASH_COMMANDS = Object.freeze([
  */
 export function resolveSlashAllowlist(env = process.env) {
   const raw = env.AIIA_SLASH_ALLOWLIST;
-  if (raw == null || String(raw).trim() === "") {
+  if (raw == null || String(raw).trim() === '') {
     return [...DEFAULT_SLASH_ALLOWLIST];
   }
   const list = String(raw)
     .split(/[,\s]+/)
     .map((s) => s.trim())
     .filter(Boolean);
-  if (!list.includes("aiia")) list.push("aiia");
+  if (!list.includes('aiia')) list.push('aiia');
   return list;
 }
 
 /** @param {NodeJS.ProcessEnv} [env] */
 export function isSlashUxDisabled(env = process.env) {
   const v = env.AIIA_SLASH_UX_DISABLED;
-  return v === "1" || v === "true";
+  return v === '1' || v === 'true';
 }
 
 /**
  * @param {string} args
  * @returns {{ subcommand: string, rest: string }}
  */
-export function parseAiiaArgs(args = "") {
-  const trimmed = String(args || "").trim();
-  if (!trimmed) return { subcommand: "help", rest: "" };
-  const sp = trimmed.indexOf(" ");
-  if (sp === -1) return { subcommand: trimmed.toLowerCase(), rest: "" };
+export function parseAiiaArgs(args = '') {
+  const trimmed = String(args || '').trim();
+  if (!trimmed) return { subcommand: 'help', rest: '' };
+  const sp = trimmed.indexOf(' ');
+  if (sp === -1) return { subcommand: trimmed.toLowerCase(), rest: '' };
   return {
     subcommand: trimmed.slice(0, sp).toLowerCase(),
     rest: trimmed.slice(sp + 1).trim(),
@@ -82,9 +76,9 @@ export function filterSlashAutocompleteItems(
   const allow = new Set(allowlist);
   const managedSet = new Set(managed);
   return (items || []).filter((item) => {
-    const name = String(item?.value ?? item?.name ?? item?.label ?? "").replace(/^\//, "");
+    const name = String(item?.value ?? item?.name ?? item?.label ?? '').replace(/^\//, '');
     if (!name) return false;
-    if (name.startsWith("skill:")) return false;
+    if (name.startsWith('skill:')) return false;
     if (!managedSet.has(name)) return true;
     return allow.has(name);
   });
@@ -97,39 +91,36 @@ export function filterSlashAutocompleteItems(
  * @param {any} ctx
  */
 export async function routeAiiaSubcommand(sub, rest, handlers, ctx) {
-  const key = String(sub || "help").toLowerCase();
+  const key = String(sub || 'help').toLowerCase();
   const aliases = {
-    dirs: "list-dirs",
-    dir: "list-dirs",
-    "list-dir": "list-dirs",
-    help: "help",
-    "?": "help",
+    dirs: 'list-dirs',
+    dir: 'list-dirs',
+    'list-dir': 'list-dirs',
+    help: 'help',
+    '?': 'help',
   };
   const resolved = aliases[key] || key;
 
-  if (resolved === "help") {
+  if (resolved === 'help') {
     const names = Object.keys(handlers)
-      .filter((n) => n !== "help")
+      .filter((n) => n !== 'help')
       .sort();
     const lines = [
-      "AIIA command hub:",
-      "  /aiia help",
+      'AIIA command hub:',
+      '  /aiia help',
       ...names.map((n) => `  /aiia ${n} ...`),
-      "",
-      "Visible slash shortcuts: /goal /steer /config /vault",
-      "Prefer tools from the capability catalog for agent work.",
+      '',
+      'Visible slash shortcuts: /goal /steer /config /vault',
+      'Prefer tools from the capability catalog for agent work.',
     ];
-    ctx?.ui?.notify?.(lines.join("\n"), "info");
-    return { ok: true, subcommand: "help" };
+    ctx?.ui?.notify?.(lines.join('\n'), 'info');
+    return { ok: true, subcommand: 'help' };
   }
 
   const handler = handlers[resolved];
   if (!handler) {
-    ctx?.ui?.notify?.(
-      `Unknown /aiia subcommand: ${key}. Try /aiia help`,
-      "warning",
-    );
-    return { ok: false, subcommand: resolved, error: "unknown" };
+    ctx?.ui?.notify?.(`Unknown /aiia subcommand: ${key}. Try /aiia help`, 'warning');
+    return { ok: false, subcommand: resolved, error: 'unknown' };
   }
   await handler(rest, ctx);
   return { ok: true, subcommand: resolved };

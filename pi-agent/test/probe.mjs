@@ -1,4 +1,4 @@
-import { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { ModelRuntime } from '@earendil-works/pi-coding-agent';
 
 async function run() {
   const rt = await ModelRuntime.create();

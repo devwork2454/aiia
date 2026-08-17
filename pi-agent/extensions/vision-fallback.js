@@ -81,28 +81,32 @@ export async function describeImageWithGemini(block, opts = {}) {
   const fetchImpl = opts.fetchImpl || globalThis.fetch;
   if (!apiKey) return null;
 
-  let img = extractImageData(block);
+  const img = extractImageData(block);
   if (!img) return null;
 
   let base64 = img.base64;
   let mime = img.mime || 'image/png';
-  
+
   if (img.fileUri || img.filePath) {
     try {
       const fs = await import('node:fs/promises');
       const { fileURLToPath } = await import('node:url');
       const extname = (await import('node:path')).extname;
-      
+
       const p = img.fileUri ? fileURLToPath(img.fileUri) : img.filePath;
       const ext = extname(p).toLowerCase();
-      mime = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' 
-           : ext === '.webp' ? 'image/webp'
-           : ext === '.gif' ? 'image/gif'
-           : 'image/png';
-           
+      mime =
+        ext === '.jpg' || ext === '.jpeg'
+          ? 'image/jpeg'
+          : ext === '.webp'
+            ? 'image/webp'
+            : ext === '.gif'
+              ? 'image/gif'
+              : 'image/png';
+
       const buf = await fs.readFile(p);
       base64 = buf.toString('base64');
-    } catch(e) {
+    } catch (e) {
       return null;
     }
   } else if (img.url) {
@@ -120,10 +124,7 @@ export async function describeImageWithGemini(block, opts = {}) {
   const body = {
     contents: [
       {
-        parts: [
-          { text: DESCRIBE_PROMPT },
-          { inline_data: { mime_type: mime, data: base64 } },
-        ],
+        parts: [{ text: DESCRIBE_PROMPT }, { inline_data: { mime_type: mime, data: base64 } }],
       },
     ],
   };
@@ -131,15 +132,12 @@ export async function describeImageWithGemini(block, opts = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const resp = await fetchImpl(
-      GEMINI_GENERATE_URL.replace('%s', model),
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify(body),
-        signal: ctrl.signal,
-      },
-    );
+    const resp = await fetchImpl(GEMINI_GENERATE_URL.replace('%s', model), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
     if (!resp.ok) return null;
     const data = await resp.json();
     const text = data?.candidates?.[0]?.content?.parts
@@ -233,7 +231,7 @@ export default function visionFallbackExtension(pi) {
     }
 
     const model = process.env.AIIA_VISION_MODEL || DEFAULT_VISION_MODEL;
-    
+
     let imageCount = 0;
     for (const msg of req.messages) {
       if (!Array.isArray(msg?.content)) continue;
@@ -245,7 +243,10 @@ export default function visionFallbackExtension(pi) {
     }
 
     if (imageCount > 0 && ctx?.ui?.notify) {
-      ctx.ui.notify(`🖼 正在调用视觉降级模型分析 ${imageCount} 张图片，可能需要几秒钟，请稍候...`, 'info');
+      ctx.ui.notify(
+        `🖼 正在调用视觉降级模型分析 ${imageCount} 张图片，可能需要几秒钟，请稍候...`,
+        'info',
+      );
     }
 
     const describeFn = (block) =>
@@ -254,7 +255,10 @@ export default function visionFallbackExtension(pi) {
     const { replaced, failed } = await buildVisionFallbackMessages(req.messages, describeFn);
     if (replaced + failed > 0 && ctx?.ui?.notify) {
       const detail = failed > 0 ? `${failed} 张识别失败已占位` : '';
-      ctx.ui.notify(`🖼 视觉降级：${replaced} 张图片已转述为文本${detail ? `（${detail}）` : ''}`, 'info');
+      ctx.ui.notify(
+        `🖼 视觉降级：${replaced} 张图片已转述为文本${detail ? `（${detail}）` : ''}`,
+        'info',
+      );
     }
   });
 }

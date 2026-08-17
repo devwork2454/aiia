@@ -35,13 +35,29 @@ const DIGEST = 'sha512';
 // ─── 预定义分类 ───────────────────────────────────────────────────────────────
 
 const CATEGORIES = {
-  account:  { label: '账号密码',   icon: '🔐', fields: ['用户名', '密码', '网址', '备注'] },
-  identity: { label: '身份信息',   icon: '🪪', fields: ['姓名', '身份证号', '手机号', '邮箱', '备注'] },
-  address:  { label: '地址信息',   icon: '🏠', fields: ['联系人', '手机号', '省市区', '详细地址', '邮编'] },
-  payment:  { label: '银行卡/支付', icon: '💳', fields: ['持卡人', '卡号', '银行', '有效期', '备注'] },
-  ssh:      { label: 'SSH/服务器', icon: '🖥️', fields: ['主机名', 'IP/域名', '端口', '用户名', '密钥路径', '备注'] },
-  note:     { label: '安全笔记',   icon: '📝', fields: ['标题', '内容'] },
-  custom:   { label: '自定义',     icon: '📦', fields: [] }, // 用户自定义字段
+  account: { label: '账号密码', icon: '🔐', fields: ['用户名', '密码', '网址', '备注'] },
+  identity: {
+    label: '身份信息',
+    icon: '🪪',
+    fields: ['姓名', '身份证号', '手机号', '邮箱', '备注'],
+  },
+  address: {
+    label: '地址信息',
+    icon: '🏠',
+    fields: ['联系人', '手机号', '省市区', '详细地址', '邮编'],
+  },
+  payment: {
+    label: '银行卡/支付',
+    icon: '💳',
+    fields: ['持卡人', '卡号', '银行', '有效期', '备注'],
+  },
+  ssh: {
+    label: 'SSH/服务器',
+    icon: '🖥️',
+    fields: ['主机名', 'IP/域名', '端口', '用户名', '密钥路径', '备注'],
+  },
+  note: { label: '安全笔记', icon: '📝', fields: ['标题', '内容'] },
+  custom: { label: '自定义', icon: '📦', fields: [] }, // 用户自定义字段
 };
 
 // ─── 工具函数 ─────────────────────────────────────────────────────────────────
@@ -52,7 +68,11 @@ function ensureConfigDir() {
 
 function loadCredentials() {
   if (!fs.existsSync(CREDENTIALS_FILE)) return null;
-  try { return JSON.parse(fs.readFileSync(CREDENTIALS_FILE, 'utf8')); } catch { return null; }
+  try {
+    return JSON.parse(fs.readFileSync(CREDENTIALS_FILE, 'utf8'));
+  } catch {
+    return null;
+  }
 }
 
 function deriveKey(password, salt) {
@@ -72,7 +92,7 @@ function encryptVault(data, password) {
     ciphertext,
     salt: salt.toString('hex'),
     iv: iv.toString('hex'),
-    authTag: cipher.getAuthTag().toString('hex')
+    authTag: cipher.getAuthTag().toString('hex'),
   };
 }
 
@@ -123,7 +143,9 @@ async function getMasterPassword(ctx, action = '操作') {
   if (creds?.pwHash) {
     let inputHash;
     if (creds.pwSalt) {
-      inputHash = crypto.pbkdf2Sync(password, Buffer.from(creds.pwSalt, 'hex'), ITERATIONS, KEY_LENGTH, DIGEST).toString('hex');
+      inputHash = crypto
+        .pbkdf2Sync(password, Buffer.from(creds.pwSalt, 'hex'), ITERATIONS, KEY_LENGTH, DIGEST)
+        .toString('hex');
     } else {
       inputHash = crypto.createHash('sha256').update(password).digest('hex');
     }
@@ -136,199 +158,241 @@ async function getMasterPassword(ctx, action = '操作') {
 
 export default function (pi) {
   const vaultHandler = async (args, ctx) => {
-      const parts = (args || '').trim().split(/\s+/);
-      const action = parts[0] || 'help';
+    const parts = (args || '').trim().split(/\s+/);
+    const action = parts[0] || 'help';
 
-      // ── categories ──────────────────────────────────────────────────────
-      if (action === 'categories') {
-        const lines = ['📂 可用分类：', ''];
-        for (const [key, cat] of Object.entries(CATEGORIES)) {
-          lines.push(`  ${cat.icon}  ${key.padEnd(10)} — ${cat.label}`);
-          if (cat.fields.length > 0) {
-            lines.push(`              字段: ${cat.fields.join('、')}`);
-          }
+    // ── categories ──────────────────────────────────────────────────────
+    if (action === 'categories') {
+      const lines = ['📂 可用分类：', ''];
+      for (const [key, cat] of Object.entries(CATEGORIES)) {
+        lines.push(`  ${cat.icon}  ${key.padEnd(10)} — ${cat.label}`);
+        if (cat.fields.length > 0) {
+          lines.push(`              字段: ${cat.fields.join('、')}`);
         }
-        ctx.ui.notify(lines.join('\n'), 'info');
+      }
+      ctx.ui.notify(lines.join('\n'), 'info');
+      return;
+    }
+
+    // ── list ─────────────────────────────────────────────────────────────
+    if (action === 'list') {
+      let password;
+      try {
+        password = await getMasterPassword(ctx, '查看保险箱');
+      } catch (e) {
+        ctx.ui.notify(`❌ ${e.message}`, 'error');
         return;
       }
 
-      // ── list ─────────────────────────────────────────────────────────────
-      if (action === 'list') {
-        let password;
-        try { password = await getMasterPassword(ctx, '查看保险箱'); }
-        catch (e) { ctx.ui.notify(`❌ ${e.message}`, 'error'); return; }
-
-        let vault;
-        try { vault = readVault(password); }
-        catch (e) { ctx.ui.notify(`❌ ${e.message}`, 'error'); return; }
-
-        const filterCat = parts[1];
-        const lines = ['🔐 AIIA Vault — 条目列表（已掩码）', ''];
-
-        let total = 0;
-        for (const [catKey, entries] of Object.entries(vault)) {
-          if (filterCat && catKey !== filterCat) continue;
-          const cat = CATEGORIES[catKey] || { label: catKey, icon: '📦' };
-          const entryKeys = Object.keys(entries || {});
-          if (entryKeys.length === 0) continue;
-
-          lines.push(`${cat.icon} ${cat.label} (${catKey}) — ${entryKeys.length} 条`);
-          for (const name of entryKeys) {
-            const entry = entries[name];
-            const preview = Object.entries(entry)
-              .slice(0, 2)
-              .map(([k, v]) => `${k}: ${mask(v)}`)
-              .join('  |  ');
-            lines.push(`   • ${name.padEnd(20)} ${preview}`);
-            total++;
-          }
-          lines.push('');
-        }
-
-        if (total === 0) {
-          lines.push(filterCat
-            ? `  分类 "${filterCat}" 中暂无条目，使用 /vault add ${filterCat} <名称> 添加`
-            : '  保险箱为空，使用 /vault add <分类> <名称> 添加第一条');
-        } else {
-          lines.push(`共 ${total} 条 | /vault show <分类> <名称> 查看明文`);
-        }
-
-        ctx.ui.notify(lines.join('\n'), 'info');
+      let vault;
+      try {
+        vault = readVault(password);
+      } catch (e) {
+        ctx.ui.notify(`❌ ${e.message}`, 'error');
         return;
       }
 
-      // ── add ──────────────────────────────────────────────────────────────
-      if (action === 'add') {
-        const catKey = parts[1];
-        const entryName = parts.slice(2).join(' ');
+      const filterCat = parts[1];
+      const lines = ['🔐 AIIA Vault — 条目列表（已掩码）', ''];
 
-        if (!catKey) {
-          ctx.ui.notify('❌ 请指定分类，例如: /vault add account Gmail\n   运行 /vault categories 查看所有分类', 'error');
-          return;
-        }
-        if (!entryName) {
-          ctx.ui.notify(`❌ 请指定条目名称，例如: /vault add ${catKey} Gmail账号`, 'error');
-          return;
-        }
-
-        let password;
-        try { password = await getMasterPassword(ctx, '添加条目'); }
-        catch (e) { ctx.ui.notify(`❌ ${e.message}`, 'error'); return; }
-
-        let vault;
-        try { vault = readVault(password); }
-        catch (e) { ctx.ui.notify(`❌ ${e.message}`, 'error'); return; }
-
-        const cat = CATEGORIES[catKey] || CATEGORIES.custom;
-        ctx.ui.notify(`\n${cat.icon} 正在添加「${cat.label}」条目：${entryName}\n（直接回车跳过某个字段）`, 'info');
-
-        const entry = {};
-        const fields = cat.fields.length > 0
-          ? cat.fields
-          : ['字段名（自定义）'];
-
-        for (const field of fields) {
-          const value = await ctx.ui.input(`  ${field}: `, '');
-          if (value) entry[field] = value;
-        }
-
-        // 支持添加额外自定义字段
-        if (catKey !== 'note') {
-          let more = await ctx.ui.input('\n  是否添加更多自定义字段？输入字段名（回车跳过）: ', '');
-          while (more) {
-            const value = await ctx.ui.input(`  ${more}: `, '');
-            if (value) entry[more] = value;
-            more = await ctx.ui.input('  继续添加字段（回车结束）: ', '');
-          }
-        }
-
-        if (Object.keys(entry).length === 0) {
-          ctx.ui.notify('⚠️ 未输入任何内容，已取消。', 'warning');
-          return;
-        }
-
-        // 写入
-        if (!vault[catKey]) vault[catKey] = {};
-        entry._createdAt = new Date().toISOString();
-        vault[catKey][entryName] = entry;
-        writeVault(vault, password);
-
-        ctx.ui.notify(`✅ 已保存「${entryName}」到 ${cat.icon} ${cat.label}（本地加密存储）`, 'info');
-        return;
-      }
-
-      // ── show ─────────────────────────────────────────────────────────────
-      if (action === 'show') {
-        const catKey = parts[1];
-        const entryName = parts.slice(2).join(' ');
-
-        if (!catKey || !entryName) {
-          ctx.ui.notify('❌ 用法: /vault show <分类> <名称>', 'error');
-          return;
-        }
-
-        let password;
-        try { password = await getMasterPassword(ctx, '查看明文'); }
-        catch (e) { ctx.ui.notify(`❌ ${e.message}`, 'error'); return; }
-
-        let vault;
-        try { vault = readVault(password); }
-        catch (e) { ctx.ui.notify(`❌ ${e.message}`, 'error'); return; }
-
-        const entry = vault[catKey]?.[entryName];
-        if (!entry) {
-          ctx.ui.notify(`❌ 未找到「${catKey} / ${entryName}」`, 'error');
-          return;
-        }
-
+      let total = 0;
+      for (const [catKey, entries] of Object.entries(vault)) {
+        if (filterCat && catKey !== filterCat) continue;
         const cat = CATEGORIES[catKey] || { label: catKey, icon: '📦' };
-        const lines = [`\n${cat.icon} ${cat.label} — ${entryName}`, '─'.repeat(40)];
-        for (const [k, v] of Object.entries(entry)) {
-          if (k.startsWith('_')) continue;
-          lines.push(`  ${k.padEnd(12)}: ${v}`);
+        const entryKeys = Object.keys(entries || {});
+        if (entryKeys.length === 0) continue;
+
+        lines.push(`${cat.icon} ${cat.label} (${catKey}) — ${entryKeys.length} 条`);
+        for (const name of entryKeys) {
+          const entry = entries[name];
+          const preview = Object.entries(entry)
+            .slice(0, 2)
+            .map(([k, v]) => `${k}: ${mask(v)}`)
+            .join('  |  ');
+          lines.push(`   • ${name.padEnd(20)} ${preview}`);
+          total++;
         }
-        lines.push('─'.repeat(40));
-        ctx.ui.notify(lines.join('\n'), 'info');
-        return;
+        lines.push('');
       }
 
-      // ── delete ───────────────────────────────────────────────────────────
-      if (action === 'delete' || action === 'del') {
-        const catKey = parts[1];
-        const entryName = parts.slice(2).join(' ');
-
-        if (!catKey || !entryName) {
-          ctx.ui.notify('❌ 用法: /vault delete <分类> <名称>', 'error');
-          return;
-        }
-
-        const confirmed = await ctx.ui.confirm(
-          '确认删除',
-          `是否删除「${catKey} / ${entryName}」？此操作不可恢复。`
+      if (total === 0) {
+        lines.push(
+          filterCat
+            ? `  分类 "${filterCat}" 中暂无条目，使用 /vault add ${filterCat} <名称> 添加`
+            : '  保险箱为空，使用 /vault add <分类> <名称> 添加第一条',
         );
-        if (!confirmed) { ctx.ui.notify('已取消', 'info'); return; }
+      } else {
+        lines.push(`共 ${total} 条 | /vault show <分类> <名称> 查看明文`);
+      }
 
-        let password;
-        try { password = await getMasterPassword(ctx, '删除条目'); }
-        catch (e) { ctx.ui.notify(`❌ ${e.message}`, 'error'); return; }
+      ctx.ui.notify(lines.join('\n'), 'info');
+      return;
+    }
 
-        let vault;
-        try { vault = readVault(password); }
-        catch (e) { ctx.ui.notify(`❌ ${e.message}`, 'error'); return; }
+    // ── add ──────────────────────────────────────────────────────────────
+    if (action === 'add') {
+      const catKey = parts[1];
+      const entryName = parts.slice(2).join(' ');
 
-        if (!vault[catKey]?.[entryName]) {
-          ctx.ui.notify(`❌ 未找到「${catKey} / ${entryName}」`, 'error');
-          return;
-        }
-
-        delete vault[catKey][entryName];
-        writeVault(vault, password);
-        ctx.ui.notify(`✅ 已删除「${entryName}」`, 'info');
+      if (!catKey) {
+        ctx.ui.notify(
+          '❌ 请指定分类，例如: /vault add account Gmail\n   运行 /vault categories 查看所有分类',
+          'error',
+        );
+        return;
+      }
+      if (!entryName) {
+        ctx.ui.notify(`❌ 请指定条目名称，例如: /vault add ${catKey} Gmail账号`, 'error');
         return;
       }
 
-      // ── help ─────────────────────────────────────────────────────────────
-      ctx.ui.notify([
+      let password;
+      try {
+        password = await getMasterPassword(ctx, '添加条目');
+      } catch (e) {
+        ctx.ui.notify(`❌ ${e.message}`, 'error');
+        return;
+      }
+
+      let vault;
+      try {
+        vault = readVault(password);
+      } catch (e) {
+        ctx.ui.notify(`❌ ${e.message}`, 'error');
+        return;
+      }
+
+      const cat = CATEGORIES[catKey] || CATEGORIES.custom;
+      ctx.ui.notify(
+        `\n${cat.icon} 正在添加「${cat.label}」条目：${entryName}\n（直接回车跳过某个字段）`,
+        'info',
+      );
+
+      const entry = {};
+      const fields = cat.fields.length > 0 ? cat.fields : ['字段名（自定义）'];
+
+      for (const field of fields) {
+        const value = await ctx.ui.input(`  ${field}: `, '');
+        if (value) entry[field] = value;
+      }
+
+      // 支持添加额外自定义字段
+      if (catKey !== 'note') {
+        let more = await ctx.ui.input('\n  是否添加更多自定义字段？输入字段名（回车跳过）: ', '');
+        while (more) {
+          const value = await ctx.ui.input(`  ${more}: `, '');
+          if (value) entry[more] = value;
+          more = await ctx.ui.input('  继续添加字段（回车结束）: ', '');
+        }
+      }
+
+      if (Object.keys(entry).length === 0) {
+        ctx.ui.notify('⚠️ 未输入任何内容，已取消。', 'warning');
+        return;
+      }
+
+      // 写入
+      if (!vault[catKey]) vault[catKey] = {};
+      entry._createdAt = new Date().toISOString();
+      vault[catKey][entryName] = entry;
+      writeVault(vault, password);
+
+      ctx.ui.notify(`✅ 已保存「${entryName}」到 ${cat.icon} ${cat.label}（本地加密存储）`, 'info');
+      return;
+    }
+
+    // ── show ─────────────────────────────────────────────────────────────
+    if (action === 'show') {
+      const catKey = parts[1];
+      const entryName = parts.slice(2).join(' ');
+
+      if (!catKey || !entryName) {
+        ctx.ui.notify('❌ 用法: /vault show <分类> <名称>', 'error');
+        return;
+      }
+
+      let password;
+      try {
+        password = await getMasterPassword(ctx, '查看明文');
+      } catch (e) {
+        ctx.ui.notify(`❌ ${e.message}`, 'error');
+        return;
+      }
+
+      let vault;
+      try {
+        vault = readVault(password);
+      } catch (e) {
+        ctx.ui.notify(`❌ ${e.message}`, 'error');
+        return;
+      }
+
+      const entry = vault[catKey]?.[entryName];
+      if (!entry) {
+        ctx.ui.notify(`❌ 未找到「${catKey} / ${entryName}」`, 'error');
+        return;
+      }
+
+      const cat = CATEGORIES[catKey] || { label: catKey, icon: '📦' };
+      const lines = [`\n${cat.icon} ${cat.label} — ${entryName}`, '─'.repeat(40)];
+      for (const [k, v] of Object.entries(entry)) {
+        if (k.startsWith('_')) continue;
+        lines.push(`  ${k.padEnd(12)}: ${v}`);
+      }
+      lines.push('─'.repeat(40));
+      ctx.ui.notify(lines.join('\n'), 'info');
+      return;
+    }
+
+    // ── delete ───────────────────────────────────────────────────────────
+    if (action === 'delete' || action === 'del') {
+      const catKey = parts[1];
+      const entryName = parts.slice(2).join(' ');
+
+      if (!catKey || !entryName) {
+        ctx.ui.notify('❌ 用法: /vault delete <分类> <名称>', 'error');
+        return;
+      }
+
+      const confirmed = await ctx.ui.confirm(
+        '确认删除',
+        `是否删除「${catKey} / ${entryName}」？此操作不可恢复。`,
+      );
+      if (!confirmed) {
+        ctx.ui.notify('已取消', 'info');
+        return;
+      }
+
+      let password;
+      try {
+        password = await getMasterPassword(ctx, '删除条目');
+      } catch (e) {
+        ctx.ui.notify(`❌ ${e.message}`, 'error');
+        return;
+      }
+
+      let vault;
+      try {
+        vault = readVault(password);
+      } catch (e) {
+        ctx.ui.notify(`❌ ${e.message}`, 'error');
+        return;
+      }
+
+      if (!vault[catKey]?.[entryName]) {
+        ctx.ui.notify(`❌ 未找到「${catKey} / ${entryName}」`, 'error');
+        return;
+      }
+
+      delete vault[catKey][entryName];
+      writeVault(vault, password);
+      ctx.ui.notify(`✅ 已删除「${entryName}」`, 'info');
+      return;
+    }
+
+    // ── help ─────────────────────────────────────────────────────────────
+    ctx.ui.notify(
+      [
         '🔐 AIIA Vault — 本地加密个人保险箱',
         '',
         '  /vault list [分类]           — 列出条目（掩码显示）',
@@ -347,7 +411,9 @@ export default function (pi) {
         '     custom   — 自定义分类',
         '',
         '  🔒 数据本地 AES-256 加密存储，同步时随 /sync push 一并上传（仍为密文）',
-      ].join('\n'), 'info');
+      ].join('\n'),
+      'info',
+    );
   };
 
   pi.registerCommand('vault', {
