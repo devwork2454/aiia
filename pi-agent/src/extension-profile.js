@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 /**
  * Default-on extension profile (lean + visual).
  * CORE always on. VISUAL (board / compact bar) on unless AIIA_VISUAL_DISABLED=1.
@@ -76,6 +79,31 @@ function splitList(raw) {
     .filter(Boolean);
 }
 
+// 崩溃隔离：读取 .agent/heal/disabled-extensions.json（mtime 缓存，避免每次调用 IO）
+let disabledCache = { path: null, mtimeMs: 0, list: [] };
+
+export function getDisabledExtensions(env = process.env) {
+  try {
+    const cwd = process.cwd();
+    const file = env.AIIA_HEAL_DIR
+      ? path.join(path.isAbsolute(env.AIIA_HEAL_DIR) ? env.AIIA_HEAL_DIR : path.resolve(cwd, env.AIIA_HEAL_DIR), 'disabled-extensions.json')
+      : path.join(cwd, '.agent', 'heal', 'disabled-extensions.json');
+    const stat = fs.statSync(file);
+    if (stat.mtimeMs === disabledCache.mtimeMs && disabledCache.path === file) {
+      return disabledCache.list;
+    }
+    const list = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    disabledCache = {
+      path: file,
+      mtimeMs: stat.mtimeMs,
+      list: Array.isArray(list) ? list.filter((x) => typeof x === 'string') : [],
+    };
+    return disabledCache.list;
+  } catch {
+    return [];
+  }
+}
+
 export function isVisualDisabled(env = process.env) {
   const v = env.AIIA_VISUAL_DISABLED;
   return v === '1' || v === 'true';
@@ -84,6 +112,7 @@ export function isVisualDisabled(env = process.env) {
 export function isExtensionEnabled(name, env = process.env) {
   const id = String(name || '').replace(/\.js$/i, '');
   if (!id) return false;
+  if (getDisabledExtensions(env).includes(id)) return false; // 崩溃隔离：降级运行
   if (env.AIIA_EXTENSIONS === 'all' || env.AIIA_EXTENSIONS === '*') return true;
   if (CORE_EXTENSIONS.includes(id)) return true;
   if (VISUAL_EXTENSIONS.includes(id) && !isVisualDisabled(env)) return true;

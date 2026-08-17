@@ -16,8 +16,16 @@ import {
   listHealTasks,
   markHealDone,
   buildHealTaskCard,
+  recordCrashedExtension,
+  loadDisabledExtensions,
+  extensionIdFromStack,
+  markSessionHealthy,
+  markSessionCrashed,
+  readLastSession,
+  buildRecoverySummary,
 } from '../src/self-heal-store.js';
 import selfHealExtension from '../extensions/self-heal.js';
+import { isExtensionEnabled } from '../src/extension-profile.js';
 
 function tmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'aiia-heal-'));
@@ -98,6 +106,44 @@ describe('S-self-heal store', () => {
       queueHealTask(cwd, { summary: 'x' }, { env: { AIIA_DISABLE_SELF_HEAL: '1' } }),
       false,
     );
+  });
+
+  test('崩溃隔离：recordCrashedExtension 去重 + extensionIdFromStack 定位', () => {
+    const cwd = tmpDir();
+    assert.equal(recordCrashedExtension(cwd, 'quality-gate'), true);
+    assert.equal(recordCrashedExtension(cwd, 'quality-gate'), false); // 去重
+    assert.deepEqual(loadDisabledExtensions(cwd), ['quality-gate']);
+    const stack = 'at /repo/pi-agent/extensions/quality-gate.js:12\n  at /repo/pi-agent/src/foo.js:3';
+    assert.equal(extensionIdFromStack(stack, cwd), 'quality-gate');
+    assert.equal(extensionIdFromStack('at /business/app.js:1', cwd), null);
+  });
+
+  test('会话健康标记：crash → 恢复摘要 → 注入一次后为空', async () => {
+    const cwd = tmpDir();
+    // 未崩溃：无摘要
+    markSessionHealthy(cwd, 'shutdown');
+    assert.equal(buildRecoverySummary(cwd), '');
+    // 崩溃：有摘要
+    markSessionCrashed(cwd, 'uncaughtException: boom');
+    recordCrashedExtension(cwd, 'broken-ext');
+    const summary = buildRecoverySummary(cwd);
+    assert.match(summary, /异常退出/);
+    assert.match(summary, /broken-ext/);
+    // 模拟注入后：不再重复
+    const { markRecoveryInjected } = await import('../src/self-heal-store.js');
+    const last = readLastSession(cwd);
+    markRecoveryInjected(cwd, last.ts);
+    assert.equal(buildRecoverySummary(cwd), '');
+  });
+});
+
+describe('S-self-heal crash isolation via profile', () => {
+  test('isExtensionEnabled 排除崩溃禁用的扩展（AIIA_HEAL_DIR 覆盖）', () => {
+    const cwd = tmpDir();
+    const env = { AIIA_HEAL_DIR: cwd };
+    recordCrashedExtension(cwd, 'self-heal', { env });
+    assert.equal(isExtensionEnabled('self-heal', env), false);
+    assert.equal(isExtensionEnabled('memory', env), true); // 未禁用不受影响
   });
 });
 

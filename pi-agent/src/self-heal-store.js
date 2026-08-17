@@ -23,6 +23,9 @@ export const SELF_HEAL_DIR = '.agent/heal';
 export const QUEUE_SUBDIR = 'queue';
 export const DONE_SUBDIR = 'done';
 export const CRASH_CURSOR = 'crash-cursor';
+export const DISABLED_EXTENSIONS_FILE = 'disabled-extensions.json';
+export const LAST_SESSION_FILE = 'last-session.json';
+export const RECOVERY_INJECTED_FILE = 'recovery-injected.json';
 
 /** 判断一段文本是否涉及 aiia 自身（扩展 / 配置 / 规则 / 文档 / 脚本）。 */
 export function isSelfReference(text, opts = {}) {
@@ -238,6 +241,184 @@ function listFiles(dir) {
     return fs.readdirSync(dir).filter((f) => f.endsWith('.md'));
   } catch {
     return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 坏扩展禁用隔离（崩溃后持久化禁用，下次启动降级运行）
+// ---------------------------------------------------------------------------
+
+export function resolveDisabledExtensionsPath(cwd = process.cwd(), env = process.env) {
+  return path.join(resolveHealDir(cwd, env), DISABLED_EXTENSIONS_FILE);
+}
+
+/** 读取崩溃禁用的扩展 id 列表（幂等）。 */
+export function loadDisabledExtensions(cwd = process.cwd(), env = process.env) {
+  try {
+    const raw = fs.readFileSync(resolveDisabledExtensionsPath(cwd, env), 'utf-8');
+    const list = JSON.parse(raw);
+    return Array.isArray(list) ? list.filter((x) => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+/** 记录一个崩溃扩展（去重追加）。返回 true=本次新增。 */
+export function recordCrashedExtension(cwd = process.cwd(), extensionId, opts = {}) {
+  const env = opts.env || process.env;
+  if (!extensionId) return false;
+  const list = loadDisabledExtensions(cwd, env);
+  if (list.includes(extensionId)) return false;
+  list.push(extensionId);
+  try {
+    fs.mkdirSync(resolveHealDir(cwd, env), { recursive: true });
+    fs.writeFileSync(resolveDisabledExtensionsPath(cwd, env), JSON.stringify(list, null, 2));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** 从堆栈文本提取崩溃扩展 id（pi-agent/extensions/xxx.js）。 */
+export function extensionIdFromStack(stack, cwd = process.cwd()) {
+  if (typeof stack !== 'string' || !stack) return null;
+  const re = /[/\\]extensions[/\\]([A-Za-z0-9_-]+)\.js/g;
+  let m = re.exec(stack);
+  const hits = [];
+  while (m !== null) {
+    hits.push(m[1]);
+    m = re.exec(stack);
+  }
+  // 优先不在 cwd 业务路径下的（aiia 自己的扩展）；否则取第一个
+  return hits[0] || null;
+}
+
+// ---------------------------------------------------------------------------
+// 会话健康标记 + 崩溃后上下文恢复
+// ---------------------------------------------------------------------------
+
+export function resolveLastSessionPath(cwd = process.cwd(), env = process.env) {
+  return path.join(resolveHealDir(cwd, env), LAST_SESSION_FILE);
+}
+
+export function resolveRecoveryInjectedPath(cwd = process.cwd(), env = process.env) {
+  return path.join(resolveHealDir(cwd, env), RECOVERY_INJECTED_FILE);
+}
+
+function writeJson(filePath, data) {
+  try {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** 会话正常结束标记（shutdown 时写）。 */
+export function markSessionHealthy(cwd = process.cwd(), reason = 'shutdown', opts = {}) {
+  const env = opts.env || process.env;
+  if (isSelfHealDisabled(env)) return false;
+  return writeJson(resolveLastSessionPath(cwd, env), {
+    ts: new Date().toISOString(),
+    healthy: true,
+    reason,
+  });
+}
+
+/** 会话异常退出标记（uncaughtException 时写，崩溃前尽力）。 */
+export function markSessionCrashed(cwd = process.cwd(), reason = 'uncaughtException', opts = {}) {
+  const env = opts.env || process.env;
+  if (isSelfHealDisabled(env)) return false;
+  return writeJson(resolveLastSessionPath(cwd, env), {
+    ts: new Date().toISOString(),
+    healthy: false,
+    reason: String(reason || 'unknown').slice(0, 500),
+  });
+}
+
+/** 读取上次会话健康状态。返回 {healthy, reason, ts} 或 null。 */
+export function readLastSession(cwd = process.cwd(), env = process.env) {
+  try {
+    const raw = fs.readFileSync(resolveLastSessionPath(cwd, env), 'utf-8');
+    const data = JSON.parse(raw);
+    return {
+      healthy: data.healthy !== false,
+      reason: data.reason || 'unknown',
+      ts: data.ts || '',
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** 标记某次崩溃的恢复摘要已注入（避免每次 context 重复注入）。 */
+export function markRecoveryInjected(cwd = process.cwd(), crashTs = '', opts = {}) {
+  const env = opts.env || process.env;
+  return writeJson(resolveRecoveryInjectedPath(cwd, env), { crashTs });
+}
+
+export function isRecoveryInjected(cwd = process.cwd(), crashTs = '', env = process.env) {
+  try {
+    const data = JSON.parse(fs.readFileSync(resolveRecoveryInjectedPath(cwd, env), 'utf-8'));
+    return data.crashTs === crashTs;
+  } catch {
+    return false;
+  }
+}
+
+/** 构建崩溃恢复摘要（注入新会话上下文）。无崩溃时返回空串。 */
+export function buildRecoverySummary(cwd = process.cwd(), opts = {}) {
+  const env = opts.env || process.env;
+  const last = readLastSession(cwd, env);
+  if (!last || last.healthy) return '';
+  const crashTs = last.ts || '';
+  if (isRecoveryInjected(cwd, crashTs, env)) return '';
+  const lines = [
+    '[AIIA 自愈恢复] 上次会话异常退出，以下为自动恢复上下文：',
+    `- 崩溃时间：${crashTs || '未知'}，原因：${last.reason || '未知'}`,
+  ];
+  const disabled = loadDisabledExtensions(cwd, env);
+  if (disabled.length) {
+    lines.push(`- 已崩溃隔离禁用扩展：${disabled.join(', ')}（修复 verify 通过后可手动移除禁用）`);
+  }
+  const queue = listHealTasks(cwd, env);
+  if (queue.length) {
+    lines.push(`- 待修复任务 ${queue.length} 个：${queue.map((t) => t.file).join(', ')}`);
+    lines.push('- 建议先执行 /goal 消费修复队列（D6 自省），再继续原任务');
+  }
+  // 上次轨迹尾部摘要（errorTools / 最后工具）
+  const traj = readLastTrajectorySummary(cwd, env);
+  if (traj) lines.push(`- 上次会话轨迹：${traj}`);
+  // PROGRESS.md 当前目标
+  const goal = readProgressGoal(cwd);
+  if (goal) lines.push(`- PROGRESS.md 目标：${goal}`);
+  return lines.join('\n');
+}
+
+function readLastTrajectorySummary(cwd, env) {
+  try {
+    const p = path.join(cwd, '.agent', 'trajectories.jsonl');
+    const raw = fs.readFileSync(p, 'utf-8');
+    const lines = raw.trim().split('\n').filter(Boolean);
+    if (!lines.length) return '';
+    const last = JSON.parse(lines[lines.length - 1]);
+    const s = last.summary || {};
+    const tools = Array.isArray(s.toolNames) ? s.toolNames.slice(0, 8).join(',') : '';
+    return `kind=${last.kind || '?'} msg=${last.messageCount ?? '?'} errorTools=${s.errorTools ?? 0}${tools ? ` tools=[${tools}]` : ''}`;
+  } catch {
+    return '';
+  }
+}
+
+function readProgressGoal(cwd) {
+  try {
+    const p = path.join(cwd, 'PROGRESS.md');
+    const raw = fs.readFileSync(p, 'utf-8');
+    const m = raw.match(/##\s*GOAL\s*\n([^#\n][^\n]*)/);
+    return m ? m[1].trim().slice(0, 200) : '';
+  } catch {
+    return '';
   }
 }
 

@@ -157,7 +157,7 @@ AIIA Secret Gate & Redaction Extension (Item B) 1. 把可用 Secret Key 名称�
 
 ## `self-heal.js`
 
-AIIA Self-Heal extension — 报错/崩溃自动采集，入修复队列供 goal 循环消费。 L0/L1 落点： - 监听 error 事件：把 aiia 自身运行期错误写入修复队列（不打断当前循环） - 监听 agent_end：扫描本次会话错误消息 + pi-crash.log 新增段 → 去重入队 - 修复动作由 goal 循环（D6 自省 + 修复队列消费）在确定性门禁内执行 Env: AIIA_DISABLE_SELF_HEAL=1  关闭采集
+AIIA Self-Heal extension — 报错/崩溃自动采集与恢复。 L0 崩溃隔离：uncaughtException/unhandledRejection → 崩溃前尽力记录 + 坏扩展禁用 L1 报错即修复：error/agent_end → 修复队列 → goal 循环消费 L3 崩溃恢复：context 注入上次会话恢复摘要（异常退出后无缝续上） Env: AIIA_DISABLE_SELF_HEAL=1   关闭全部自愈采集 AIIA_HEAL_RESUME=1         崩溃后不重抛异常（降级继续运行，默认重抛保崩溃语义）
 
 ## `semantic-search.js`
 
